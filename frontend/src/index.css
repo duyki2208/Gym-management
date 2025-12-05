@@ -1,0 +1,92 @@
+/* src/index.css */
+
+/* 1. Gọi Tailwind vào dự án */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2. Cấu hình giao diện chung (Base Styles) */
+@layer base {
+  body {
+    /* Sử dụng font hệ thống đẹp nhất có thể và làm mượt chữ */
+    @apply font-sans antialiased text-gray-800 bg-gray-50;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tùy chỉnh tiêu đề */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-gray-900;
+  }
+}
+
+/* 3. Tùy chỉnh Thanh cuộn (Scrollbar) cho đẹp hơn */
+@layer utilities {
+  /* Ẩn thanh cuộn nhưng vẫn cuộn được (cho menu ngang) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Custom thanh cuộn chính của trang */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  }
+}
+
+/* 4. Định nghĩa các hiệu ứng động (Animations) */
+/* Thay vì viết inline, ta định nghĩa ở đây để tái sử dụng */
+
+/* Hiệu ứng Fade In (Hiện dần ra) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Hiệu ứng Bounce nhẹ cho Popup */
+@keyframes bounceIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Hiệu ứng Gradient che mờ bên phải (Dùng cho menu ngang) */
+.mask-gradient-right {
+  mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+/* 5. Tùy chỉnh input để trông sạch sẽ hơn */
+input:focus, select:focus, textarea:focus {
+  @apply outline-none ring-2 ring-blue-500/20 border-blue-500 transition-all duration-200;
+}
+
+/* Style cho bảng (Table) */
+table thead th {
+  @apply bg-gray-50 text-gray-500 text-xs font-semibold uppercase tracking-wider border-b border-gray-100;
+}
+
+table tbody tr {
+  @apply transition-colors duration-150;
+}
+
+table tbody tr:hover {
+  @apply bg-blue-50/50;
+}
