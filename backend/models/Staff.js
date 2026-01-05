@@ -13,6 +13,7 @@ const staffSchema = mongoose.Schema(
     specialty: { type: String, default: "" }, // Chuyên môn
     activeCustomers: { type: Number, default: 0 },
     shift: { type: String, default: "" }, // Ca làm việc
+    dob: { type: Date },
   },
   {
     timestamps: true, // Tự động tạo createdAt, updatedAt

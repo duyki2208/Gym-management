@@ -71,10 +71,14 @@ const History = () => {
       setLoading(true);
       try {
         const [customersData, checkinsData] = await Promise.all([
-          customerService.getAll(),
+          customerService.getAll({ limit: 10000 }), // Lấy tất cả khách hàng (giới hạn lớn) để lọc client-side
           checkInService.getAll(),
         ]);
-        setRawCustomers(Array.isArray(customersData) ? customersData : []);
+        
+        // Handle response format from updated getAll (object with customers array)
+        const customers = customersData.customers || (Array.isArray(customersData) ? customersData : []);
+        setRawCustomers(customers);
+        
         setRawCheckins(Array.isArray(checkinsData) ? checkinsData : []);
       } catch (error) {
         console.error("Lỗi tải dữ liệu:", error);
@@ -142,20 +146,35 @@ const History = () => {
 
   const stats = useMemo(() => {
     const now = new Date();
-    const totalCustomers = rawCustomers.length;
+    
+    // Filter customers who registered (startDate) within the selected range
+    const newCustomersInPeriod = rawCustomers.filter((c) => {
+        if (!c.startDate) return false;
+        try {
+            return isWithinInterval(new Date(c.startDate), {
+                start: dateRange.start,
+                end: dateRange.end
+            });
+        } catch (e) { return false; }
+    });
+
     const activeCustomers = rawCustomers.filter(
       (c) => c.endDate && new Date(c.endDate) >= now
     ).length;
+
     const periodCheckins = filteredCheckins.length;
-    const estimatedRevenue = periodCheckins * 25000;
+    
+    // Revenue from new registrations in period
+    const revenue = newCustomersInPeriod.reduce((sum, c) => sum + (Number(c.price) || 0), 0);
+
     return {
-      totalCustomers,
+      totalCustomers: newCustomersInPeriod.length,
       activeCustomers,
       periodCheckins,
-      revenue: estimatedRevenue,
+      revenue,
       growth: { total: 0, active: 0, revenue: 0, checkin: 0 },
     };
-  }, [rawCustomers, filteredCheckins]);
+  }, [rawCustomers, filteredCheckins, dateRange]);
 
   const peakHourData = useMemo(() => {
     const hours = Array(24).fill(0);
@@ -325,19 +344,19 @@ const History = () => {
       {/* Grid Thống kê */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Tổng khách hàng"
+          title="Khách mới đăng ký"
           value={stats.totalCustomers}
-          subText="Tổng số lượng đăng ký"
+          subText={`Trong ${getLabel().toLowerCase()}`}
         />
         <StatCard
           title="Khách đang hoạt động"
           value={stats.activeCustomers}
-          subText="Khách còn hạn gói tập"
+          subText="Tổng số hiện tại"
         />
         <StatCard
           title={`Doanh thu (${getLabel()})`}
           value={formatCurrency(stats.revenue)}
-          subText="Dựa trên lượt check-in"
+          subText="Từ khách đăng ký mới"
         />
         <StatCard
           title={`Lượt Check-in (${getLabel()})`}
@@ -407,7 +426,7 @@ const History = () => {
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
         <div className="p-6 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-center gap-4">
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
-            Nhật ký hoạt động
+            Nhật ký hoạt động ({getLabel()})
           </h3>
           <div className="relative w-full sm:w-auto">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">
@@ -432,7 +451,7 @@ const History = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {rawCheckins
+              {filteredCheckins
                 .filter((i) =>
                   (i.customerName || "")
                     .toLowerCase()

@@ -1,22 +1,235 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import reportService from '../services/reportService';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell
+} from 'recharts';
+import { Download, Users, DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF5733', '#C70039'];
 
 const Reports = () => {
+  const [summary, setSummary] = useState({ totalRevenue: 0, activeMembers: 0, newMembers: 0 });
+  const [revenueData, setRevenueData] = useState([]);
+  const [packageData, setPackageData] = useState([]);
+  const [expiringMembers, setExpiringMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [summaryRes, revenueRes, packageRes, expiringRes] = await Promise.all([
+        reportService.getSummary(),
+        reportService.getRevenueChart(),
+        reportService.getPackageDistribution(),
+        reportService.getExpiringMembers()
+      ]);
+
+      setSummary(summaryRes);
+      setRevenueData(revenueRes);
+      setPackageData(packageRes);
+      setExpiringMembers(expiringRes);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Date", "Revenue"];
+    const csvContent = [
+      headers.join(","),
+      ...revenueData.map(row => `${row.date},${row.revenue}`)
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "revenue_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center">Đang tải báo cáo...</div>;
+  }
+
+  // Tùy chỉnh Y-axis ticks cho doanh thu: 0, 50tr, 100tr...
+  const revenueTicks = [0, 50000000, 100000000, 150000000, 200000000];
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-4xl font-black text-text-light dark:text-text-dark">Báo cáo & Tài chính</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[{l: 'Tổng doanh thu', v: '1,250M', c: '+15.2%'}, {l: 'Khách hàng mới', v: '125', c: '+8.5%'}, {l: 'Lượt gia hạn', v: '82', c: '+5.0%'}].map((s,i)=>(
-          <div key={i} className="p-6 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg">
-            <p className="text-text-light dark:text-text-dark font-medium">{s.l}</p>
-            <p className="text-3xl font-bold text-text-light dark:text-text-dark my-2">{s.v}</p>
-            <p className="text-positive-light dark:text-positive-dark font-medium">{s.c}</p>
-          </div>
-        ))}
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-800">Báo Cáo & Thống Kê</h1>
+        <button 
+          onClick={exportToCSV}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          <Download size={20} /> Xuất Báo Cáo
+        </button>
       </div>
-      <div className="p-6 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg h-96 flex items-center justify-center text-text-muted-light dark:text-text-muted-dark">
-        Biểu đồ doanh thu (Placeholder)
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+          <div>
+            <p className="text-gray-500 text-sm">Doanh thu tháng này</p>
+            <p className="text-2xl font-bold text-green-600">{summary.totalRevenue.toLocaleString()} VND</p>
+          </div>
+          <div className="bg-green-100 p-3 rounded-full text-green-600">
+            <DollarSign size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+          <div>
+            <p className="text-gray-500 text-sm">Thành viên đang tập</p>
+            <p className="text-2xl font-bold text-blue-600">{summary.activeMembers}</p>
+          </div>
+          <div className="bg-blue-100 p-3 rounded-full text-blue-600">
+            <Users size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+          <div>
+            <p className="text-gray-500 text-sm">Khách mới (Tháng này)</p>
+            <p className="text-2xl font-bold text-purple-600">{summary.newMembers}</p>
+          </div>
+          <div className="bg-purple-100 p-3 rounded-full text-purple-600">
+            <TrendingUp size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue Chart Section (Full Width, Custom Ticks) */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-bold mb-4 text-gray-800">Biểu Đồ Doanh Thu</h2>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={revenueData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" />
+              <YAxis 
+                ticks={revenueTicks}
+                tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(value)}
+                domain={[0, 200000000]} 
+              />
+              <Tooltip formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)} />
+              <Legend />
+              <Bar 
+                dataKey="revenue" 
+                fill="#3b82f6" 
+                radius={[4, 4, 0, 0]} 
+                name="Doanh Thu"
+                barSize={40}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Package Distribution (Full Row: Left Legend, Right Chart) */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-bold mb-6 text-gray-800">Tỷ Lệ Gói Tập</h2>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          {/* Legend Section (Left) */}
+          <div className="w-full md:w-1/3 space-y-4">
+             {packageData.map((entry, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full" 
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    ></div>
+                    <span className="font-medium text-gray-700">{entry.name}</span>
+                  </div>
+                </div>
+             ))}
+          </div>
+
+          {/* Chart Section (Right) */}
+          <div className="w-full md:w-2/3 h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={packageData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                >
+                  {packageData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Expiring Members (Bottom Full Width) */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="text-orange-500" />
+          <h2 className="text-xl font-bold text-gray-800">Sắp Hết Hạn (Trong 14 ngày tới)</h2>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="p-3 font-medium text-gray-600">Khách Hàng</th>
+                <th className="p-3 font-medium text-gray-600">Số Điện Thoại</th>
+                <th className="p-3 font-medium text-gray-600">Gói Tập</th>
+                <th className="p-3 font-medium text-gray-600">Ngày Hết Hạn</th>
+                <th className="p-3 font-medium text-gray-600">Buổi Còn Lại</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expiringMembers.length > 0 ? (
+                expiringMembers.map((member) => (
+                  <tr key={member._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">
+                      <div className="font-medium text-gray-800">{member.name}</div>
+                    </td>
+                    <td className="p-3">{member.phone}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        {member.packageType}
+                      </span>
+                    </td>
+                    <td className="p-3 text-red-600 font-bold">
+                      {new Date(member.endDate).toLocaleDateString("vi-VN")}
+                    </td>
+                    <td className="p-3 font-semibold">{member.remainingSessions}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="p-4 text-center text-gray-500">
+                    Không có thành viên nào sắp hết hạn trong 14 ngày tới.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
+
 export default Reports;

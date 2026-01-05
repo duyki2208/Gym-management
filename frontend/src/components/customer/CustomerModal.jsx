@@ -153,6 +153,13 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // --- FIX: Thêm xác thực ---
+    if (!formData.packageType || !formData.endDate) {
+      alert(
+        "Vui lòng chọn một gói tập hợp lệ. Ngày hết hạn sẽ được tự động tính."
+      );
+      return;
+    }
     onSave(formData);
   };
 

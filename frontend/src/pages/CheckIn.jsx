@@ -9,13 +9,17 @@ const CheckIn = () => {
   const [loading, setLoading] = useState(true);
   const [checkingIn, setCheckingIn] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
+    setIsAdmin(user.role === "admin");
     const fetchData = async () => {
       setLoading(true);
       try {
-        const data = await customerService.getAll();
-        setCustomers(Array.isArray(data) ? data : []);
+        const data = await customerService.getAll({ limit: 10000 }); // Lấy tất cả khách để search client-side tạm thời
+        const customersList = data.customers || (Array.isArray(data) ? data : []);
+        setCustomers(customersList);
       } catch (err) {
         console.error("Lỗi tải khách hàng:", err);
         setCustomers([]);
@@ -56,8 +60,9 @@ const CheckIn = () => {
       setTimeout(() => setSuccessMessage(""), 3000);
 
       // Refresh danh sách để cập nhật
-      const newData = await customerService.getAll();
-      setCustomers(Array.isArray(newData) ? newData : []);
+      const newData = await customerService.getAll({ limit: 10000 });
+      const customersList = newData.customers || (Array.isArray(newData) ? newData : []);
+      setCustomers(customersList);
     } catch (error) {
       console.error("Lỗi check-in:", error);
       alert("Có lỗi xảy ra khi check-in. Vui lòng thử lại.");
@@ -120,7 +125,7 @@ const CheckIn = () => {
                 <th className="p-4">Số điện thoại</th>
                 <th className="p-4">Gói tập</th>
                 <th className="p-4">Trạng thái</th>
-                <th className="p-4 text-right">Hành động</th>
+                {isAdmin && <th className="p-4 text-right">Hành động</th>}
               </tr>
             </thead>
             <tbody>
@@ -156,31 +161,33 @@ const CheckIn = () => {
                           {status.label}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleCheckIn(c)}
-                          disabled={isCheckingIn || status.status === "expired"}
-                          className={`px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 ml-auto ${
-                            status.status === "expired"
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : isCheckingIn
-                              ? "bg-blue-300 text-blue-700 cursor-wait"
-                              : "bg-green-600 text-white hover:bg-green-700"
-                          }`}
-                        >
-                          {isCheckingIn ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
-                              Đang xử lý...
-                            </>
-                          ) : (
-                            <>
-                              <LogIn size={18} />
-                              Check-in
-                            </>
-                          )}
-                        </button>
-                      </td>
+                      {isAdmin && (
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleCheckIn(c)}
+                            disabled={isCheckingIn || status.status === "expired"}
+                            className={`px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 ml-auto ${
+                              status.status === "expired"
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : isCheckingIn
+                                ? "bg-blue-300 text-blue-700 cursor-wait"
+                                : "bg-green-600 text-white hover:bg-green-700"
+                            }`}
+                          >
+                            {isCheckingIn ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                                Đang xử lý...
+                              </>
+                            ) : (
+                              <>
+                                <LogIn size={18} />
+                                Check-in
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })

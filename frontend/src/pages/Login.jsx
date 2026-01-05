@@ -88,7 +88,7 @@ const Login = () => {
                 </form>
                 
                 <div className="mt-auto pt-8 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-600">Demo: admin / 123</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-600">Sản phẩm của duyki</p>
                 </div>
               </div>
             </div>

@@ -1,285 +1,238 @@
 // Định nghĩa đường dẫn API của Backend
 const API_URL = "http://localhost:5000/api";
 
-// --- HÀM HỖ TRỢ AN TOÀN (HELPER) ---
-// Hàm này giúp đảm bảo dữ liệu trả về luôn là Mảng [], tránh lỗi .filter()
+// --- HÀM HỖ TRỢ (HELPER) ---
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("accessToken");
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
 const ensureArray = (data) => {
-  if (Array.isArray(data)) return data; // Nếu là mảng chuẩn thì trả về ngay
-  if (data && Array.isArray(data.data)) return data.data; // Nếu API trả về dạng { data: [...] }
-  if (data && Array.isArray(data.customers)) return data.customers; // Nếu API trả về dạng { customers: [...] }
-  return []; // Nếu không phải mảng, trả về mảng rỗng để không bị crash ứng dụng
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  if (data && Array.isArray(data.customers)) return data.customers;
+  return [];
 };
 
 // --- 1. SERVICE KHÁCH HÀNG ---
 export const customerService = {
-  getAll: async () => {
+  getAll: async (params = {}) => {
     try {
-      const response = await fetch(`${API_URL}/customers`);
-      if (!response.ok) return [];
-
+      // Build query string from params
+      const query = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_URL}/customers?${query}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) return { customers: [], totalPages: 0, totalCustomers: 0 };
       const result = await response.json();
-
-      // LOG RA CONSOLE ĐỂ BẠN KIỂM TRA DỮ LIỆU THỰC TẾ
-      console.log("API /customers response:", result);
-
-      // Sử dụng hàm ensureArray để lọc lấy mảng
-      return ensureArray(result);
+      
+      // Handle both old array format (fallback) and new object format
+      if (Array.isArray(result)) {
+         return { customers: result, totalPages: 1, totalCustomers: result.length };
+      }
+      return result;
     } catch (error) {
-      console.error("Lỗi lấy danh sách khách:", error);
-      return []; // Luôn trả về mảng rỗng khi lỗi mạng
+      return { customers: [], totalPages: 0, totalCustomers: 0 };
     }
   },
 
   save: async (customerData) => {
-    try {
-      const isUpdate = customerData._id || customerData.id;
-      const url = isUpdate
-        ? `${API_URL}/customers/${customerData._id || customerData.id}`
-        : `${API_URL}/customers`;
+    const isUpdate = customerData._id || customerData.id;
+    const url = isUpdate
+      ? `${API_URL}/customers/${customerData._id || customerData.id}`
+      : `${API_URL}/customers`;
+    const method = isUpdate ? "PUT" : "POST";
 
-      const method = isUpdate ? "PUT" : "POST";
-
-      // Chuẩn bị dữ liệu gửi lên
-      const dataToSend = { ...customerData };
-
-      // Loại bỏ id khỏi body khi PUT (vì đã có trong URL)
-      if (isUpdate) {
-        delete dataToSend._id;
-        delete dataToSend.id;
-      } else {
-        // Khi tạo mới, không gửi code nếu rỗng (để backend tự tạo)
-        if (
-          !dataToSend.code ||
-          dataToSend.code === "" ||
-          dataToSend.code === "Tự động tạo"
-        ) {
-          delete dataToSend.code;
-        }
-      }
-
-      // Đảm bảo trainer là string, không phải boolean
-      if (dataToSend.trainer !== undefined) {
-        dataToSend.trainer =
-          typeof dataToSend.trainer === "string"
-            ? dataToSend.trainer
-            : dataToSend.trainer
-            ? String(dataToSend.trainer)
-            : "";
-      }
-
-      // Chuyển đổi date strings sang Date objects nếu cần
-      if (dataToSend.dob && typeof dataToSend.dob === "string") {
-        dataToSend.dob = dataToSend.dob ? new Date(dataToSend.dob) : null;
-      }
-      if (dataToSend.startDate && typeof dataToSend.startDate === "string") {
-        dataToSend.startDate = dataToSend.startDate
-          ? new Date(dataToSend.startDate)
-          : new Date();
-      }
-      if (dataToSend.endDate && typeof dataToSend.endDate === "string") {
-        dataToSend.endDate = dataToSend.endDate
-          ? new Date(dataToSend.endDate)
-          : null;
-      }
-
-      const response = await fetch(url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Lỗi lưu khách hàng:", error);
-      throw error;
+    const dataToSend = { ...customerData };
+    if (isUpdate) {
+      delete dataToSend._id;
+      delete dataToSend.id;
+    } else {
+      if (!dataToSend.code || dataToSend.code === "Tự động tạo")
+        delete dataToSend.code;
     }
+
+    // KHÔNG chuyển Date object - để string và để backend xử lý
+    // Chỉ đảm bảo format đúng nếu là string
+    // Nếu là Date object, chuyển thành ISO string
+    if (dataToSend.dob) {
+      if (dataToSend.dob instanceof Date) {
+        dataToSend.dob = dataToSend.dob.toISOString();
+      }
+      // Nếu là string, giữ nguyên (đã đúng format từ input date)
+    }
+    if (dataToSend.startDate) {
+      if (dataToSend.startDate instanceof Date) {
+        dataToSend.startDate = dataToSend.startDate.toISOString();
+      }
+    }
+    if (dataToSend.endDate) {
+      if (dataToSend.endDate instanceof Date) {
+        dataToSend.endDate = dataToSend.endDate.toISOString();
+      }
+    }
+
+    const response = await fetch(url, {
+      method: method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify(dataToSend),
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Lỗi lưu dữ liệu";
+      try {
+        const err = await response.json();
+        errorMessage = err.message || errorMessage;
+      } catch (e) {
+        errorMessage = `Lỗi ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
   },
 
   delete: async (id) => {
+    const response = await fetch(`${API_URL}/customers/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error("Lỗi xóa khách hàng");
+    return true;
+  },
+
+  getDashboardStats: async () => {
     try {
-      const response = await fetch(`${API_URL}/customers/${id}`, {
-        method: "DELETE",
+      const response = await fetch(`${API_URL}/dashboard`, {
+        headers: getAuthHeaders(),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return true;
+      if (!response.ok) throw new Error("Lỗi lấy dữ liệu dashboard");
+      return await response.json();
     } catch (error) {
-      console.error("Lỗi xóa khách hàng:", error);
-      throw error; // Re-throw để component có thể xử lý
+      console.error(error);
+      return null;
     }
   },
 };
 
 // --- 2. SERVICE CHECK-IN ---
 export const checkInService = {
-  create: async (data) => {
-    try {
-      const response = await fetch(`${API_URL}/checkins`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Lỗi check-in:", error);
-      throw error; // Re-throw để component có thể xử lý
-    }
-  },
-
   getAll: async () => {
     try {
-      const response = await fetch(`${API_URL}/checkins`);
+      const response = await fetch(`${API_URL}/checkins`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) return [];
-
-      const result = await response.json();
-      // Áp dụng tương tự cho checkin để tránh lỗi tương lai
-      return ensureArray(result);
+      return ensureArray(await response.json());
     } catch (error) {
-      console.error("Lỗi lấy lịch sử check-in:", error);
       return [];
     }
   },
+  create: async (data) => {
+    const response = await fetch(`${API_URL}/checkins`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Lỗi checkin");
+    return await response.json();
+  },
 };
 
-// --- 3. SERVICE GÓI TẬP (Dữ liệu tĩnh) ---
+// --- 3. SERVICE GÓI TẬP ---
 export const packageService = {
   getAll: async () => {
     try {
-      const response = await fetch(`${API_URL}/packages`);
+      const response = await fetch(`${API_URL}/packages`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) return [];
-      const result = await response.json();
-      return Array.isArray(result) ? result : [];
+      return await response.json();
     } catch (error) {
-      console.error("Lỗi lấy danh sách gói tập:", error);
       return [];
     }
   },
   save: async (pkg) => {
-    try {
-      let response;
-      if (pkg._id) {
-        response = await fetch(`${API_URL}/packages/${pkg._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pkg),
-        });
-      } else {
-        response = await fetch(`${API_URL}/packages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pkg),
-        });
-      }
-      if (!response.ok) throw new Error("Lỗi khi lưu gói tập");
-      return await response.json();
-    } catch (error) {
-      console.error("Lỗi lưu gói tập:", error);
-      throw error;
-    }
+    const url = pkg._id
+      ? `${API_URL}/packages/${pkg._id}`
+      : `${API_URL}/packages`;
+    const method = pkg._id ? "PUT" : "POST";
+    const body = { ...pkg };
+    if (pkg._id) delete body._id;
+
+    const response = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error("Lỗi lưu gói tập");
+    return response.json();
   },
   delete: async (id) => {
-    try {
-      await fetch(`${API_URL}/packages/${id}`, { method: "DELETE" });
-    } catch (error) {
-      console.error("Lỗi xóa gói tập:", error);
-    }
+    await fetch(`${API_URL}/packages/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
   },
 };
 
-// --- 4. SERVICE NHÂN VIÊN ---
+// --- 4. SERVICE NHÂN VIÊN (Đã cập nhật xử lý ngày sinh) ---
 export const staffService = {
   getAll: async () => {
     try {
-      const response = await fetch(`${API_URL}/staff`);
+      const response = await fetch(`${API_URL}/staff`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) return [];
-      const result = await response.json();
-      return Array.isArray(result) ? result : [];
-    } catch (error) {
-      console.error("Lỗi lấy danh sách nhân viên:", error);
+      return await response.json();
+    } catch (e) {
       return [];
     }
   },
-
   save: async (staffData) => {
-    try {
-      const isUpdate = staffData._id || staffData.id;
-      const url = isUpdate
-        ? `${API_URL}/staff/${staffData._id || staffData.id}`
-        : `${API_URL}/staff`;
+    const isUpdate = staffData._id || staffData.id;
+    const url = isUpdate
+      ? `${API_URL}/staff/${staffData._id || staffData.id}`
+      : `${API_URL}/staff`;
+    const method = isUpdate ? "PUT" : "POST";
 
-      const method = isUpdate ? "PUT" : "POST";
+    const dataToSend = { ...staffData };
+    if (isUpdate) delete dataToSend._id;
 
-      // Chuẩn bị dữ liệu gửi lên
-      const dataToSend = { ...staffData };
-      if (isUpdate) {
-        delete dataToSend._id;
-        delete dataToSend.id;
-      }
-
-      const response = await fetch(url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Lỗi lưu nhân viên:", error);
-      throw error;
+    // --- QUAN TRỌNG: Chuyển đổi ngày sinh sang Date object ---
+    if (dataToSend.dob && typeof dataToSend.dob === "string") {
+      dataToSend.dob = new Date(dataToSend.dob);
     }
+
+    const response = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify(dataToSend),
+    });
+    if (!response.ok) {
+      let errorMessage = "Lỗi lưu nhân viên";
+      try {
+        const err = await response.json();
+        errorMessage = err.message || errorMessage;
+      } catch (e) {
+        errorMessage = `Lỗi ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
+    return response.json();
   },
-
   delete: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/staff/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Lỗi xóa nhân viên:", error);
-      throw error;
-    }
+    const response = await fetch(`${API_URL}/staff/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error("Lỗi xóa nhân viên");
+    return true;
   },
 };
 
-// --- 5. HÀM KHỞI TẠO DỮ LIỆU ---
-// Hàm này gọi customerService.getAll(), vốn đã được bảo vệ bởi ensureArray
 export const initializeData = async () => {
   return await customerService.getAll();
 };

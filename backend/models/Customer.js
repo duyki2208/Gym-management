@@ -23,13 +23,19 @@ const customerSchema = mongoose.Schema(
     email: { type: String, default: "" }, // Email
     price: { type: Number, default: 0 }, // Giá gói
     remainingSessions: { type: Number, default: 0 }, // Số buổi còn lại
-
     // Trạng thái (Active/Inactive tính theo endDate ở Frontend hoặc Backend đều được)
   },
   {
     timestamps: true, // Tự động tạo createdAt, updatedAt
   }
 );
+
+// Middleware: Tự động sinh mã code nếu chưa có khi tạo mới
+customerSchema.pre("validate", async function () {
+  if (!this.code) {
+    this.code = "KH" + Date.now();
+  }
+});
 
 const Customer = mongoose.model("Customer", customerSchema);
 

@@ -6,8 +6,11 @@ const Packages = () => {
   const [list, setList] = useState([]);
   const [modal, setModal] = useState(false);
   const [edit, setEdit] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
+    setIsAdmin(user.role === "admin");
     const fetchPackages = async () => {
       try {
         const data = await packageService.getAll();
@@ -68,21 +71,23 @@ const Packages = () => {
             placeholder="Tìm kiếm gói..."
           />
         </div>
-        <button
-          onClick={() => {
-            setEdit(null);
-            setModal(true);
-          }}
-          className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-lg font-bold hover:opacity-90"
-        >
-          <span
-            className="material-symbols-outlined"
-            style={{ fontVariationSettings: "'FILL' 1" }}
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setEdit(null);
+              setModal(true);
+            }}
+            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-lg font-bold hover:opacity-90"
           >
-            add_circle
-          </span>
-          <span>Thêm gói</span>
-        </button>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              add_circle
+            </span>
+            <span>Thêm gói</span>
+          </button>
+        )}
       </div>
 
       <div className="rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
@@ -92,7 +97,7 @@ const Packages = () => {
               <th className="px-6 py-4">Tên gói</th>
               <th className="px-6 py-4">Giá (VNĐ)</th>
               <th className="px-6 py-4">Thời hạn</th>
-              <th className="px-6 py-4 text-center">Hành động</th>
+              {isAdmin && <th className="px-6 py-4 text-center">Hành động</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -111,27 +116,29 @@ const Packages = () => {
                   <td className="px-6 py-4 text-subtle-light dark:text-subtle-dark">
                     {p.duration || 0} ngày
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => {
-                        setEdit(p);
-                        setModal(true);
-                      }}
-                      className="p-2 hover:bg-primary/20 rounded-full transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-text-light dark:text-text-dark text-base">
-                        edit
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => del(p._id || p.id)}
-                      className="p-2 hover:bg-red-500/20 rounded-full transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-negative-light dark:text-negative-dark text-base">
-                        delete
-                      </span>
-                    </button>
-                  </td>
+                  {isAdmin && (
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => {
+                          setEdit(p);
+                          setModal(true);
+                        }}
+                        className="p-2 hover:bg-primary/20 rounded-full transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-text-light dark:text-text-dark text-base">
+                          edit
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => del(p._id || p.id)}
+                        className="p-2 hover:bg-red-500/20 rounded-full transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-negative-light dark:text-negative-dark text-base">
+                          delete
+                        </span>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
