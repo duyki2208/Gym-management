@@ -139,7 +139,7 @@ const StaffModal = ({ staff, onSave, onClose }) => {
               <label className="block text-sm font-medium mb-1.5 text-gray-700">
                 {staff
                   ? "Mật khẩu mới (để trống nếu không đổi)"
-                  : 'Mật khẩu <span className="text-red-500">*</span>'}
+                  : 'Mật khẩu '}
               </label>
               <input
                 type="password"
@@ -168,7 +168,7 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                   setFormData({ ...formData, role: e.target.value })
                 }
               >
-                <option value="pt">PT (HLV)</option>
+                <option value="pt">PT</option>
                 <option value="sale">Sale</option>
                 <option value="reception">Lễ tân</option>
                 <option value="manager">Quản lý</option>

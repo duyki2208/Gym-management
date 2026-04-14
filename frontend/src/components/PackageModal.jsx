@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 const PackageModal = ({ pkg, onSave, onClose }) => {
   const [formData, setFormData] = useState(pkg || { 
     name: '', 
+    type: 'monthly',
     duration: 30, 
     price: 0 
     // sessions không cần init ở đây, sẽ tính khi save
@@ -11,14 +12,15 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // LOGIC: Tự động gán số buổi (sessions) bằng số ngày (duration)
     const duration = parseInt(formData.duration) || 0;
+    const sessions = parseInt(formData.sessions) || 0;
     
     onSave({
       ...formData,
+      type: formData.type,
       duration: duration,
       price: parseInt(formData.price) || 0,
-      sessions: duration // <-- Quan trọng: Gán buổi bằng ngày
+      sessions: formData.type === 'session' ? sessions : 0 
     });
   };
 
@@ -43,9 +45,36 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
               placeholder="Ví dụ: Gói 1 tháng" 
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">Thời hạn (ngày)</label>
+            <label className="block text-sm font-medium mb-1.5 text-gray-700">Loại gói</label>
+            <select
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              value={formData.type || 'monthly'}
+              onChange={e => setFormData({...formData, type: e.target.value})}
+            >
+              <option value="monthly">Theo tháng (Gói thường)</option>
+              <option value="session">Theo buổi (Tập với PT)</option>
+            </select>
+          </div>
+          
+          {formData.type === 'session' && (
+            <div className="animate-fade-in-up">
+              <label className="block text-sm font-medium mb-1.5 text-gray-700">Tổng số buổi tập <span className="text-red-500">*</span></label>
+              <input 
+                type="number" 
+                required 
+                min="1"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-900" 
+                value={formData.sessions} 
+                onChange={e => setFormData({...formData, sessions: e.target.value})} 
+                placeholder="Ví dụ: 12" 
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5 text-gray-700">Thời hạn sử dụng gói (tính theo ngày)</label>
             <input 
               type="number" 
               required 
@@ -53,9 +82,8 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
               value={formData.duration} 
               onChange={e => setFormData({...formData, duration: e.target.value})} 
-              placeholder="30" 
+              placeholder="Ví dụ: 90 ngày" 
             />
-            <p className="text-xs text-gray-500 mt-1">Hệ thống sẽ tự động tạo số buổi tập tương ứng.</p>
           </div>
           
           <div>

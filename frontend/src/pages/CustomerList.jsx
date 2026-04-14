@@ -3,10 +3,23 @@ import { customerService, packageService } from "../services/customerService";
 import CustomerModal from "../components/customer/CustomerModal"; // Existing Edit/Add Modal
 import CustomerDetailModal from "../components/customer/CustomerDetailModal"; // New Detail Modal
 
-const getCustomerStatus = (endDate) => {
+const getCustomerStatus = (startDate, endDate) => {
   if (!endDate) return { status: "active", label: "Hoạt động" };
-  const end = new Date(endDate);
   const now = new Date();
+  const start = startDate ? new Date(startDate) : now;
+  const end = new Date(endDate);
+  
+  // Kiểm tra ngày bắt đầu: Nếu ngày bắt đầu > hiện tại => Chưa kích hoạt
+  // Note: So sánh timestamp.
+  if (start.getTime() > now.getTime() + 86400000) { // Lớn hơn 1 ngày so với hiện tại (như user yêu cầu) hoặc chỉ cần > now tùy ý. User yêu cầu "xa hơn ngày hiện tại là 1 ngày", tức là > tomorrow? 
+      // User said: "nếu ngày bắt đầu xa hơn ngày hiện tại là 1 ngày thì sẽ để là chưa bắt đầu nhé" -> > now + 1 day? Or just strictly future?
+      // Logic phổ biến: Nếu start > now là chưa bắt đầu.
+      // Tuy nhiên user nói: "xa hơn ngày hiện tại là 1 ngày"
+      // Giả sử hôm nay 05.Start 06 => Chưa.
+      // Vậy dùng start > now là đủ.
+      return { status: "not_activated", label: "Chưa kích hoạt" };
+  }
+
   const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
   if (diff < 0) return { status: "expired", label: "Hết hạn" };
   if (diff <= 14) return { status: "expiring", label: "Sắp hết" };
@@ -90,7 +103,7 @@ const CustomerList = () => {
       setShowEditModal(false);
     } catch (error) {
       console.error("Lỗi lưu khách hàng:", error);
-      alert("Có lỗi xảy ra khi lưu khách hàng. Vui lòng thử lại.");
+      // toast handled by api.js
     }
   };
 
@@ -101,7 +114,7 @@ const CustomerList = () => {
         fetchData(); // Reload data
       } catch (error) {
         console.error("Lỗi xóa khách hàng:", error);
-        alert("Có lỗi xảy ra khi xóa khách hàng. Vui lòng thử lại.");
+        // toast handled by api.js
       }
     }
   };
@@ -110,16 +123,13 @@ const CustomerList = () => {
   const displayCustomers = customers;
 
   if (loading && customers.length === 0)
-    return <div className="p-10 text-center">Đang kết nối Backend...</div>;
+    return <div className="p-10 text-center">loading...</div>;
 
   return (
     <div className="flex flex-col gap-6 font-display p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-           <h1 className="text-3xl font-black">Quản lý Khách hàng</h1>
-           <p className="text-gray-500 mt-1">
-              Danh sách hội viên ({totalCustomers} khách hàng)
-           </p>
+           <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">Quản lý Khách hàng</h1>
         </div>
         
         {isAdmin && (
@@ -156,6 +166,7 @@ const CustomerList = () => {
              >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">Đang hoạt động</option>
+                <option value="not_activated">Chưa kích hoạt</option>
                 <option value="expiring">Sắp hết hạn (≤ 14 ngày)</option>
                 <option value="expired">Đã hết hạn</option>
              </select>
@@ -164,18 +175,19 @@ const CustomerList = () => {
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 uppercase text-xs font-bold text-gray-500 tracking-wider">
+          <thead className="bg-gray-50 uppercase text-sm font-black text-gray-800 tracking-wider font-display">
             <tr>
-              <th className="p-4">Tên khách hàng</th>
-              <th className="p-4">SĐT</th>
-              <th className="p-4">Gói tập</th>
-              <th className="p-4">Trạng thái</th>
-              {isAdmin && <th className="p-4 text-right">Hành động</th>}
+              <th className="p-4 w-[5%]"></th>
+              <th className="p-4 pl-8 w-[25%]">HỌ VÀ TÊN</th>
+              <th className="p-4 w-[15%]">SĐT</th>
+              <th className="p-4 pl-8 w-[20%]">GÓI TẬP</th>
+              <th className="p-4 w-[20%]">Trạng thái</th>
+              {isAdmin && <th className="p-4 text-right w-[15%]">Hành động</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 font-display">
             {displayCustomers.length > 0 ? displayCustomers.map((c) => {
-                const st = getCustomerStatus(c.endDate);
+                const st = getCustomerStatus(c.startDate, c.endDate);
                 return (
                   <tr 
                     key={c._id || c.id} 
@@ -185,15 +197,26 @@ const CustomerList = () => {
                         setShowDetailModal(true);
                     }}
                   >
-                    <td className="p-4">
-                        <div className="font-bold text-gray-900 text-base">{c.name}</div>
-                        <div className="text-xs text-gray-500 font-mono mt-0.5">{c.code}</div>
+                    <td className="p-4 pr-0">
+                       <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden mx-auto md:mx-0">
+                          {c.avatar && c.avatar !== "👤" ? (
+                            <img src={c.avatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                               <span className="material-symbols-outlined text-sm">face</span>
+                            </div>
+                          )}
+                       </div>
                     </td>
-                    <td className="p-4 text-sm font-bold text-gray-900">
+                    <td className="p-4 pl-8">
+                        <div className="font-medium text-gray-900 text-base">{c.name}</div>
+                        <div className="text-xs text-gray-500 font-light mt-0.5">{c.code}</div>
+                    </td>
+                    <td className="p-4 text-base font-medium text-gray-900">
                         {c.phone}
                     </td>
-                    <td className="p-4">
-                        <span className="font-medium text-gray-900">{c.packageType}</span>
+                    <td className="p-4 pl-8">
+                        <span className="text-base font-medium text-gray-900">{c.packageType}</span>
                     </td>
                     <td className="p-4">
                       <span
@@ -201,12 +224,17 @@ const CustomerList = () => {
                           st.status === "active"
                             ? "bg-green-50 text-green-700 border-green-200"
                             : st.status === "expiring" 
-                            ? "bg-orange-50 text-orange-700 border-orange-200"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200" 
+                            : st.status === "not_activated"
+                            ? "bg-sky-50 text-sky-700 border-sky-200"
                             : "bg-red-50 text-red-700 border-red-200"
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                             st.status === "active" ? "bg-green-500" : st.status === "expiring" ? "bg-orange-500" : "bg-red-500"
+                             st.status === "active" ? "bg-green-500" 
+                             : st.status === "expiring" ? "bg-yellow-500" 
+                             : st.status === "not_activated" ? "bg-sky-500"
+                             : "bg-red-500"
                         }`}></span>
                         {st.label}
                       </span>
@@ -242,7 +270,7 @@ const CustomerList = () => {
                 );
               }) : (
                  <tr>
-                    <td colSpan={isAdmin ? 5 : 4} className="p-12 text-center text-gray-500">
+                    <td colSpan={isAdmin ? 6 : 5} className="p-12 text-center text-gray-500">
                         <div className="flex flex-col items-center gap-3">
                             <div className="bg-gray-100 p-4 rounded-full">
                                 <span className="material-symbols-outlined text-3xl text-gray-400">search_off</span>

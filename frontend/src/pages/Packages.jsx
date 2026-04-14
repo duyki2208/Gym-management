@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { packageService } from "../services/customerService";
 import PackageModal from "../components/PackageModal";
 
@@ -31,7 +32,7 @@ const Packages = () => {
       setModal(false);
     } catch (error) {
       console.error("Lỗi lưu gói tập:", error);
-      alert("Có lỗi xảy ra khi lưu gói tập. Vui lòng thử lại.");
+      // Global error handled by api.js
     }
   };
 
@@ -43,7 +44,7 @@ const Packages = () => {
         setList(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Lỗi xóa gói tập:", error);
-        alert("Có lỗi xảy ra khi xóa gói tập. Vui lòng thử lại.");
+        // Global error handled by api.js
       }
     }
   };
@@ -55,9 +56,6 @@ const Packages = () => {
           <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
             Quản lý Gói tập
           </h1>
-          <p className="text-subtle-light dark:text-subtle-dark">
-            Xem, thêm, sửa các gói tập.
-          </p>
         </div>
       </div>
 
@@ -95,6 +93,7 @@ const Packages = () => {
           <thead className="bg-background-light dark:bg-background-dark text-sm font-medium text-text-light dark:text-text-dark">
             <tr>
               <th className="px-6 py-4">Tên gói</th>
+              <th className="px-6 py-4">Loại gói</th>
               <th className="px-6 py-4">Giá (VNĐ)</th>
               <th className="px-6 py-4">Thời hạn</th>
               {isAdmin && <th className="px-6 py-4 text-center">Hành động</th>}
@@ -107,13 +106,18 @@ const Packages = () => {
                   key={p._id || p.id}
                   className="hover:bg-primary/10 transition-colors"
                 >
-                  <td className="px-6 py-4 font-normal text-text-light dark:text-text-dark">
+                  <td className="px-6 py-4 font-medium text-text-light dark:text-text-dark">
                     {p.name || "N/A"}
                   </td>
-                  <td className="px-6 py-4 text-subtle-light dark:text-subtle-dark">
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${p.type === 'session' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {p.type === 'session' ? 'Theo buổi' : 'Theo tháng'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-subtle-light dark:text-subtle-dark">
                     {p.price ? p.price.toLocaleString() : "0"}
                   </td>
-                  <td className="px-6 py-4 text-subtle-light dark:text-subtle-dark">
+                  <td className="px-6 py-4 font-medium text-subtle-light dark:text-subtle-dark">
                     {p.duration || 0} ngày
                   </td>
                   {isAdmin && (

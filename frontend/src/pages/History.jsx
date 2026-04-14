@@ -239,7 +239,7 @@ const History = () => {
     >
       {/* Header & Filters */}
       <div className="flex flex-wrap justify-between items-center gap-4">
-        <h1 className="text-3xl font-black text-text-light dark:text-text-dark">
+        <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
           Lịch sử & Thống kê
         </h1>
         <div className="flex gap-2">
@@ -425,7 +425,7 @@ const History = () => {
       {/* Bảng Lịch sử */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
         <div className="p-6 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
+          <h3 className="text-xl font-bold text-black dark:text-white">
             Nhật ký hoạt động ({getLabel()})
           </h3>
           <div className="relative w-full sm:w-auto">
@@ -442,7 +442,7 @@ const History = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 uppercase">
+            <thead className="bg-gray-50 dark:bg-gray-800 text-black dark:text-white uppercase font-bold">
               <tr>
                 <th className="p-4">Khách hàng</th>
                 <th className="p-4">Thời gian</th>
@@ -463,13 +463,13 @@ const History = () => {
                     key={item._id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <td className="p-4 font-medium text-text-light dark:text-text-dark">
+                    <td className="p-4 font-bold text-black dark:text-white">
                       {item.customerName}
                     </td>
-                    <td className="p-4 text-gray-500">
+                    <td className="p-4 text-black dark:text-white font-medium">
                       {formatDateTime(item.time)}
                     </td>
-                    <td className="p-4 text-text-light dark:text-text-dark">
+                    <td className="p-4 text-black dark:text-white font-medium">
                       {item.packageType || "Vãng lai"}
                     </td>
                     <td className="p-4 text-right">

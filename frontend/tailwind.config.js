@@ -27,8 +27,9 @@ export default {
         "negative-dark": "#ff6b6b",
       },
       fontFamily: {
+        "sans": ["Lexend", "sans-serif"],
         "display": ["Lexend", "sans-serif"],
-        "body": ["Manrope", "sans-serif"]
+        "body": ["Lexend", "sans-serif"]
       },
     },
   },

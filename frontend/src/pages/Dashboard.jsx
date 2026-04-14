@@ -11,18 +11,11 @@ import {
 } from "lucide-react";
 import { customerService, checkInService } from "../services/customerService";
 import { getCustomerStatus } from "../utils/dateUtils";
+import { LOCAL_STORAGE_KEYS, ROLES } from "../utils/constants";
+import { useQuery } from '@tanstack/react-query';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    expiring: 0,
-    todayCheckIns: 0,
-    revenue: 0,
-  });
-  const [peakHours, setPeakHours] = useState([]);
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Can keep for other uses or remove if unused, but we'll remove it since we use React Query's isLoading.
   
   // State lưu thông tin user và quyền
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,54 +23,31 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Lấy thông tin User từ key 'gym_user' (khớp với authService.js)
-    const storedUser = localStorage.getItem("gym_user");
+    const storedUser = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
     if (storedUser) {
       try {
         const userObj = JSON.parse(storedUser);
         setCurrentUser(userObj);
-        // Kiểm tra quyền (giả sử role='admin')
-        setIsAdmin(userObj.role === "admin");
+        // Kiểm tra quyền
+        setIsAdmin(userObj.role === ROLES.ADMIN);
       } catch (e) {
         console.error("Lỗi parse user:", e);
       }
     }
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const data = await customerService.getDashboardStats();
-        
-        if (data) {
-          setStats({
-            total: data.total,
-            active: data.active,
-            expiring: data.expiring,
-            todayCheckIns: data.todayCheckIns,
-            revenue: data.revenue,
-          });
-          setPeakHours(data.peakHours);
-          
-          setActivities(data.recentActivities.map(act => ({
-             id: act._id,
-             customerName: act.customerName,
-             time: act.time ? new Date(act.time).toLocaleTimeString("vi-VN", {
-               hour: "2-digit",
-               minute: "2-digit"
-             }) : "--:--",
-             type: act.type || "in"
-          })));
-        }
-
-      } catch (error) {
-        console.error("Lỗi tải Dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
   }, []);
 
-  if (loading) {
+  // Sử dụng React Query thay cho useEffect cục bộ
+  const { data: dashboardData, isLoading, isError, error } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const data = await customerService.getDashboardStats();
+      if (!data) throw new Error("Không thể tải dữ liệu thống kê");
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // Cầm data cũ trong 5 phút trước khi refetch ngầm
+  });
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full">
         <Loader2 className="animate-spin text-primary" size={48} />
@@ -85,10 +55,38 @@ const Dashboard = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full text-red-500">
+        <p>Lỗi: {error.message}</p>
+      </div>
+    );
+  }
+
+  // Fallback data nếu API trả về null hoặc lỗi nhẹ
+  const stats = {
+    total: dashboardData?.total || 0,
+    active: dashboardData?.active || 0,
+    expiring: dashboardData?.expiring || 0,
+    todayCheckIns: dashboardData?.todayCheckIns || 0,
+    revenue: dashboardData?.revenue || 0,
+  };
+  const peakHours = dashboardData?.peakHours || [];
+  
+  const activities = (dashboardData?.recentActivities || []).map(act => ({
+     id: act._id,
+     customerName: act.customerName,
+     time: act.time ? new Date(act.time).toLocaleTimeString("vi-VN", {
+       hour: "2-digit",
+       minute: "2-digit"
+     }) : "--:--",
+     type: act.type || "in"
+  }));
+
   return (
     <div className="flex flex-col gap-6 p-2 md:p-0">
       <div className="flex flex-col gap-2">
-        <h1 className="text-text-light dark:text-text-dark text-4xl font-black leading-tight tracking-[-0.033em]">
+        <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
           Tổng quan
         </h1>
         

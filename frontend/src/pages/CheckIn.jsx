@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { customerService, checkInService } from "../services/customerService";
 import { getCustomerStatus } from "../utils/dateUtils";
 import { LogIn, CheckCircle, XCircle } from "lucide-react";
@@ -32,14 +33,14 @@ const CheckIn = () => {
 
   const handleCheckIn = async (customer) => {
     if (!customer || !customer._id) {
-      alert("Thông tin khách hàng không hợp lệ.");
+      toast.error("Thông tin khách hàng không hợp lệ.");
       return;
     }
 
     // Kiểm tra trạng thái gói tập
     const status = getCustomerStatus(customer.endDate);
     if (status.status === "expired") {
-      alert(
+      toast.error(
         "Gói tập của khách hàng đã hết hạn. Vui lòng gia hạn trước khi check-in."
       );
       return;
@@ -65,7 +66,7 @@ const CheckIn = () => {
       setCustomers(customersList);
     } catch (error) {
       console.error("Lỗi check-in:", error);
-      alert("Có lỗi xảy ra khi check-in. Vui lòng thử lại.");
+      // toast.error handled by api.js global interceptor
     } finally {
       setCheckingIn(null);
     }
@@ -87,12 +88,9 @@ const CheckIn = () => {
     <div className="flex flex-col gap-6 font-display p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black text-text-light dark:text-text-dark">
+          <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
             Check-in Khách hàng
           </h1>
-          <p className="text-subtle-light dark:text-subtle-dark mt-1">
-            Quét mã hoặc tìm kiếm khách hàng để check-in
-          </p>
         </div>
       </div>
 
@@ -131,7 +129,7 @@ const CheckIn = () => {
             <tbody>
               {filteredCustomers.length > 0 ? (
                 filteredCustomers.map((c) => {
-                  const status = getCustomerStatus(c.endDate);
+                  const status = getCustomerStatus(c.startDate, c.endDate);
                   const isCheckingIn = checkingIn === c._id;
 
                   return (
@@ -139,25 +137,25 @@ const CheckIn = () => {
                       key={c._id || c.id}
                       className="border-t hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                     >
-                      <td className="p-4 font-bold text-text-light dark:text-text-dark">
+                      <td className="p-4 font-medium text-base text-gray-900 dark:text-gray-100">
                         {c.name || "N/A"}
                       </td>
-                      <td className="p-4 text-text-light dark:text-text-dark">
+                      <td className="p-4 text-base font-medium text-gray-900 dark:text-gray-100">
                         {c.phone || "N/A"}
                       </td>
-                      <td className="p-4 text-text-light dark:text-text-dark">
+                      <td className="p-4 text-base font-medium text-gray-900 dark:text-gray-100">
                         {c.packageType || "N/A"}
                       </td>
                       <td className="p-4">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-bold ${
-                            status.status === "active"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : status.status === "expiring"
-                              ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                          }`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${status.color}`}
                         >
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                             status.status === "active" ? "bg-green-500" 
+                             : status.status === "expiring" ? "bg-yellow-500" 
+                             : status.status === "not_activated" ? "bg-sky-500"
+                             : "bg-red-500"
+                          }`}></span>
                           {status.label}
                         </span>
                       </td>

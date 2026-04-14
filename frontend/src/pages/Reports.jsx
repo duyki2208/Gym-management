@@ -4,12 +4,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { Download, Users, DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Download, Users, DollarSign, TrendingUp, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF5733', '#C70039'];
 
 const Reports = () => {
-  const [summary, setSummary] = useState({ totalRevenue: 0, activeMembers: 0, newMembers: 0 });
+  const [summary, setSummary] = useState({ totalRevenue: 0, activeMembers: 0, newMembers: 0, retentionRate: 0, churnRate: 0 });
   const [revenueData, setRevenueData] = useState([]);
   const [packageData, setPackageData] = useState([]);
   const [expiringMembers, setExpiringMembers] = useState([]);
@@ -39,21 +40,59 @@ const Reports = () => {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ["Date", "Revenue"];
-    const csvContent = [
-      headers.join(","),
-      ...revenueData.map(row => `${row.date},${row.revenue}`)
-    ].join("\n");
+  const exportToExcel = async () => {
+    try {
+      // 1. Fetch details data
+      const details = await reportService.getRevenueDetails();
+      
+      // 2. Format structure for Excel
+      const excelData = details.map((item, index) => ({
+        "STT": index + 1,
+        "Mã KH": item.customerId || `KH-${item._id.substring(item._id.length - 4)}`, // Fallback
+        "Tên Khách Hàng": item.name,
+        "SĐT": item.phone,
+        "Tên Gói Tập": item.packageType,
+        "Kích Hoạt": new Date(item.startDate).toLocaleDateString("vi-VN"),
+        "Hết Hạn": new Date(item.endDate).toLocaleDateString("vi-VN"),
+        "Thành Tiền (VNĐ)": item.price
+      }));
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "revenue_report.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Calculate total revenue
+      const totalAmount = excelData.reduce((sum, item) => sum + (item["Thành Tiền (VNĐ)"] || 0), 0);
+
+      // 3. Create Worksheet from array of objects
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Append Summary row
+      XLSX.utils.sheet_add_aoa(ws, [
+        ['Tổng', '', '', '', '', '', '', totalAmount]
+      ], { origin: -1 }); // append to bottom
+
+      // Set some column widths
+      ws['!cols'] = [
+        { wch: 5 },  // STT
+        { wch: 15 }, // Mã KH
+        { wch: 25 }, // Tên KH
+        { wch: 15 }, // SDT
+        { wch: 20 }, // Tên Package
+        { wch: 15 }, // Kich hoat
+        { wch: 15 }, // Het han
+        { wch: 20 }, // Thanh Tien
+      ];
+
+      // 4. Create Workbook and add Worksheet
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Doanh Thu");
+
+      // 5. Generate and download file
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      XLSX.writeFile(wb, `BaoCao_DoanhThu_T${currentMonth}_${currentYear}.xlsx`);
+
+    } catch (error) {
+      console.error("Export Excel error", error);
+      // toast handled by api.js
+    }
   };
 
   if (loading) {
@@ -66,12 +105,12 @@ const Reports = () => {
   return (
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Báo Cáo & Thống Kê</h1>
+        <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">Báo Cáo & Thống Kê</h1>
         <button 
-          onClick={exportToCSV}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          onClick={exportToExcel}
+          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
         >
-          <Download size={20} /> Xuất Báo Cáo
+          <Download size={20} /> Xuất Báo Cáo Excel
         </button>
       </div>
 
@@ -106,6 +145,31 @@ const Reports = () => {
             <TrendingUp size={24} />
           </div>
         </div>
+      </div>
+
+      {/* Member Insights (Retention & Churn) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+           <div>
+             <p className="text-gray-500 text-sm font-medium mb-1">Tỷ lệ giữ chân</p>
+             <div className="flex items-center gap-2">
+               <p className="text-3xl font-bold text-green-600">{summary.retentionRate}%</p>
+               <span className="flex items-center text-sm text-green-600 bg-green-50 px-2 py-1 rounded-full"><ArrowUpRight size={16}/> Tích cực</span>
+             </div>
+             <p className="text-xs text-gray-400 mt-2">Dựa trên tỷ lệ khách hàng còn Active/Tổng khách hàng</p>
+           </div>
+         </div>
+
+         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+           <div>
+             <p className="text-gray-500 text-sm font-medium mb-1">Tỷ lệ rời bỏ</p>
+             <div className="flex items-center gap-2">
+               <p className="text-3xl font-bold text-red-600">{summary.churnRate}%</p>
+               <span className="flex items-center text-sm text-red-600 bg-red-50 px-2 py-1 rounded-full"><ArrowDownRight size={16}/> Cần chú ý</span>
+             </div>
+             <p className="text-xs text-gray-400 mt-2">Phần trăm khách hàng đã hết hạn và chưa gia hạn</p>
+           </div>
+         </div>
       </div>
 
       {/* Revenue Chart Section (Full Width, Custom Ticks) */}

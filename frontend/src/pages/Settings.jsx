@@ -3,7 +3,7 @@ import React from 'react';
 const Settings = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <h1 className="text-4xl font-black text-text-light dark:text-text-dark">Cài đặt Hệ thống</h1>
+      <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">Cài đặt Hệ thống</h1>
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
         <div className="p-6 border-b border-border-light dark:border-border-dark"><h2 className="text-xl font-bold text-text-light dark:text-text-dark">Thông tin chung</h2></div>
         <div className="p-6 space-y-6">

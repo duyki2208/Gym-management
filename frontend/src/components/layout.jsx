@@ -49,8 +49,8 @@ const Layout = ({ children }) => {
     }
 
     // Staff (PT, Sale, Reception): Show limited items
-    // Hide Packages, Staff, Notifications, Reports
-    return ['/', '/customers', '/checkin', '/history'].includes(item.path);
+    // Hide Notifications, Reports
+    return ['/', '/customers', '/checkin', '/history', '/packages', '/staff'].includes(item.path);
   });
 
   return (
@@ -88,13 +88,13 @@ const Layout = ({ children }) => {
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
                   isActive
-                    ? "bg-primary text-white shadow-lg shadow-primary/30 font-bold"
-                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200"
+                    ? "bg-green-100 text-green-900 font-bold"
+                    : "text-gray-900 hover:bg-green-50 hover:text-green-700"
                 }`}
               >
                 <item.icon
                   size={20}
-                  className={`transition-colors ${isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600"}`}
+                  className={`transition-colors ${isActive ? "text-green-700" : "text-gray-900 group-hover:text-green-700"}`}
                 />
                 <span className="text-sm">{item.label}</span>
               </Link>

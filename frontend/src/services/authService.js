@@ -1,66 +1,60 @@
-// Định nghĩa đường dẫn API Backend
-const API_URL = 'http://localhost:5000/api';
+import api from './api';
+import { LOCAL_STORAGE_KEYS } from '../utils/constants';
 
 export const authService = {
-  // Hàm đăng nhập: Gọi API thực tế thay vì check Mock Data
+  // Hàm đăng nhập
   login: async (username, password) => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const response = await api.post('/login', { username, password });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Nếu Server trả về lỗi (400, 401, 500...), ném lỗi ra để bắt ở UI
-        throw new Error(data.message || 'Đăng nhập thất bại');
-      }
-
-      // Đăng nhập thành công!
-      // Lưu Token và thông tin User vào localStorage
+      // Lưu thông tin vào localStorage (bao gồm cả role)
       if (data.token) {
-        localStorage.setItem('accessToken', data.token); // Lưu token để dùng cho các request sau
+        localStorage.setItem('gym_token', data.token);
       }
       
       if (data.user) {
-        localStorage.setItem('gym_user', JSON.stringify(data.user)); // Lưu thông tin hiển thị
+        localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(data.user));
       }
 
       return data.user;
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
-      throw error; // Ném lỗi tiếp để form đăng nhập hiển thị thông báo đỏ
+      // Axios store error response in error.response.data
+      const message = error.response?.data?.message || error.message || 'Đăng nhập thất bại';
+      throw new Error(message);
     }
   },
 
   // Hàm đăng xuất
   logout: () => {
-    localStorage.removeItem('gym_user');
-    localStorage.removeItem('accessToken');
-    // Có thể reload trang hoặc điều hướng về login tại đây nếu cần
-    // window.location.href = '/login'; 
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
+    localStorage.removeItem('gym_token');
+    // Điều hướng về login
+    window.location.href = '/login'; 
   },
 
-  // Lấy thông tin user hiện tại (để hiển thị tên, avatar...)
+  // Lấy thông tin user hiện tại
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('gym_user');
-    return userStr ? JSON.parse(userStr) : null;
+    const userStr = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr);
+    } catch (e) {
+      console.error("Error parsing user from localStorage", e);
+      return null;
+    }
   },
 
-  // Lấy token (để kẹp vào header các request gọi API lấy dữ liệu)
+  // Lấy token (Đã có interceptor xử lý, nhưng giữ lại nếu cần dùng lẻ)
   getToken: () => {
-    return localStorage.getItem('accessToken');
+    return localStorage.getItem('gym_token');
   },
   
-  // Hàm kiểm tra xem user có quyền admin/manager không (Optional helper)
+  // Hàm kiểm tra quyền
   hasRole: (allowedRoles) => {
-    const userStr = localStorage.getItem('gym_user');
-    if (!userStr) return false;
-    const user = JSON.parse(userStr);
+    const user = authService.getCurrentUser();
+    if (!user) return false;
     return allowedRoles.includes(user.role);
   }
 };

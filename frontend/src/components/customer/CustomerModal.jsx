@@ -1,7 +1,23 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { X } from "lucide-react";
+import { staffService } from "../../services/customerService";
 
 const CustomerModal = ({ customer, packages, onSave, onClose }) => {
+  const [staffList, setStaffList] = useState([]);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const data = await staffService.getAll();
+        setStaffList(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchStaff();
+  }, []);
+
   const [formData, setFormData] = useState({
     // 1. Thông tin cơ bản
     code: "",
@@ -25,6 +41,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
 
     // 4. Dịch vụ thêm
     trainer: "",
+    assignedStaff: "",
     hasLocker: false,
     hasWater: false,
   });
@@ -82,6 +99,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         remainingSessions: customer.remainingSessions || 0,
         healthNote: customer.healthNote || "",
         trainer: customer.trainer || "",
+        assignedStaff: customer.assignedStaff?._id || customer.assignedStaff || "",
         hasLocker: customer.hasLocker || false,
         hasWater: customer.hasWater || false,
         // Giữ lại _id và các trường khác nhưng không ghi đè date fields đã format
@@ -106,6 +124,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         remainingSessions: 0,
         healthNote: "",
         trainer: "",
+        assignedStaff: "",
         hasLocker: false,
         hasWater: false,
       });
@@ -153,15 +172,23 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // --- FIX: Thêm xác thực ---
-    if (!formData.packageType || !formData.endDate) {
-      alert(
-        "Vui lòng chọn một gói tập hợp lệ. Ngày hết hạn sẽ được tự động tính."
+    if (!formData.packageType || !formData.endDate || !formData.assignedStaff) {
+      toast.error(
+        "Vui lòng điền nhân viên tư vấn, gói tập và ngày hết hạn hợp lệ."
       );
       return;
     }
     onSave(formData);
   };
+
+  const filteredAndSortedStaff = [...staffList]
+    .filter((s) => ["manager", "pt", "sale"].includes(s.role))
+    .sort((a, b) => {
+      // Sort to group identical roles together
+      if (a.role < b.role) return -1;
+      if (a.role > b.role) return 1;
+      return 0;
+    });
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -323,7 +350,26 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
               2. Thông tin gói tập
             </h3>
             <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-              <div className="col-span-2">
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nhân viên tư vấn <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.assignedStaff}
+                  onChange={(e) => setFormData({ ...formData, assignedStaff: e.target.value })}
+                >
+                  <option value="">-- Chọn nhân viên --</option>
+                  {filteredAndSortedStaff.map((s) => (
+                    <option key={s._id || s.id} value={s._id || s.id}>
+                      {s.name || s.fullName} ({s.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Loại gói <span className="text-red-500">*</span>
                 </label>
@@ -411,20 +457,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                 4. Dịch vụ thêm
               </h3>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thuê PT Riêng
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={formData.trainer}
-                    onChange={(e) =>
-                      setFormData({ ...formData, trainer: e.target.value })
-                    }
-                    placeholder="Nhập tên PT"
-                  />
-                </div>
+
 
                 <div
                   className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer"

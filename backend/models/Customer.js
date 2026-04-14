@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const customerSchema = mongoose.Schema(
   {
     name: { type: String, required: true },
-    code: { type: String, required: true, unique: true },
+    code: { type: String, required: true },
     phone: { type: String, required: true },
     dob: { type: Date }, // Ngày sinh
     gender: { type: String },
@@ -17,6 +17,7 @@ const customerSchema = mongoose.Schema(
 
     // Các dịch vụ đi kèm
     trainer: { type: String, default: "" }, // Tên PT riêng
+    assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Nhân viên tư vấn bán gói
     hasLocker: { type: Boolean, default: false },
     hasWater: { type: Boolean, default: false },
     healthNote: { type: String, default: "" }, // Ghi chú sức khỏe
@@ -31,9 +32,22 @@ const customerSchema = mongoose.Schema(
 );
 
 // Middleware: Tự động sinh mã code nếu chưa có khi tạo mới
+const Counter = require("./Counter");
+
+// Middleware: Tự động sinh mã code nếu chưa có khi tạo mới
 customerSchema.pre("validate", async function () {
-  if (!this.code) {
-    this.code = "KH" + Date.now();
+  if (this.isNew && !this.code) {
+    try {
+      const counter = await Counter.findByIdAndUpdate(
+        { _id: "customerId" },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      // Format: KH + 4 digits (e.g., KH0001, KH0002...)
+      this.code = "KH" + counter.seq.toString().padStart(4, "0");
+    } catch (error) {
+      throw error;
+    }
   }
 });
 

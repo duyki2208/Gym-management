@@ -1,5 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
+dotenv.config();
+
 const cors = require("cors");
 const connectDB = require("./config/db");
 
@@ -9,7 +11,10 @@ const packageRoutes = require("./routes/packageRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 
-dotenv.config();
+// Initialize Cron Jobs
+const startExpirationCron = require("./jobs/expirationCron");
+startExpirationCron();
+
 connectDB();
 
 const app = express();
@@ -23,9 +28,11 @@ app.use("/api/customers", customerRoutes); // Gắn route /api/customers vào cu
 app.use("/api/packages", packageRoutes);
 const staffRoutes = require("./routes/staffRoutes");
 const checkInRoutes = require("./routes/checkInRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
 app.use("/api/staff", staffRoutes);
 app.use("/api", authRoutes); // Đăng nhập qua /api/login
 app.use("/api/checkins", checkInRoutes);
+app.use("/api/workouts", workoutRoutes);
 const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use("/api/dashboard", dashboardRoutes);
 

@@ -22,9 +22,15 @@ const loginUser = async (req, res) => {
 
     // 3. Nếu đúng hết thì trả về thông tin user và Token (nếu có)
     // Tùy vào cách bạn tạo token, đây là ví dụ cơ bản:
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error("LỖI NGHIÊM TRỌNG: JWT_SECRET chưa được cấu hình. Ứng dụng không thể tạo token.");
+      return res.status(500).json({ message: "Lỗi cấu hình server nội bộ (Auth)." });
+    }
+
     const token = jwt.sign(
       { id: user._id, role: user.role }, 
-      process.env.JWT_SECRET || "secret_key_tam_thoi", // Nhớ cấu hình cái này trong .env
+      jwtSecret,
       { expiresIn: '1d' }
     );
 

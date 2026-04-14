@@ -3,7 +3,7 @@ import React from 'react';
 const Notifications = () => {
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-black text-text-light dark:text-text-dark">Thông báo & Nhắc nhở</h1>
+      <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">Thông báo & Nhắc nhở</h1>
       <div className="grid gap-4">
         {['Nhắc nhở Hết hạn Gói tập', 'Nhắc nhở Không Hoạt động', 'Thông báo Gia hạn Thành công'].map((item, i) => (
           <div key={i} className="flex justify-between items-center p-5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">

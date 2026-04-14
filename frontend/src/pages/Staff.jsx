@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { staffService } from "../services/customerService";
 import StaffModal from "../components/StaffModal";
+import StaffDetailModal from "../components/StaffDetailModal";
 
 const Staff = () => {
   const [list, setList] = useState([]);
   const [modal, setModal] = useState(false);
+  const [detailStaff, setDetailStaff] = useState(null);
+  const [todaySchedules, setTodaySchedules] = useState([]);
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -13,8 +16,12 @@ const Staff = () => {
     try {
       setLoading(true);
       const data = await staffService.getAll();
-
       setList(Array.isArray(data) ? data : []);
+
+      // Lấy lịch làm việc của hôm nay
+      const today = new Date().toLocaleDateString("en-CA");
+      const schedulesData = await staffService.getSchedules({ date: today });
+      setTodaySchedules(schedulesData);
     } catch (error) {
       console.error("Lỗi tải nhân viên:", error);
       setList([]);
@@ -36,7 +43,7 @@ const Staff = () => {
       setModal(false);
     } catch (error) {
       console.error("Lỗi lưu nhân viên:", error);
-      alert("Có lỗi xảy ra khi lưu nhân viên.");
+      // toast handled by api.js
     }
   };
 
@@ -46,7 +53,7 @@ const Staff = () => {
         await staffService.delete(id);
         await fetchStaff();
       } catch (error) {
-        alert("Có lỗi xảy ra khi xóa nhân viên.");
+        // toast handled by api.js
       }
     }
   };
@@ -68,12 +75,9 @@ const Staff = () => {
     <div className="flex flex-col gap-6 font-display">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black text-text-light dark:text-text-dark">
+          <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
             Quản lý Nhân viên
           </h1>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Danh sách nhân sự và phân quyền.
-          </p>
         </div>
         {isAdmin && (
           <button
@@ -96,8 +100,8 @@ const Staff = () => {
               <tr>
                 <th className="px-6 py-4">Họ tên</th>
                 <th className="px-6 py-4">Chức vụ</th>
-                <th className="px-6 py-4">Ngày sinh</th>
-                <th className="px-6 py-4">SĐT</th>
+                <th className="px-6 py-4 text-center">SỐ KH PHỤ TRÁCH</th>
+                <th className="px-6 py-4 text-center">Lịch làm việc</th>
                 {isAdmin && <th className="px-6 py-4 text-right">Hành động</th>}
               </tr>
             </thead>
@@ -109,17 +113,22 @@ const Staff = () => {
                   </td>
                 </tr>
               ) : list.length > 0 ? (
-                list.map((s) => (
+                list.map((s) => {
+                  const shiftData = todaySchedules.find(sch => sch.staff && (sch.staff._id === (s._id || s.id) || sch.staff === (s._id || s.id)));
+                  const shift = shiftData ? shiftData.shiftType : "Nghỉ";
+                  
+                  return (
                   <tr
                     key={s._id || s.id}
-                    className="hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors"
+                    className="hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors cursor-pointer"
+                    onClick={() => setDetailStaff(s)}
                   >
-                    <td className="px-6 py-4 font-bold text-text-light dark:text-text-dark">
+                    <td className="px-6 py-4 font-medium text-text-light dark:text-text-dark text-blue-600 hover:underline">
                       {s.fullName || s.name || "N/A"}
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
                           s.role === "manager"
                             ? "bg-purple-100 text-purple-700"
                             : s.role === "sale"
@@ -136,28 +145,36 @@ const Staff = () => {
                           : s.role === "sale"
                           ? "Sale"
                           : s.role === "pt"
-                          ? "PT (HLV)"
+                          ? "PT"
                           : s.role === "reception"
                           ? "Lễ tân"
                           : s.role || "N/A"}
                       </span>
-                      {s.specialty && (
-                        <div className="text-xs mt-1 text-gray-500 italic">
-                          {s.specialty}
-                        </div>
-                      )}
                     </td>
 
-                    {/* Cột Ngày Sinh */}
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark text-sm font-medium">
-                      {formatDob(s.dob)}
+                    <td className="px-6 py-4 text-center text-text-light dark:text-text-dark font-bold text-blue-600">
+                      {s.activeCustomersCount || 0} <span className="text-gray-500 font-normal text-xs ml-1">khách</span>
                     </td>
 
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark font-mono text-sm">
-                      {s.phone || "N/A"}
+                    {/* Cột Ca Hôm Nay */}
+                    <td className="px-6 py-4 text-center">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${
+                          shift === "Nghỉ"
+                            ? "bg-gray-100 text-gray-500 border-transparent"
+                            : shift === "Sáng"
+                            ? "bg-orange-50 text-orange-700 border-orange-200"
+                            : shift === "Chiều"
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : "bg-green-50 text-green-700 border-green-200"
+                        }`}
+                      >
+                        {shift}
+                      </span>
                     </td>
+
                     {isAdmin && (
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => {
@@ -184,12 +201,13 @@ const Staff = () => {
                       </td>
                     )}
                   </tr>
-                ))
+                  );
+                })
 
               ) : (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -210,6 +228,18 @@ const Staff = () => {
           staff={edit}
           onSave={save}
           onClose={() => setModal(false)}
+        />
+      )}
+      {detailStaff && (
+        <StaffDetailModal
+          staff={detailStaff}
+          isAdmin={isAdmin || (JSON.parse(localStorage.getItem("gym_user") || "{}").role === "manager")}
+          onClose={() => setDetailStaff(null)}
+          onScheduleUpdate={async () => {
+            const today = new Date().toLocaleDateString("en-CA");
+            const schedulesData = await staffService.getSchedules({ date: today });
+            setTodaySchedules(schedulesData);
+          }}
         />
       )}
     </div>

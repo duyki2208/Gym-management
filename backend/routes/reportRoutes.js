@@ -4,7 +4,8 @@ const {
   getSummary,
   getRevenueChart,
   getPackageDistribution,
-  getExpiringMembers
+  getExpiringMembers,
+  getRevenueDetails
 } = require("../controllers/reportController");
 const { protect } = require("../middleware/authMiddleware"); // Giả sử có middleware này
 
@@ -15,5 +16,6 @@ router.get("/summary", getSummary);
 router.get("/revenue", getRevenueChart);
 router.get("/packages", getPackageDistribution);
 router.get("/expiring", getExpiringMembers);
+router.get("/revenue-details", getRevenueDetails);
 
 module.exports = router;

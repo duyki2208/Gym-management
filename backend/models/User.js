@@ -22,6 +22,8 @@ const userSchema = new mongoose.Schema(
       default: "reception", // Mặc định là lễ tân cho an toàn
     },
     dob: { type: Date },
+    phone: { type: String },
+    specialty: { type: String },
     // -------------------------
   },
   { timestamps: true }

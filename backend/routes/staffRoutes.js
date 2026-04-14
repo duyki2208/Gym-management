@@ -3,7 +3,10 @@ const router = express.Router();
 const staffController = require("../controllers/staffController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
-router.get("/", protect, authorize("admin", "manager"), staffController.getAll);
+router.get("/schedules", protect, staffController.getSchedules);
+router.post("/:id/schedule", protect, authorize("admin", "manager"), staffController.updateSchedule);
+
+router.get("/", protect, staffController.getAll);
 router.post("/", protect, authorize("admin"), staffController.create);
 router.put(
   "/:id",

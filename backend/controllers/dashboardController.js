@@ -13,26 +13,26 @@ const getStats = async (req, res) => {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const startOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
-    // 1. Total Customers
-    const totalCustomers = await Customer.countDocuments();
-
-    // 2. Active Customers (endDate >= now)
-    const activeCustomers = await Customer.countDocuments({
-      endDate: { $gte: today },
-    });
-
     // 3. Expiring Customers (endDate between now and 7 days from now)
     const next7Days = new Date(today);
     next7Days.setDate(next7Days.getDate() + 7);
-    const expiringCustomers = await Customer.countDocuments({
-      endDate: { $gte: today, $lte: next7Days },
-    });
 
-    // 4. Today's Check-ins & Peak Hours
-    // Get all check-ins for today to calculate count and peak hours
-    const todayCheckInDocs = await CheckIn.find({
-      time: { $gte: startOfToday, $lt: startOfTomorrow },
-    });
+    // Thực thi tất cả các truy vấn độc lập song song với Promise.all
+    const [
+      totalCustomers,
+      activeCustomers,
+      expiringCustomers,
+      todayCheckInDocs,
+      newCustomersThisMonth,
+      recentActivities
+    ] = await Promise.all([
+      Customer.countDocuments(),
+      Customer.countDocuments({ endDate: { $gte: today } }),
+      Customer.countDocuments({ endDate: { $gte: today, $lte: next7Days } }),
+      CheckIn.find({ time: { $gte: startOfToday, $lt: startOfTomorrow } }).lean(),
+      Customer.find({ startDate: { $gte: startOfMonth, $lt: startOfNextMonth } }).lean(),
+      CheckIn.find().sort({ time: -1 }).limit(5).lean()
+    ]);
 
     const todayCheckInsCount = todayCheckInDocs.length;
 
@@ -53,19 +53,9 @@ const getStats = async (req, res) => {
 
     // 5. Monthly Revenue
     // Sum 'price' of all Customers with startDate in current month
-    const newCustomersThisMonth = await Customer.find({
-      startDate: { $gte: startOfMonth, $lt: startOfNextMonth },
-    });
-    
     const revenue = newCustomersThisMonth.reduce((sum, customer) => {
         return sum + (customer.price || 0);
     }, 0);
-
-    // 6. Recent Activities (Last 5 check-ins)
-    const recentActivities = await CheckIn.find()
-      .sort({ time: -1 })
-      .limit(5)
-      .lean();
 
     // Format recent activities for frontend (optional, or let frontend format)
     // We'll send raw and let frontend format to match existing structure easily, 

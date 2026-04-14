@@ -1,12 +1,25 @@
 const User = require("../models/User");
+const Schedule = require("../models/Schedule");
+const Customer = require("../models/Customer");
 
 // Lấy tất cả nhân viên
 const getAll = async (req, res) => {
   try {
     const staff = await User.find({
       role: { $in: ["manager", "pt", "sale", "reception"] },
-    });
-    res.json(staff);
+    }).lean();
+
+    const now = new Date();
+    // Đếm số KH phụ trách hiện tại (có endDate >= now)
+    const staffWithCounts = await Promise.all(staff.map(async (user) => {
+      const activeCustomersCount = await Customer.countDocuments({
+        assignedStaff: user._id,
+        endDate: { $gte: now }
+      });
+      return { ...user, activeCustomersCount };
+    }));
+
+    res.json(staffWithCounts);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy danh sách nhân viên" });
   }
@@ -116,4 +129,43 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, remove };
+// Lấy lịch làm việc của tất cả nhân viên (tuỳ chọn lọc theo date)
+const getSchedules = async (req, res) => {
+  try {
+    const { startDate, endDate, date } = req.query;
+    let query = {};
+    if (startDate && endDate) {
+      query.date = { $gte: startDate, $lte: endDate };
+    } else if (date) {
+      query.date = date;
+    }
+    
+    const schedules = await Schedule.find(query).populate('staff', 'fullName name role').lean();
+    res.json(schedules);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi lấy lịch làm việc" });
+  }
+};
+
+// Cập nhật/Thêm lịch làm việc cho 1 nhân viên
+const updateSchedule = async (req, res) => {
+  try {
+    const { id } = req.params; // Staff ID
+    const { date, shiftType } = req.body;
+    
+    if (!date || !shiftType) {
+      return res.status(400).json({ message: "Thiếu ngày (date) hoặc ca làm (shiftType)" });
+    }
+    
+    const schedule = await Schedule.findOneAndUpdate(
+      { staff: id, date: date },
+      { shiftType: shiftType },
+      { new: true, upsert: true }
+    );
+    res.json(schedule);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi cập nhật lịch làm việc" });
+  }
+};
+
+module.exports = { getAll, create, update, remove, getSchedules, updateSchedule };

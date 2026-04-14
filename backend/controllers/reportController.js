@@ -11,36 +11,42 @@ const getSummary = async (req, res) => {
     const firstDayOfMonth = startOfMonth(today);
     const lastDayOfMonth = endOfMonth(today);
 
-    // 1. Tổng doanh thu (Tính tổng price của tất cả customers)
-    // Lưu ý: Logic này giả định price là doanh thu. Nếu cần chính xác theo ngày thanh toán cần Transaction model.
-    // Ở đây ta tính tổng giá trị các gói đăng ký trong tháng này.
-    const revenueAggregation = await Customer.aggregate([
-      {
-        $match: {
-          startDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
+    // Thực thi các truy vấn thống kê song song với Promise.all
+    const [revenueAggregation, activeMembers, totalEverMembers] = await Promise.all([
+      Customer.aggregate([
+        {
+          $match: {
+            startDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$price" },
+            newMembers: { $sum: 1 }
+          }
         }
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: "$price" },
-          newMembers: { $sum: 1 }
-        }
-      }
+      ]),
+      Customer.countDocuments({ endDate: { $gte: today } }),
+      Customer.countDocuments()
     ]);
 
     const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
     const newMembers = revenueAggregation[0]?.newMembers || 0;
-
-    // 2. Tổng thành viên đang hoạt động (Active)
-    const activeMembers = await Customer.countDocuments({
-      endDate: { $gte: today }
-    });
+    let retentionRate = 0;
+    let churnRate = 0;
+    
+    if (totalEverMembers > 0) {
+       retentionRate = Math.round((activeMembers / totalEverMembers) * 100);
+       churnRate = 100 - retentionRate;
+    }
 
     res.json({
       totalRevenue,
       activeMembers,
-      newMembers
+      newMembers,
+      retentionRate,
+      churnRate
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -127,10 +133,30 @@ const getExpiringMembers = async (req, res) => {
 
     const expiringMembers = await Customer.find({
       endDate: { $gte: today, $lte: next14Days }
-    }).select("name phone endDate packageType remainingSessions");
+    }).select("name phone endDate packageType remainingSessions").lean();
 
     res.json(expiringMembers);
 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get detailed revenue/customer list for Excel export
+// @route   GET /api/reports/revenue-details
+// @access  Private
+const getRevenueDetails = async (req, res) => {
+  try {
+    const today = new Date();
+    const firstDayOfMonth = startOfMonth(today);
+    const lastDayOfMonth = endOfMonth(today);
+
+    const details = await Customer.find({
+      startDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
+    }).select("customerId name phone packageType startDate endDate price")
+      .sort({ startDate: -1 }).lean();
+
+    res.json(details);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -140,5 +166,6 @@ module.exports = {
   getSummary,
   getRevenueChart,
   getPackageDistribution,
-  getExpiringMembers
+  getExpiringMembers,
+  getRevenueDetails
 };

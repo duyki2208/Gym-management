@@ -1,25 +1,27 @@
-import axios from 'axios';
-
-// Cấu hình URL cơ sở (nếu chưa có global config)
-const API_URL = 'http://localhost:5000/api/reports';
+import api from './api';
 
 const getSummary = async () => {
-  const response = await axios.get(`${API_URL}/summary`);
+  const response = await api.get('/reports/summary');
   return response.data;
 };
 
 const getRevenueChart = async () => {
-  const response = await axios.get(`${API_URL}/revenue`);
+  const response = await api.get('/reports/revenue');
   return response.data;
 };
 
 const getPackageDistribution = async () => {
-  const response = await axios.get(`${API_URL}/packages`);
+  const response = await api.get('/reports/packages');
   return response.data;
 };
 
 const getExpiringMembers = async () => {
-  const response = await axios.get(`${API_URL}/expiring`);
+  const response = await api.get('/reports/expiring');
+  return response.data;
+};
+
+const getRevenueDetails = async () => {
+  const response = await api.get('/reports/revenue-details');
   return response.data;
 };
 
@@ -27,5 +29,7 @@ export default {
   getSummary,
   getRevenueChart,
   getPackageDistribution,
-  getExpiringMembers
+  getExpiringMembers,
+  getRevenueDetails
 };
+
