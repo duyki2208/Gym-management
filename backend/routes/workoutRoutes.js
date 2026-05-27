@@ -14,4 +14,12 @@ router.post(
   workoutController.deductSession
 );
 
+// Delete a session (Only Admin)
+router.delete(
+  "/:id",
+  protect,
+  authorize("admin"),
+  workoutController.deleteSession
+);
+
 module.exports = router;

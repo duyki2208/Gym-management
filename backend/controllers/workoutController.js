@@ -58,3 +58,35 @@ exports.deductSession = async (req, res) => {
     res.status(500).json({ message: "Lỗi Server" });
   }
 };
+
+// Delete a session (Only Admin)
+exports.deleteSession = async (req, res) => {
+  try {
+    const { id } = req.params; // Workout session ID
+    const session = await WorkoutSession.findById(id);
+
+    if (!session) {
+      return res.status(404).json({ message: "Không tìm thấy buổi tập" });
+    }
+
+    const customer = await Customer.findById(session.customer);
+    if (!customer) {
+      return res.status(404).json({ message: "Không tìm thấy khách hàng của buổi tập này" });
+    }
+
+    // Xóa session
+    await session.deleteOne();
+
+    // Hoàn lại 1 buổi tập cho customer
+    customer.remainingSessions += 1;
+    await customer.save();
+
+    res.json({
+      message: "Xóa buổi tập thành công và đã hoàn lại 1 buổi",
+      remainingSessions: customer.remainingSessions
+    });
+  } catch (error) {
+    console.error("Lỗi khi xóa buổi tập:", error);
+    res.status(500).json({ message: "Lỗi Server" });
+  }
+};

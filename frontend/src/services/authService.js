@@ -5,7 +5,7 @@ export const authService = {
   // Hàm đăng nhập
   login: async (username, password) => {
     try {
-      const response = await api.post('/login', { username, password });
+      const response = await api.post('/auth/login', { username, password });
       const data = response.data;
 
       // Lưu thông tin vào localStorage (bao gồm cả role)

@@ -1,8 +1,5 @@
 import api from "./api";
 
-// --- HÀM HỖ TRỢ (HELPER) ---
-// getAuthHeaders không còn cần thiết vì api interceptor đã xử lý
-
 const ensureArray = (data) => {
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.data)) return data.data;
@@ -10,14 +7,12 @@ const ensureArray = (data) => {
   return [];
 };
 
-// --- 1. SERVICE KHÁCH HÀNG ---
 export const customerService = {
   getAll: async (params = {}) => {
     try {
       const response = await api.get('/customers', { params });
       const result = response.data;
       
-      // Handle both old array format (fallback) and new object format
       if (Array.isArray(result)) {
          return { customers: result, totalPages: 1, totalCustomers: result.length };
       }
@@ -34,7 +29,6 @@ export const customerService = {
       ? `/customers/${customerData._id || customerData.id}`
       : `/customers`;
     
-    // Axios tu dong dong goi JSON
     const dataToSend = { ...customerData };
     if (isUpdate) {
       delete dataToSend._id;
@@ -46,17 +40,54 @@ export const customerService = {
 
     if (dataToSend.dob) {
       if (dataToSend.dob instanceof Date) {
-        dataToSend.dob = dataToSend.dob.toISOString();
+        if (isNaN(dataToSend.dob.getTime())) {
+          delete dataToSend.dob;
+        } else {
+          dataToSend.dob = dataToSend.dob.toISOString();
+        }
+      } else if (typeof dataToSend.dob === "string") {
+        if (!dataToSend.dob || dataToSend.dob === "Invalid Date") {
+          delete dataToSend.dob;
+        } else {
+          const parsed = new Date(dataToSend.dob);
+          if (isNaN(parsed.getTime())) {
+            delete dataToSend.dob;
+          } else {
+            dataToSend.dob = parsed.toISOString();
+          }
+        }
       }
     }
     if (dataToSend.startDate) {
       if (dataToSend.startDate instanceof Date) {
-        dataToSend.startDate = dataToSend.startDate.toISOString();
+        if (isNaN(dataToSend.startDate.getTime())) {
+          delete dataToSend.startDate;
+        } else {
+          dataToSend.startDate = dataToSend.startDate.toISOString();
+        }
+      } else if (typeof dataToSend.startDate === "string") {
+        const parsed = new Date(dataToSend.startDate);
+        if (isNaN(parsed.getTime())) {
+          delete dataToSend.startDate;
+        } else {
+          dataToSend.startDate = parsed.toISOString();
+        }
       }
     }
     if (dataToSend.endDate) {
       if (dataToSend.endDate instanceof Date) {
-        dataToSend.endDate = dataToSend.endDate.toISOString();
+        if (isNaN(dataToSend.endDate.getTime())) {
+          delete dataToSend.endDate;
+        } else {
+          dataToSend.endDate = dataToSend.endDate.toISOString();
+        }
+      } else if (typeof dataToSend.endDate === "string") {
+        const parsed = new Date(dataToSend.endDate);
+        if (isNaN(parsed.getTime())) {
+          delete dataToSend.endDate;
+        } else {
+          dataToSend.endDate = parsed.toISOString();
+        }
       }
     }
 
@@ -88,9 +119,16 @@ export const customerService = {
       return null;
     }
   },
+  freeze: async (id, freezeData) => {
+    const response = await api.post(`/customers/${id}/freeze`, freezeData);
+    return response.data;
+  },
+  unfreeze: async (id, actualUnfreezeDate) => {
+    const response = await api.post(`/customers/${id}/unfreeze`, { actualUnfreezeDate });
+    return response.data;
+  }
 };
 
-// --- 2. SERVICE CHECK-IN ---
 export const checkInService = {
   getAll: async () => {
     try {
@@ -106,7 +144,6 @@ export const checkInService = {
   },
 };
 
-// --- 3. SERVICE GÓI TẬP ---
 export const packageService = {
   getAll: async () => {
     try {
@@ -142,7 +179,6 @@ export const packageService = {
   },
 };
 
-// --- 4. SERVICE NHÂN VIÊN (Đã cập nhật xử lý ngày sinh) ---
 export const staffService = {
   getAll: async () => {
     try {
@@ -161,10 +197,6 @@ export const staffService = {
     const dataToSend = { ...staffData };
     if (isUpdate) delete dataToSend._id;
 
-    // --- QUAN TRỌNG: Chuyển đổi ngày sinh sang Date object ---
-    // (Lưu ý: Logic gốc là chuyển string -> Date object rồi stringify lại khi gửi JSON
-    // Tuy nhiên api.post sẽ tự stringify.
-    // Nếu backend cần ISO string, Date object là ok vì nó sẽ dc serialize thành ISO string)
     if (dataToSend.dob && typeof dataToSend.dob === "string") {
       dataToSend.dob = new Date(dataToSend.dob);
     }
@@ -200,8 +232,6 @@ export const staffService = {
   }
 };
 
-
-// --- 5. SERVICE BUỔI TẬP (WORKOUTS) ---
 export const workoutService = {
   getByCustomer: async (customerId) => {
     try {
@@ -213,6 +243,10 @@ export const workoutService = {
   },
   deduct: async (customerId, data) => {
     const response = await api.post(`/workouts/${customerId}/deduct`, data);
+    return response.data;
+  },
+  deleteSession: async (sessionId) => {
+    const response = await api.delete(`/workouts/${sessionId}`);
     return response.data;
   }
 };

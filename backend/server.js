@@ -5,12 +5,6 @@ dotenv.config();
 const cors = require("cors");
 const connectDB = require("./config/db");
 
-// Import Routes
-const customerRoutes = require("./routes/customerRoutes"); // Import file route khách hàng
-const packageRoutes = require("./routes/packageRoutes");
-
-const authRoutes = require("./routes/authRoutes");
-
 // Initialize Cron Jobs
 const startExpirationCron = require("./jobs/expirationCron");
 startExpirationCron();
@@ -20,39 +14,28 @@ connectDB();
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 // --- ROUTES ---
-// Sử dụng các routes đã import
-app.use("/api/customers", customerRoutes); // Gắn route /api/customers vào customerRoutes
-app.use("/api/packages", packageRoutes);
-const staffRoutes = require("./routes/staffRoutes");
-const checkInRoutes = require("./routes/checkInRoutes");
-const workoutRoutes = require("./routes/workoutRoutes");
-app.use("/api/staff", staffRoutes);
-app.use("/api", authRoutes); // Đăng nhập qua /api/login
-app.use("/api/checkins", checkInRoutes);
-app.use("/api/workouts", workoutRoutes);
-const dashboardRoutes = require("./routes/dashboardRoutes");
-app.use("/api/dashboard", dashboardRoutes);
+// Tất cả routes được gom qua prefix /api/v1/
+app.use("/api/v1", require("./routes"));
 
-const reportRoutes = require("./routes/reportRoutes");
-app.use("/api/reports", reportRoutes);
+// Legacy redirect: giữ /api/login để tương thích ngắn hạn (xóa sau khi frontend đã update hoàn toàn)
+// app.use("/api", require("./routes/authRoutes"));
 
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.json({ success: true, message: "Gym Management API v1 is running..." });
 });
 
-// Middleware xử lý lỗi (Optional nhưng recommended)
+// --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode);
-  res.json({
+  res.status(statusCode).json({
+    success: false,
     message: err.message,
     stack: process.env.NODE_ENV === "production" ? null : err.stack,
   });
 });
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

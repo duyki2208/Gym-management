@@ -14,6 +14,7 @@ const customerSchema = mongoose.Schema(
     packageType: { type: String, required: true }, // Tên gói (1 Tháng, 1 Năm...)
     startDate: { type: Date, default: Date.now },
     endDate: { type: Date, required: true },
+    activePackage: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerPackage' },
 
     // Các dịch vụ đi kèm
     trainer: { type: String, default: "" }, // Tên PT riêng
@@ -21,9 +22,18 @@ const customerSchema = mongoose.Schema(
     hasLocker: { type: Boolean, default: false },
     hasWater: { type: Boolean, default: false },
     healthNote: { type: String, default: "" }, // Ghi chú sức khỏe
+    packageNote: { type: String, default: "" }, // Ghi chú gói tập
     email: { type: String, default: "" }, // Email
     price: { type: Number, default: 0 }, // Giá gói
     remainingSessions: { type: Number, default: 0 }, // Số buổi còn lại
+
+    // Thanh toán và Nguồn khách
+    paymentStatus: { type: String, enum: ['paid', 'deposit', 'unpaid'], default: 'paid' },
+    paidAmount: { type: Number, default: 0 },
+    contractType: { type: String, enum: ['new', 'renew', 'upgrade'], default: 'new' },
+
+    // Sinh trắc học
+    faceDescriptor: { type: [Number], default: [] }, // Vector 128 chiều
     // Trạng thái (Active/Inactive tính theo endDate ở Frontend hoặc Backend đều được)
   },
   {

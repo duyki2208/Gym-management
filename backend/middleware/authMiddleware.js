@@ -1,9 +1,14 @@
+/**
+ * authMiddleware.js — Middleware xác thực & phân quyền DUY NHẤT
+ * Không tạo thêm file auth middleware khác.
+ * Export: { protect, authorize }
+ */
 const jwt = require("jsonwebtoken");
-const User = require("../models/User"); // Đảm bảo đường dẫn tới model User đúng
+const User = require("../models/User");
 
 // Middleware xác thực token (protect)
 const protect = async (req, res, next) => {
-  console.log("--- Executing: protect middleware ---");
+  // console.log("--- Executing: protect middleware ---"); // remove in production
   let token;
 
   if (
@@ -44,7 +49,7 @@ const protect = async (req, res, next) => {
 const authorize = (...allowedRoles) => {
   // Sử dụng rest parameter để nhận danh sách role
   return (req, res, next) => {
-    console.log("--- Executing: authorize middleware ---");
+    // console.log("--- Executing: authorize middleware ---"); // remove in production
     // 1. Kiểm tra xem request đã có thông tin user chưa
     if (!req.user) {
       return res

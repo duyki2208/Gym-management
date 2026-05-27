@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { customerService, packageService } from "../services/customerService";
+import { useSearchParams } from "react-router-dom";
+import { customerService, packageService, staffService } from "../services/customerService";
 import CustomerModal from "../components/customer/CustomerModal"; // Existing Edit/Add Modal
 import CustomerDetailModal from "../components/customer/CustomerDetailModal"; // New Detail Modal
 
@@ -9,24 +10,18 @@ const getCustomerStatus = (startDate, endDate) => {
   const start = startDate ? new Date(startDate) : now;
   const end = new Date(endDate);
   
-  // Kiểm tra ngày bắt đầu: Nếu ngày bắt đầu > hiện tại => Chưa kích hoạt
-  // Note: So sánh timestamp.
-  if (start.getTime() > now.getTime() + 86400000) { // Lớn hơn 1 ngày so với hiện tại (như user yêu cầu) hoặc chỉ cần > now tùy ý. User yêu cầu "xa hơn ngày hiện tại là 1 ngày", tức là > tomorrow? 
-      // User said: "nếu ngày bắt đầu xa hơn ngày hiện tại là 1 ngày thì sẽ để là chưa bắt đầu nhé" -> > now + 1 day? Or just strictly future?
-      // Logic phổ biến: Nếu start > now là chưa bắt đầu.
-      // Tuy nhiên user nói: "xa hơn ngày hiện tại là 1 ngày"
-      // Giả sử hôm nay 05.Start 06 => Chưa.
-      // Vậy dùng start > now là đủ.
+  if (start.getTime() > now.getTime() + 86400000) { 
       return { status: "not_activated", label: "Chưa kích hoạt" };
   }
 
   const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
   if (diff < 0) return { status: "expired", label: "Hết hạn" };
-  if (diff <= 14) return { status: "expiring", label: "Sắp hết" };
+  if (diff <= 14) return { status: "expiring", label: "Sắp hết hạn" };
   return { status: "active", label: "Hoạt động" };
 };
 
 const CustomerList = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState([]);
   const [packages, setPackages] = useState([]);
   
@@ -36,13 +31,45 @@ const CustomerList = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   
   // Pagination & Filtering State
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const initialSearch = searchParams.get('search') || "";
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [filterStatus, setFilterStatus] = useState("all"); 
+  const [filterPayment, setFilterPayment] = useState("all");
+  const [filterContract, setFilterContract] = useState("all");
+  const [filterPackage, setFilterPackage] = useState("all");
+  const [filterStartDateFrom, setFilterStartDateFrom] = useState("");
+  const [filterStartDateTo, setFilterStartDateTo] = useState("");
+  const [filterEndDateFrom, setFilterEndDateFrom] = useState("");
+  const [filterEndDateTo, setFilterEndDateTo] = useState("");
+  const [filterAssignedStaff, setFilterAssignedStaff] = useState("all");
+
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+  const [showContractDropdown, setShowContractDropdown] = useState(false);
+  const [showPackageDropdown, setShowPackageDropdown] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
+  const [staffList, setStaffList] = useState([]);
+  
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Auto-open modal if 'id' param is present
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    if (targetId && customers.length > 0) {
+      const target = customers.find(c => c._id === targetId || c.id === targetId);
+      if (target) {
+        setSelectedCustomer(target);
+        setShowDetailModal(true);
+        // Clear params to avoid reopening on refresh
+        setSearchParams({});
+      }
+    }
+  }, [customers, searchParams, setSearchParams]);
   
   // Check Admin Role
   const [isAdmin, setIsAdmin] = useState(false);
@@ -63,19 +90,28 @@ const CustomerList = () => {
   // Reset page when filter changes
   useEffect(() => {
     setPage(1);
-  }, [filterStatus]);
+  }, [filterStatus, filterPayment, filterContract, filterPackage, filterStartDateFrom, filterStartDateTo, filterEndDateFrom, filterEndDateTo, filterAssignedStaff]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [customerData, packageData] = await Promise.all([
+      const [customerData, packageData, staffData] = await Promise.all([
         customerService.getAll({ 
             page, 
             limit: 10, 
             search: debouncedSearch, 
-            status: filterStatus 
+            status: filterStatus,
+            paymentStatus: filterPayment,
+            contractType: filterContract,
+            packageType: filterPackage,
+            assignedStaff: filterAssignedStaff,
+            startDateFrom: filterStartDateFrom,
+            startDateTo: filterStartDateTo,
+            endDateFrom: filterEndDateFrom,
+            endDateTo: filterEndDateTo
         }),
         packageService.getAll(),
+        staffService.getAll(),
       ]);
       
       setCustomers(customerData.customers || []);
@@ -83,10 +119,14 @@ const CustomerList = () => {
       setTotalCustomers(customerData.totalCustomers || 0);
       
       setPackages(Array.isArray(packageData) ? packageData : []);
+      
+      const staffs = Array.isArray(staffData) ? staffData : [];
+      setStaffList(staffs.filter(s => ["manager", "pt", "sale"].includes(s.role)));
     } catch (err) {
       console.error("Lỗi tải khách hàng:", err);
       setCustomers([]);
       setPackages([]);
+      setStaffList([]);
     } finally {
       setLoading(false);
     }
@@ -94,7 +134,7 @@ const CustomerList = () => {
 
   useEffect(() => {
     fetchData();
-  }, [page, debouncedSearch, filterStatus]);
+  }, [page, debouncedSearch, filterStatus, filterPayment, filterContract, filterPackage, filterStartDateFrom, filterStartDateTo, filterEndDateFrom, filterEndDateTo, filterAssignedStaff]);
 
   const handleSave = async (data) => {
     try {
@@ -126,56 +166,329 @@ const CustomerList = () => {
     return <div className="p-10 text-center">loading...</div>;
 
   return (
-    <div className="flex flex-col gap-6 font-display p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-           <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">Quản lý Khách hàng</h1>
-        </div>
-        
-        {isAdmin && (
-          <button
-            onClick={() => {
-              setSelectedCustomer(null);
-              setShowEditModal(true);
-            }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center gap-2 shadow-lg shadow-green-600/20"
-          >
-            <span className="material-symbols-outlined">add</span>
-            Thêm Khách
-          </button>
-        )}
-      </div>
+    <div className="flex flex-col gap-6 font-display">
 
-      {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-             <span className="material-symbols-outlined absolute left-3 top-3 text-gray-400">search</span>
-             <input
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Tìm kiếm theo tên, số điện thoại..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+      {/* ── Card bao quanh: Search + Add + Filter ── */}
+      <div className="flex flex-col gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+
+        {/* Row 1: Search + Add */}
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1 max-w-2xl">
+            <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-500 text-xl">search</span>
+            <input
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-gray-100"
+              placeholder="Tìm tên, SĐT..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          
-          <div className="w-full md:w-64">
-             <select 
-                className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white cursor-pointer"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-             >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Đang hoạt động</option>
-                <option value="not_activated">Chưa kích hoạt</option>
-                <option value="expiring">Sắp hết hạn (≤ 14 ngày)</option>
-                <option value="expired">Đã hết hạn</option>
-             </select>
+
+          <div className="flex-1" />
+
+          {/* Nút Thêm Khách — giống nút Thêm gói (Packages) */}
+          {isAdmin && (
+            <button
+              onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
+              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl font-bold hover:opacity-90 shrink-0"
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                add_circle
+              </span>
+              Thêm Khách
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: Bộ lọc Trạng thái (không icon) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <button
+              onClick={() => setShowStatusDropdown(prev => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                filterStatus !== 'all'
+                  ? 'bg-green-100 text-green-800 border-green-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Trạng thái
+              {filterStatus !== 'all' && (
+                <span className="ml-1 bg-green-700 text-white rounded-full px-1.5 text-[10px] font-black">
+                  {[{value:'active',label:'Đang tập'},{value:'not_activated',label:'Chưa KH'},{value:'expiring',label:'Sắp hết hạn'},{value:'expired',label:'Hết hạn'}].find(t=>t.value===filterStatus)?.label}
+                </span>
+              )}
+            </button>
+
+            {showStatusDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                {[
+                  { value: 'all',           label: 'Tất cả'          },
+                  { value: 'active',        label: 'Đang hoạt động'  },
+                  { value: 'not_activated', label: 'Chưa kích hoạt'  },
+                  { value: 'expiring',      label: 'Sắp hết hạn'     },
+                  { value: 'expired',       label: 'Hết hạn'          },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setFilterStatus(opt.value); setShowStatusDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                      filterStatus === opt.value ? 'font-bold text-green-800 bg-green-50' : 'text-gray-600'
+                    }`}
+                  >
+                    {opt.label}
+                    {filterStatus === opt.value && (
+                      <span className="material-symbols-outlined text-green-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-      </div>
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowPaymentDropdown(prev => !prev);
+                setShowStatusDropdown(false); setShowContractDropdown(false); setShowPackageDropdown(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                filterPayment !== 'all'
+                  ? 'bg-blue-100 text-blue-800 border-blue-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Thanh toán
+              {filterPayment !== 'all' && (
+                <span className="ml-1 bg-blue-700 text-white rounded-full px-1.5 text-[10px] font-black">
+                  {[{value:'paid',label:'Đã thanh toán'},{value:'deposit',label:'Đặt cọc'},{value:'unpaid',label:'Chưa thanh toán'}].find(t=>t.value===filterPayment)?.label}
+                </span>
+              )}
+            </button>
+
+            {showPaymentDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                {[
+                  { value: 'all',     label: 'Tất cả'          },
+                  { value: 'paid',    label: 'Đã thanh toán'  },
+                  { value: 'deposit', label: 'Đặt cọc'  },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setFilterPayment(opt.value); setShowPaymentDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                      filterPayment === opt.value ? 'font-bold text-blue-800 bg-blue-50' : 'text-gray-600'
+                    }`}
+                  >
+                    {opt.label}
+                    {filterPayment === opt.value && (
+                      <span className="material-symbols-outlined text-blue-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowContractDropdown(prev => !prev);
+                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowPackageDropdown(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                filterContract !== 'all'
+                  ? 'bg-purple-100 text-purple-800 border-purple-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Nguồn khách
+              {filterContract !== 'all' && (
+                <span className="ml-1 bg-purple-700 text-white rounded-full px-1.5 text-[10px] font-black">
+                  {[{value:'new',label:'Mới'},{value:'renew',label:'Gia hạn'},{value:'upgrade',label:'Nâng cấp'}].find(t=>t.value===filterContract)?.label}
+                </span>
+              )}
+            </button>
+
+            {showContractDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                {[
+                  { value: 'all',     label: 'Tất cả'          },
+                  { value: 'new',     label: 'Khách mới'  },
+                  { value: 'renew',   label: 'Gia hạn (Renew)'  },
+                  { value: 'upgrade', label: 'Nâng cấp'     },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setFilterContract(opt.value); setShowContractDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                      filterContract === opt.value ? 'font-bold text-purple-800 bg-purple-50' : 'text-gray-600'
+                    }`}
+                  >
+                    {opt.label}
+                    {filterContract === opt.value && (
+                      <span className="material-symbols-outlined text-purple-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowPackageDropdown(prev => !prev);
+                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowContractDropdown(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                filterPackage !== 'all'
+                  ? 'bg-orange-100 text-orange-800 border-orange-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Gói tập
+              {filterPackage !== 'all' && (
+                <span className="ml-1 bg-orange-700 text-white rounded-full px-1.5 text-[10px] font-black">
+                  {filterPackage}
+                </span>
+              )}
+            </button>
+
+            {showPackageDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px] max-h-[300px] overflow-y-auto">
+                <button
+                  onClick={() => { setFilterPackage('all'); setShowPackageDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterPackage === 'all' ? 'font-bold text-orange-800 bg-orange-50' : 'text-gray-600'}`}
+                >
+                  Tất cả
+                  {filterPackage === 'all' && (
+                    <span className="material-symbols-outlined text-orange-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                  )}
+                </button>
+                {packages.map(pkg => (
+                  <button
+                    key={pkg._id || pkg.name}
+                    onClick={() => { setFilterPackage(pkg.name); setShowPackageDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterPackage === pkg.name ? 'font-bold text-orange-800 bg-orange-50' : 'text-gray-600'}`}
+                  >
+                    {pkg.name}
+                    {filterPackage === pkg.name && (
+                      <span className="material-symbols-outlined text-orange-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* STAFF FILTER */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowStaffDropdown(prev => !prev);
+                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowContractDropdown(false); setShowPackageDropdown(false); setShowDateDropdown(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                filterAssignedStaff !== 'all'
+                  ? 'bg-teal-100 text-teal-800 border-teal-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Nhân viên
+              {filterAssignedStaff !== 'all' && (
+                <span className="ml-1 bg-teal-700 text-white rounded-full px-1.5 text-[10px] font-black">
+                  {staffList.find(s=>s._id===filterAssignedStaff || s.id===filterAssignedStaff)?.name || staffList.find(s=>s._id===filterAssignedStaff || s.id===filterAssignedStaff)?.fullName || "Đã lọc"}
+                </span>
+              )}
+            </button>
+
+            {showStaffDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px] max-h-[300px] overflow-y-auto">
+                <button
+                  onClick={() => { setFilterAssignedStaff('all'); setShowStaffDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterAssignedStaff === 'all' ? 'font-bold text-teal-800 bg-teal-50' : 'text-gray-600'}`}
+                >
+                  Tất cả
+                  {filterAssignedStaff === 'all' && (
+                    <span className="material-symbols-outlined text-teal-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                  )}
+                </button>
+                {staffList.map(staff => (
+                  <button
+                    key={staff._id || staff.id}
+                    onClick={() => { setFilterAssignedStaff(staff._id || staff.id); setShowStaffDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterAssignedStaff === (staff._id || staff.id) ? 'font-bold text-teal-800 bg-teal-50' : 'text-gray-600'}`}
+                  >
+                    {staff.name || staff.fullName} ({staff.role})
+                    {filterAssignedStaff === (staff._id || staff.id) && (
+                      <span className="material-symbols-outlined text-teal-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* DATE RANGE FILTER */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowDateDropdown(prev => !prev);
+                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowContractDropdown(false); setShowPackageDropdown(false); setShowStaffDropdown(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                (filterStartDateFrom || filterStartDateTo || filterEndDateFrom || filterEndDateTo)
+                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Ngày hợp đồng
+              {(filterStartDateFrom || filterStartDateTo || filterEndDateFrom || filterEndDateTo) && (
+                <span className="ml-1 bg-rose-700 text-white rounded-full px-1.5 text-[10px] font-black">
+                  Đã lọc
+                </span>
+              )}
+            </button>
+
+            {showDateDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-4 min-w-[320px]">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Ngày bắt đầu gói</label>
+                    <div className="flex items-center gap-2">
+                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateFrom} onChange={e=>setFilterStartDateFrom(e.target.value)} title="Từ ngày"/>
+                      <span className="text-gray-400 font-bold">-</span>
+                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateTo} onChange={e=>setFilterStartDateTo(e.target.value)} title="Đến ngày"/>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Ngày hết hạn gói</label>
+                    <div className="flex items-center gap-2">
+                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateFrom} onChange={e=>setFilterEndDateFrom(e.target.value)} title="Từ ngày"/>
+                      <span className="text-gray-400 font-bold">-</span>
+                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateTo} onChange={e=>setFilterEndDateTo(e.target.value)} title="Đến ngày"/>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                    <button onClick={()=>{
+                      setFilterStartDateFrom(""); setFilterStartDateTo(""); setFilterEndDateFrom(""); setFilterEndDateTo("");
+                    }} className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Xóa lọc</button>
+                    <button onClick={()=>setShowDateDropdown(false)} className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 transition-colors text-white rounded-lg font-bold">Đóng</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div> {/* end card */}
+
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 uppercase text-sm font-black text-gray-800 tracking-wider font-display">
+          <thead className="bg-gray-100 dark:bg-gray-800 uppercase text-sm font-bold text-gray-700">
             <tr>
               <th className="p-4 w-[5%]"></th>
               <th className="p-4 pl-8 w-[25%]">HỌ VÀ TÊN</th>
@@ -248,7 +561,7 @@ const CustomerList = () => {
                               setSelectedCustomer(c);
                               setShowEditModal(true);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors"
                             title="Sửa thông tin"
                           >
                             <span className="material-symbols-outlined text-xl">edit</span>
@@ -258,7 +571,7 @@ const CustomerList = () => {
                                 e.stopPropagation();
                                 handleDelete(c._id || c.id);
                             }}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                            className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-colors"
                             title="Xóa khách hàng"
                           >
                              <span className="material-symbols-outlined text-xl">delete</span>
@@ -292,14 +605,14 @@ const CustomerList = () => {
                 <button
                     onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     Trang trước
                 </button>
                 <button
                     onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={page >= totalPages}
-                    className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     Trang sau
                 </button>
@@ -320,10 +633,10 @@ const CustomerList = () => {
         />
       )}
 
-      {/* Detail Modal */}
       {showDetailModal && selectedCustomer && (
           <CustomerDetailModal 
              customer={selectedCustomer}
+             packages={packages}
              onClose={() => {
                  setShowDetailModal(false);
                  setSelectedCustomer(null);

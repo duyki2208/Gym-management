@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { staffService } from "../services/customerService";
-import StaffModal from "../components/StaffModal";
-import StaffDetailModal from "../components/StaffDetailModal";
+import StaffModal from "../components/staff/StaffModal";
+import StaffDetailModal from "../components/staff/StaffDetailModal";
 
 const Staff = () => {
   const [list, setList] = useState([]);
@@ -73,25 +73,18 @@ const Staff = () => {
 
   return (
     <div className="flex flex-col gap-6 font-display">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
-            Quản lý Nhân viên
-          </h1>
-        </div>
+      {/* Action bar */}
+      <div className="flex justify-end">
         {isAdmin && (
           <button
-            onClick={() => {
-              setEdit(null);
-              setModal(true);
-            }}
-            className="flex items-center gap-2 h-11 px-5 rounded-lg bg-primary text-text-light font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+            onClick={() => { setEdit(null); setModal(true); }}
+            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
           >
-            <span className="material-symbols-outlined font-bold">add</span>{" "}
+            <span className="material-symbols-outlined font-bold">add</span>
             Thêm mới
           </button>
         )}
-      </header>
+      </div>
 
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
         <div className="overflow-x-auto">

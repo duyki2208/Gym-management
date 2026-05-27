@@ -44,7 +44,8 @@ const Dashboard = () => {
       if (!data) throw new Error("Không thể tải dữ liệu thống kê");
       return data;
     },
-    staleTime: 5 * 60 * 1000, // Cầm data cũ trong 5 phút trước khi refetch ngầm
+    refetchInterval: 5000, // Polling mỗi 5 giây
+    refetchIntervalInBackground: true, // Cho phép polling cả khi đang ở tab khác
   });
 
   if (isLoading) {
@@ -67,9 +68,14 @@ const Dashboard = () => {
   const stats = {
     total: dashboardData?.total || 0,
     active: dashboardData?.active || 0,
+    activePercentage: dashboardData?.activePercentage || 0,
     expiring: dashboardData?.expiring || 0,
     todayCheckIns: dashboardData?.todayCheckIns || 0,
+    checkInChange: dashboardData?.checkInChange || 0,
     revenue: dashboardData?.revenue || 0,
+    revenueChangePercent: dashboardData?.revenueChangePercent || 0,
+    newCustomersThisWeek: dashboardData?.newCustomersThisWeek || 0,
+    newCustomersChange: dashboardData?.newCustomersChange || 0,
   };
   const peakHours = dashboardData?.peakHours || [];
   
@@ -84,27 +90,21 @@ const Dashboard = () => {
   }));
 
   return (
-    <div className="flex flex-col gap-6 p-2 md:p-0">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
-          Tổng quan
-        </h1>
-        
-      </div>
+    <div className="flex flex-col gap-4">
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Tổng khách hàng"
-          value={stats.total}
-          change="+Members"
-          type="positive"
+          label="Khách hàng mới "
+          value={stats.newCustomersThisWeek}
+          change={`${stats.newCustomersChange > 0 ? '+' : ''}${stats.newCustomersChange} so với tuần trước`}
+          type={stats.newCustomersChange >= 0 ? "positive" : "negative"}
           icon={Users}
           colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900/30"
         />
         <StatCard
           label="Đang hoạt động"
           value={stats.active}
-          change="Active"
+          change={`${stats.activePercentage}% tổng khách hàng`}
           type="positive"
           icon={Check}
           colorClass="text-green-600 bg-green-100 dark:bg-green-900/30"
@@ -115,8 +115,8 @@ const Dashboard = () => {
           <StatCard
             label="Doanh thu tháng"
             value={`${(stats.revenue / 1000000).toFixed(1)}M`}
-            change="VNĐ"
-            type="neutral"
+            change={`${stats.revenueChangePercent > 0 ? '+' : ''}${stats.revenueChangePercent}% so với tháng trước`}
+            type={stats.revenueChangePercent >= 0 ? "positive" : "negative"}
             icon={DollarSign}
             colorClass="text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30"
           />
@@ -134,8 +134,8 @@ const Dashboard = () => {
         <StatCard
           label="Lượt check-in"
           value={stats.todayCheckIns}
-          change="Hôm nay"
-          type="positive"
+          change={`${stats.checkInChange > 0 ? '+' : ''}${stats.checkInChange} so với hôm qua`}
+          type={stats.checkInChange >= 0 ? "positive" : "negative"}
           icon={Activity}
           colorClass="text-purple-600 bg-purple-100 dark:bg-purple-900/30"
         />
@@ -229,12 +229,12 @@ const Dashboard = () => {
 };
 
 const StatCard = ({ label, value, change, type, icon: Icon, colorClass }) => (
-  <div className="flex flex-col gap-2 rounded-lg p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all">
+  <div className="flex flex-col rounded-lg p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all">
     <div className={`absolute right-4 top-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-300 ${colorClass ? colorClass.split(' ')[0] : ''}`}>
       <Icon size={64} />
     </div>
     
-    <div className="flex items-center gap-2 mb-2">
+    <div className="flex items-center gap-2 mb-4">
         <div className={`p-2 rounded-md ${colorClass || 'bg-gray-100 text-gray-600'}`}>
             <Icon size={20} />
         </div>
@@ -243,13 +243,14 @@ const StatCard = ({ label, value, change, type, icon: Icon, colorClass }) => (
         </p>
     </div>
 
-    <div className="flex items-baseline gap-2 z-10">
+    <div className="flex flex-col z-10">
       <p className="text-text-light dark:text-text-dark tracking-tight text-3xl font-black">
         {value}
       </p>
+      
       {change && (
         <span
-          className={`text-sm font-bold ${
+          className={`text-sm font-bold mt-2 ${
             type === "positive" ? "text-green-500" : type === "negative" ? "text-red-500" : "text-gray-500"
           }`}
         >

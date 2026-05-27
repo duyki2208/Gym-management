@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { packageService } from "../services/customerService";
-import PackageModal from "../components/PackageModal";
+import PackageModal from "../components/package/PackageModal";
 
 const Packages = () => {
   const [list, setList] = useState([]);
@@ -51,31 +51,27 @@ const Packages = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap justify-between gap-4">
-        <div>
-          <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
-            Quản lý Gói tập
-          </h1>
-        </div>
-      </div>
 
-      <div className="flex justify-between items-center p-4 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark">
-        <div className="relative w-full max-w-xs">
+      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
+        <div className="relative flex-1 max-w-2xl">
           <span className="material-symbols-outlined absolute left-3 top-2.5 text-text-muted-light dark:text-text-muted-dark">
             search
           </span>
           <input
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm focus:ring-primary focus:border-primary"
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Tìm kiếm gói..."
           />
         </div>
+
+        <div className="flex-1" />
+
         {isAdmin && (
           <button
             onClick={() => {
               setEdit(null);
               setModal(true);
             }}
-            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-lg font-bold hover:opacity-90"
+            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl font-bold hover:opacity-90"
           >
             <span
               className="material-symbols-outlined"
@@ -88,9 +84,9 @@ const Packages = () => {
         )}
       </div>
 
-      <div className="rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
+      <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-background-light dark:bg-background-dark text-sm font-medium text-text-light dark:text-text-dark">
+          <thead className="bg-gray-100 dark:bg-gray-800 uppercase text-sm font-bold text-gray-700">
             <tr>
               <th className="px-6 py-4">Tên gói</th>
               <th className="px-6 py-4">Loại gói</th>
@@ -110,7 +106,7 @@ const Packages = () => {
                     {p.name || "N/A"}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-sm font-medium ${p.type === 'session' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`px-2 py-1 rounded-full text-sm font-medium ${p.type === 'session' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                         {p.type === 'session' ? 'Theo buổi' : 'Theo tháng'}
                     </span>
                   </td>
@@ -127,7 +123,7 @@ const Packages = () => {
                           setEdit(p);
                           setModal(true);
                         }}
-                        className="p-2 hover:bg-primary/20 rounded-full transition-colors"
+                        className="p-2 hover:bg-primary/20 rounded-xl transition-colors"
                       >
                         <span className="material-symbols-outlined text-text-light dark:text-text-dark text-base">
                           edit
@@ -135,7 +131,7 @@ const Packages = () => {
                       </button>
                       <button
                         onClick={() => del(p._id || p.id)}
-                        className="p-2 hover:bg-red-500/20 rounded-full transition-colors"
+                        className="p-2 hover:bg-red-500/20 rounded-xl transition-colors"
                       >
                         <span className="material-symbols-outlined text-negative-light dark:text-negative-dark text-base">
                           delete

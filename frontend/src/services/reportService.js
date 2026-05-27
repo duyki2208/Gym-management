@@ -25,11 +25,23 @@ const getRevenueDetails = async () => {
   return response.data;
 };
 
+const getInventoryReport = async () => {
+  const response = await api.get('/reports/inventory');
+  return response.data;
+};
+
+const getChurnPrediction = async () => {
+  const response = await api.get('/reports/churn-prediction');
+  return response.data;
+};
+
 export default {
   getSummary,
   getRevenueChart,
   getPackageDistribution,
   getExpiringMembers,
-  getRevenueDetails
+  getRevenueDetails,
+  getInventoryReport,
+  getChurnPrediction
 };
 

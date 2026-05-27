@@ -24,9 +24,9 @@ import CheckIn from './pages/CheckIn';
 import History from './pages/History';
 import Packages from './pages/Packages';
 import Staff from './pages/Staff';
-import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import ProductsMain from './pages/ProductsMain';
 
 const App = () => {
 
@@ -52,9 +52,9 @@ const App = () => {
                       <Route path="/history" element={<History />} />
                       <Route path="/packages" element={<Packages />} />
                       <Route path="/staff" element={<Staff />} />
-                      <Route path="/notifications" element={<Notifications />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/settings" element={<Settings />} />
+                      <Route path="/products/*" element={<ProductsMain />} />
                       
                       {/* Fallback cho route sai */}
                       <Route path="*" element={<Navigate to="/" replace />} />

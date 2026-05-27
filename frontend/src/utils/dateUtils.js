@@ -16,7 +16,7 @@ export const getCustomerStatus = (startDate, endDate) => {
   const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   if (daysLeft < 0) return { status: 'expired', label: 'Hết hạn', color: 'bg-red-50 text-red-700 border-red-200' };
-  if (daysLeft <= 14) return { status: 'expiring', label: 'Sắp hết', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' };
+  if (daysLeft <= 14) return { status: 'expiring', label: 'Sắp hết hạn', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' };
   
   return { status: 'active', label: 'Hoạt động', color: 'bg-green-50 text-green-700 border-green-200' };
 };

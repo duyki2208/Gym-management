@@ -44,9 +44,14 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
     assignedStaff: "",
     hasLocker: false,
     hasWater: false,
-  });
 
-  const avatars = ["👨", "👩", "🧑", "👨‍💼", "👩‍💼", "👨‍🎓", "👩‍🎓", "🧔", "👱‍♀️", "👱‍♂️"];
+    // 5. Thanh toán
+    paymentStatus: "paid",
+    paidAmount: 0,
+    contractType: "new",
+    contractCode: "",
+    packageNote: "",
+  });
 
   // Hàm helper để format date cho input type="date"
   const formatDateForInput = (dateValue) => {
@@ -102,6 +107,11 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         assignedStaff: customer.assignedStaff?._id || customer.assignedStaff || "",
         hasLocker: customer.hasLocker || false,
         hasWater: customer.hasWater || false,
+        paymentStatus: customer.paymentStatus || "paid",
+        paidAmount: customer.paidAmount || 0,
+        contractType: customer.contractType || "new",
+        contractCode: customer.contractCode || "",
+        packageNote: customer.packageNote || "",
         // Giữ lại _id và các trường khác nhưng không ghi đè date fields đã format
         _id: customer._id,
         id: customer.id,
@@ -127,6 +137,11 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         assignedStaff: "",
         hasLocker: false,
         hasWater: false,
+        paymentStatus: "paid",
+        paidAmount: 0,
+        contractType: "new",
+        contractCode: "",
+        packageNote: "",
       });
     }
   }, [customer]);
@@ -136,20 +151,24 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
     if (!Array.isArray(packages)) return;
     const pkg = packages.find((p) => p && p.name === packageName);
     if (pkg) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(startDate);
-      // Tính ngày hết hạn
-      endDate.setDate(endDate.getDate() + pkg.duration);
+      setFormData((prev) => {
+        const startDate = new Date(prev.startDate);
+        const endDate = new Date(startDate);
+        
+        if (prev.paymentStatus === "deposit") {
+          endDate.setDate(endDate.getDate() + 30);
+        } else {
+          endDate.setDate(endDate.getDate() + pkg.duration);
+        }
 
-      setFormData((prev) => ({
-        ...prev,
-        packageType: packageName,
-        price: pkg.price,
-        endDate: endDate.toISOString().split("T")[0],
-        // SỬA: Gán số buổi còn lại bằng chính thời hạn gói (ngày)
-        // Nếu gói đã có sessions riêng thì dùng, không thì dùng duration
-        remainingSessions: pkg.sessions || pkg.duration,
-      }));
+        return {
+          ...prev,
+          packageType: packageName,
+          price: pkg.price,
+          endDate: endDate.toISOString().split("T")[0],
+          remainingSessions: pkg.sessions || pkg.duration,
+        };
+      });
     } else {
       setFormData((prev) => ({ ...prev, packageType: packageName }));
     }
@@ -158,16 +177,42 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
   const handleStartDateChange = (date) => {
     if (!Array.isArray(packages)) return;
     const pkg = packages.find((p) => p && p.name === formData.packageType);
-    let endDate = formData.endDate;
 
-    if (pkg) {
-      const start = new Date(date);
-      const end = new Date(start);
-      end.setDate(end.getDate() + pkg.duration);
-      endDate = end.toISOString().split("T")[0];
-    }
+    setFormData((prev) => {
+      let endDate = prev.endDate;
+      if (pkg) {
+        const start = new Date(date);
+        const end = new Date(start);
+        
+        if (prev.paymentStatus === "deposit") {
+          end.setDate(end.getDate() + 30);
+        } else {
+          end.setDate(end.getDate() + pkg.duration);
+        }
+        endDate = end.toISOString().split("T")[0];
+      }
+      return { ...prev, startDate: date, endDate };
+    });
+  };
 
-    setFormData((prev) => ({ ...prev, startDate: date, endDate }));
+  const handlePaymentStatusChange = (status) => {
+    setFormData((prev) => {
+      const newState = { ...prev, paymentStatus: status };
+      const pkg = packages.find((p) => p && p.name === prev.packageType);
+      
+      if (pkg) {
+        const start = new Date(prev.startDate);
+        const end = new Date(start);
+        
+        if (status === "deposit") {
+          end.setDate(end.getDate() + 30);
+        } else {
+          end.setDate(end.getDate() + pkg.duration);
+        }
+        newState.endDate = end.toISOString().split("T")[0];
+      }
+      return newState;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -218,34 +263,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
               1. Thông tin cơ bản
             </h3>
             <div className="flex gap-6">
-              {/* Avatar */}
-              <div className="w-1/4 flex flex-col items-center gap-3">
-                <div className="w-24 h-24 text-6xl border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-gray-50">
-                  {formData.avatar}
-                </div>
-                <div className="grid grid-cols-4 gap-1">
-                  {avatars.map((avt) => (
-                    <button
-                      key={avt}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, avatar: avt })}
-                      className={`text-xl p-1 rounded hover:bg-gray-100 ${
-                        formData.avatar === avt
-                          ? "bg-blue-100 ring-1 ring-blue-500"
-                          : ""
-                      }`}
-                    >
-                      {avt}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 text-center">
-                  Chọn ảnh đại diện
-                </p>
-              </div>
-
-              {/* Form Fields */}
-              <div className="w-3/4 grid grid-cols-2 gap-4">
+              <div className="w-full grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Họ và tên <span className="text-red-500">*</span>
@@ -300,10 +318,11 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ngày sinh
+                    Ngày sinh <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
+                    required
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formData.dob}
                     onChange={(e) =>
@@ -350,6 +369,127 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
               2. Thông tin gói tập
             </h3>
             <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+              {/* Row 1 */}
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Loại gói <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.packageType}
+                  onChange={(e) => handlePackageChange(e.target.value)}
+                >
+                  <option value="">-- Chọn gói --</option>
+                  {Array.isArray(packages) &&
+                    packages.map((p) => (
+                      <option key={p._id || p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Giá gói (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-600"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Row 2 */}
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thanh toán
+                </label>
+                <select
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.paymentStatus}
+                  onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                >
+                  <option value="paid">Đã thanh toán đủ</option>
+                  <option value="deposit">Đặt cọc</option>
+                </select>
+              </div>
+
+              <div className="col-span-2 md:col-span-1">
+                {formData.paymentStatus === "deposit" && (
+                  <>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Số tiền cọc (VNĐ)
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-orange-600 font-bold"
+                      value={formData.paidAmount}
+                      onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value })}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Row 3 */}
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ngày bắt đầu
+                </label>
+                <input
+                  type="date"
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                />
+              </div>
+
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ngày hết hạn
+                </label>
+                <input
+                  type="date"
+                  className="w-full p-2 border rounded bg-white text-gray-500"
+                  value={formData.endDate}
+                  readOnly
+                />
+              </div>
+
+              {/* Row 4 */}
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nguồn hợp đồng
+                </label>
+                <select
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.contractType}
+                  onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
+                >
+                  <option value="new">Khách mới</option>
+                  <option value="renew">Gia hạn (Renew)</option>
+                  <option value="upgrade">Nâng cấp (Upgrade)</option>
+                </select>
+              </div>
+
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mã hợp đồng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.contractCode}
+                  onChange={(e) => setFormData({ ...formData, contractCode: e.target.value })}
+                />
+              </div>
+
+              {/* Row 5 */}
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nhân viên tư vấn <span className="text-red-500">*</span>
@@ -371,146 +511,75 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
 
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Loại gói <span className="text-red-500">*</span>
+                  Ghi chú gói tập
                 </label>
-                <select
-                  required
+                <input
+                  type="text"
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.packageType}
-                  onChange={(e) => handlePackageChange(e.target.value)}
-                >
-                  <option value="">-- Chọn gói --</option>
-                  {Array.isArray(packages) &&
-                    packages.map((p) => (
-                      <option key={p._id || p.id} value={p.name}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giá gói (VNĐ)
-                </label>
-                <input
-                  type="number"
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-600"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                />
-              </div>
-
-              {/* ĐÃ ẨN SỐ BUỔI CÒN LẠI */}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ngày bắt đầu
-                </label>
-                <input
-                  type="date"
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ngày hết hạn
-                </label>
-                <input
-                  type="date"
-                  className="w-full p-2 border rounded bg-white text-gray-500"
-                  value={formData.endDate}
-                  readOnly
+                  value={formData.packageNote}
+                  onChange={(e) => setFormData({ ...formData, packageNote: e.target.value })}
                 />
               </div>
             </div>
           </section>
 
-          {/* 3. SỨC KHỎE & DỊCH VỤ THÊM */}
-          <div className="grid grid-cols-2 gap-8">
-            <section>
-              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                3. Thông tin sức khỏe
-              </h3>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bệnh lý / Lưu ý
+          {/* 3. DỊCH VỤ THÊM */}
+          <section>
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+              3. Dịch vụ thêm
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div
+                className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer col-span-2 md:col-span-1"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    hasLocker: !prev.hasLocker,
+                  }))
+                }
+              >
+                <label className="cursor-pointer font-medium text-gray-700">
+                  Thuê Tủ Khóa
                 </label>
-                <textarea
-                  rows={4}
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.healthNote}
-                  onChange={(e) =>
-                    setFormData({ ...formData, healthNote: e.target.value })
-                  }
-                />
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                4. Dịch vụ thêm
-              </h3>
-              <div className="space-y-4">
-
-
                 <div
-                  className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      hasLocker: !prev.hasLocker,
-                    }))
-                  }
+                  className={`w-12 h-6 rounded-full p-1 transition-colors ${
+                    formData.hasLocker ? "bg-blue-600" : "bg-gray-300"
+                  }`}
                 >
-                  <label className="cursor-pointer font-medium text-gray-700">
-                    Thuê Tủ Khóa
-                  </label>
                   <div
-                    className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      formData.hasLocker ? "bg-blue-600" : "bg-gray-300"
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      formData.hasLocker ? "translate-x-6" : ""
                     }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        formData.hasLocker ? "translate-x-6" : ""
-                      }`}
-                    ></div>
-                  </div>
-                </div>
-
-                <div
-                  className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      hasWater: !prev.hasWater,
-                    }))
-                  }
-                >
-                  <label className="cursor-pointer font-medium text-gray-700">
-                    Gói nước uống
-                  </label>
-                  <div
-                    className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      formData.hasWater ? "bg-blue-600" : "bg-gray-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        formData.hasWater ? "translate-x-6" : ""
-                      }`}
-                    ></div>
-                  </div>
+                  ></div>
                 </div>
               </div>
-            </section>
-          </div>
+
+              <div
+                className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer col-span-2 md:col-span-1"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    hasWater: !prev.hasWater,
+                  }))
+                }
+              >
+                <label className="cursor-pointer font-medium text-gray-700">
+                  Gói nước uống
+                </label>
+                <div
+                  className={`w-12 h-6 rounded-full p-1 transition-colors ${
+                    formData.hasWater ? "bg-blue-600" : "bg-gray-300"
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      formData.hasWater ? "translate-x-6" : ""
+                    }`}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t sticky bottom-0 bg-white pb-2">
             <button

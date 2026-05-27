@@ -1,0 +1,292 @@
+# 🏋️ Kế Hoạch Hoàn Thiện Hệ Thống Gym Management
+
+## 📊 Đánh Giá Độ Chính Xác Của Audit (Fact-check)
+
+> Trước khi làm plan — kiểm tra lại những gì audit nói có đúng không.
+
+| Điểm audit nêu | Thực tế trong code | Kết luận |
+|---|---|---|
+| ✅ Face ID dùng `@vladmandic/face-api` | ✅ Đúng — `AutoCheckIn.jsx` line 2 | **CHÍNH XÁC** |
+| ✅ Pipeline detect→encode→compare | ✅ Đúng — `detectSingleFace().withFaceLandmarks().withFaceDescriptor()` | **CHÍNH XÁC** |
+| ✅ Threshold `0.45` | ✅ Đúng — `new faceapi.FaceMatcher(labeledDescriptors, 0.45)` | **CHÍNH XÁC** |
+| ✅ Realtime `requestAnimationFrame` | ✅ Đúng — line 136 `AutoCheckIn.jsx` | **CHÍNH XÁC** |
+| ❌ Liveness check chưa có | ✅ Đúng — không có trong code | **CHÍNH XÁC** |
+| ✅ VietQR API thật | ✅ Đúng — `img.vietqr.io` với số tiền thật | **CHÍNH XÁC** |
+| ❌ Webhook payment chưa có | ✅ Đúng — không có poll/callback | **CHÍNH XÁC** |
+| ⚠️ Payment "không biết status" | **KHÔNG HOÀN TOÀN ĐÚNG** — `SaleOrder` có field `status` enum `['Chờ thanh toán', 'Đã thanh toán', 'Đã huỷ']` | **SAI MỘT PHẦN** |
+| ❌ Soft delete không có | ✅ Đúng — không có `isDeleted` field trong bất kỳ model nào | **CHÍNH XÁC** |
+| ❌ Audit log không có | ✅ Đúng — không có collection nào track thao tác | **CHÍNH XÁC** |
+| ❌ Logging chỉ `console.log` | ✅ Đúng — toàn bộ dùng `console.log` / `console.error` | **CHÍNH XÁC** |
+| ❌ Email gửi sync | **KHÔNG CHÍNH XÁC** — có `expirationCron.js` chạy cron `node-cron` 8AM/ngày, và email đăng ký gọi `await` nhưng không block UX nặng | **SAI MỘT PHẦN** |
+| ❌ Queue chưa có | ✅ Đúng — không có RabbitMQ/Redis | **CHÍNH XÁC** |
+| ✅ JWT auth | ✅ Đúng | **CHÍNH XÁC** |
+| ✅ 5 roles RBAC | ✅ Đúng — `admin, manager, pt, sale, reception` | **CHÍNH XÁC** |
+
+### 🔍 Bổ sung những thứ audit BỎ SÓT (điểm cộng chưa được đề cập):
+- **Cron job tự động** nhắc nhở hết hạn gói (14 ngày) → `expirationCron.js` ✅
+- **Email automation** đầy đủ (đăng ký + nhắc hạn) ✅  
+- **Auto-generate mã khách hàng** (`KH0001`, `KH0002`...) với Counter ✅
+- **SaleOrder đã có state machine**: `Chờ thanh toán → Đã thanh toán → Đã huỷ` ✅ (audit nói "không có" là không đúng hoàn toàn)
+
+---
+
+## 🎯 Kế Hoạch Nâng Cấp (Ưu tiên theo impact)
+
+---
+
+## 🔥 PRIORITY 1 — Bắt buộc (impact cao, thời gian ngắn)
+
+### P1.1 — Soft Delete cho Customer & Staff
+
+**Vấn đề**: Xóa hội viên = mất toàn bộ lịch sử check-in và giao dịch liên quan.
+
+**Thay đổi**:
+
+#### [MODIFY] `backend/models/Customer.js`
+```js
+isDeleted: { type: Boolean, default: false },
+deletedAt: { type: Date, default: null },
+```
+
+#### [MODIFY] `backend/models/Staff.js`
+```js
+isDeleted: { type: Boolean, default: false },
+```
+
+#### [MODIFY] Tất cả query Customer trong controllers
+```js
+// Thêm filter vào mọi find()
+Customer.find({ isDeleted: false })
+```
+
+**Thời gian ước tính**: 2–3 giờ  
+**Độ khó**: ⭐☆☆☆☆
+
+---
+
+### P1.2 — Payment Flow hoàn chỉnh (QR Confirmation)
+
+**Vấn đề**: QR hiện tại tạo ra nhưng system không biết đã thanh toán chưa.
+
+**Phương án thực tế nhất** (không cần webhook ngân hàng):
+
+> Thêm nút "Xác nhận đã nhận tiền" cho staff — update `SaleOrder.status = 'Đã thanh toán'`
+
+**Thay đổi**:
+
+#### [MODIFY] `frontend/src/pages/PointOfSale.jsx`
+- Sau khi tạo QR → `SaleOrder.status = 'Chờ thanh toán'` (đã có field này rồi, chỉ cần dùng đúng)
+- Hiển thị nút **"✅ Xác nhận đã nhận tiền"** trong invoice modal
+- Khi staff bấm → gọi API `PATCH /api/pos/orders/:id/confirm`
+
+#### [NEW] `backend/routes/posRoutes.js` — thêm route
+```js
+router.patch('/orders/:id/confirm', protect, authorize('admin','manager','sale','reception'), confirmPayment)
+```
+
+**Thời gian ước tính**: 3–4 giờ  
+**Độ khó**: ⭐⭐☆☆☆
+
+---
+
+### P1.3 — Structured Logging với Morgan
+
+**Vấn đề**: Chỉ có `console.log` thô, không có request log.
+
+**Phương án**: Thêm `morgan` (đơn giản, không cần cấu hình phức tạp)
+
+#### [MODIFY] `backend/server.js`
+```js
+const morgan = require('morgan');
+app.use(morgan('dev')); // log mọi HTTP request
+```
+
+#### [NEW] `backend/utils/logger.js`
+```js
+// Winston logger - log lỗi ra file
+const winston = require('winston');
+module.exports = winston.createLogger({...});
+```
+
+**Thời gian ước tính**: 1–2 giờ  
+**Độ khó**: ⭐☆☆☆☆
+
+---
+
+## ⚠️ PRIORITY 2 — Nên làm (ăn điểm phỏng vấn cao)
+
+### P2.1 — Audit Log
+
+**Vấn đề**: Không biết ai sửa gì, lúc nào.
+
+#### [NEW] `backend/models/AuditLog.js`
+```js
+{
+  action: String,       // 'UPDATE_CUSTOMER', 'DELETE_CUSTOMER', 'CHECKIN'...
+  performedBy: ObjectId ref User,
+  targetModel: String,  // 'Customer', 'SaleOrder'...
+  targetId: ObjectId,
+  oldData: Mixed,
+  newData: Mixed,
+  timestamp: Date
+}
+```
+
+#### [MODIFY] Các controllers quan trọng
+- `customerController.js` — log khi update/delete
+- `staffController.js` — log khi tạo/sửa role
+- `checkInController.js` — đã có log gián tiếp qua CheckIn model
+
+**Thời gian ước tính**: 4–5 giờ  
+**Độ khó**: ⭐⭐☆☆☆
+
+---
+
+### P2.2 — Liveness Check (cơ bản)
+
+**Vấn đề**: FaceID hiện có thể bị bypass bằng ảnh in/màn hình.
+
+**Phương án đơn giản nhất** (không cần model AI thêm):
+
+> Kiểm tra **chuyển động của điểm landmark** qua nhiều frame liên tiếp
+
+#### [MODIFY] `frontend/src/components/customer/AutoCheckIn.jsx`
+```js
+// Track độ lệch của nose tip (điểm 30) qua 10 frame
+// Nếu < threshold movement → báo "Vui lòng nhếch mặt nhẹ"
+// Nếu có movement → pass liveness
+```
+
+**Thời gian ước tính**: 3–4 giờ  
+**Độ khó**: ⭐⭐⭐☆☆
+
+---
+
+### P2.3 — Error Handling Middleware chuẩn
+
+**Vấn đề**: Response error không thống nhất format.
+
+#### [NEW] `backend/middleware/errorHandler.js`
+```js
+// Global error handler
+(err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+}
+```
+
+**Thời gian ước tính**: 1–2 giờ  
+**Độ khó**: ⭐☆☆☆☆
+
+---
+
+### P2.4 — Rate Limiting (chống brute force)
+
+**Vấn đề**: Hiện tại login không có giới hạn số lần thử.
+
+#### [MODIFY] `backend/server.js`
+```js
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+app.use('/api/auth', limiter);
+```
+
+**Thời gian ước tính**: 30 phút  
+**Độ khó**: ⭐☆☆☆☆
+
+---
+
+## 🧠 PRIORITY 3 — Bonus (flex với interviewer)
+
+### P3.1 — Redis Cache cho Dashboard
+
+**Lý do**: Dashboard query nhiều collection → chậm nếu data lớn.
+
+```js
+// Cache dashboard stats 5 phút
+const cached = await redisClient.get('dashboard_stats');
+if (cached) return res.json(JSON.parse(cached));
+```
+
+**Thời gian ước tính**: 4–6 giờ  
+**Độ khó**: ⭐⭐⭐☆☆
+
+---
+
+### P3.2 — Input Validation với Joi/express-validator
+
+**Vấn đề**: Controllers hiện đang trust client data hoàn toàn.
+
+```js
+// Validate body trước khi vào controller
+const { body, validationResult } = require('express-validator');
+router.post('/customers', [
+  body('name').trim().notEmpty(),
+  body('phone').isMobilePhone('vi-VN'),
+  body('endDate').isISO8601(),
+], createCustomer);
+```
+
+**Thời gian ước tính**: 3–4 giờ  
+**Độ khó**: ⭐⭐☆☆☆
+
+---
+
+### P3.3 — Pagination Server-side cho CheckIn History
+
+**Vấn đề**: Hiện `limit: 10000` phía client — không scale được.
+
+#### [MODIFY] `backend/controllers/checkInController.js`
+```js
+// Thêm pagination thật
+const page = parseInt(req.query.page) || 1;
+const limit = parseInt(req.query.limit) || 20;
+```
+
+**Thời gian ước tính**: 2–3 giờ  
+**Độ khó**: ⭐⭐☆☆☆
+
+---
+
+## 📅 Lộ Trình Thực Hiện
+
+```
+Tuần 1 (Priority 1):
+├── Day 1-2: Soft Delete (P1.1)
+├── Day 3-4: Payment Confirmation Flow (P1.2)  
+└── Day 5: Morgan + Logger setup (P1.3)
+
+Tuần 2 (Priority 2):
+├── Day 1-2: Audit Log (P2.1)
+├── Day 3-4: Liveness Check (P2.2)
+└── Day 5: Error Handler + Rate Limit (P2.3 + P2.4)
+
+Tuần 3 (Priority 3 - nếu còn thời gian):
+├── Input Validation (P3.2)
+├── Pagination fix (P3.3)
+└── Redis Cache (P3.1)
+```
+
+---
+
+## 📊 Kết Luận Đánh Giá Audit
+
+**Độ chính xác tổng thể: ~85%**
+
+Audit **đúng** về:
+- Face ID pipeline (✅ mạnh thật)
+- Thiếu liveness check
+- Thiếu soft delete
+- Thiếu audit log  
+- Thiếu structured logging
+
+Audit **chưa chính xác** về:
+- `SaleOrder` **đã có** state machine `status` — không phải "không biết status"
+- Email **không hoàn toàn sync** — có `node-cron` chạy background  
+- **Bỏ sót** điểm cộng: cron job, auto-generate mã KH
+
+> **Kết luận**: Audit nhìn tổng thể chính xác, nhưng thiếu một số chi tiết quan trọng cho thấy project đã có một số "production thinking" mà audit chưa phát hiện.

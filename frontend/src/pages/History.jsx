@@ -381,7 +381,7 @@ const History = () => {
             }}
           >
             {chartReady && peakHourData && peakHourData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} minWidth={1}>
                 <BarChart
                   data={peakHourData}
                   barSize={50}

@@ -1,0 +1,25 @@
+/**
+ * routes/index.js — Router trung tâm
+ * Tất cả routes đều được mount tại đây với prefix /api/v1/
+ */
+const router = require('express').Router();
+const auditLogger = require('../middleware/auditLogger');
+
+// Kích hoạt audit logger cho tất cả các thao tác thay đổi dữ liệu
+router.use(auditLogger);
+
+router.use('/auth',          require('./authRoutes'));
+router.use('/customers',     require('./customerRoutes'));
+router.use('/packages',      require('./packageRoutes'));
+router.use('/staff',         require('./staffRoutes'));
+router.use('/checkins',      require('./checkInRoutes'));
+router.use('/workouts',      require('./workoutRoutes'));
+router.use('/dashboard',     require('./dashboardRoutes'));
+router.use('/reports',       require('./reportRoutes'));
+router.use('/products',      require('./productRoutes'));
+router.use('/inventory',     require('./inventoryRoutes'));
+router.use('/pos',           require('./posRoutes'));
+router.use('/notifications', require('./notificationRoutes'));
+router.use('/audit-logs',    require('./auditRoutes'));
+
+module.exports = router;

@@ -5,17 +5,18 @@ const {
   getRevenueChart,
   getPackageDistribution,
   getExpiringMembers,
-  getRevenueDetails
+  getRevenueDetails,
+  getInventoryReport,
+  getChurnPrediction
 } = require("../controllers/reportController");
-const { protect } = require("../middleware/authMiddleware"); // Giả sử có middleware này
-
-// Tất cả route báo cáo nên được bảo vệ
-// router.use(protect); 
+const { protect } = require("../middleware/authMiddleware"); 
 
 router.get("/summary", getSummary);
 router.get("/revenue", getRevenueChart);
 router.get("/packages", getPackageDistribution);
 router.get("/expiring", getExpiringMembers);
 router.get("/revenue-details", getRevenueDetails);
+router.get("/inventory", getInventoryReport);
+router.get("/churn-prediction", getChurnPrediction);
 
 module.exports = router;

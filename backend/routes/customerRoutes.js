@@ -1,24 +1,54 @@
 const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/customerController');
+const { protect, authorize } = require('../middleware/authMiddleware');
+const { createCustomerValidator, updateCustomerValidator } = require('../validators/customerValidator');
+const validate = require('../middleware/validate');
 
-// Import cả protect (xác thực) và authorize (phân quyền) từ authMiddleware
-const { protect, authorize } = require('../middleware/authMiddleware'); 
+// GET  /api/v1/customers — Xem danh sách
+router.get('/',
+  protect,
+  authorize('admin', 'manager', 'staff', 'pt', 'sale', 'reception'),
+  customerController.getAll
+);
 
-// --- CÁC ROUTES ---
+// POST /api/v1/customers — Thêm khách hàng mới
+router.post('/',
+  protect,
+  authorize('admin', 'manager', 'sale', 'reception'),
+  createCustomerValidator,
+  validate,
+  customerController.create
+);
 
-// 1. Xem danh sách: Ai cũng xem được (Admin, Manager, Staff, PT, Sale...)
-// protect: Đảm bảo đã đăng nhập
-// authorize: Đảm bảo có role hợp lệ
-router.get('/', protect, authorize('admin', 'manager', 'staff', 'pt', 'sale', 'reception'), customerController.getAll);
+// PUT  /api/v1/customers/:id — Sửa khách hàng
+router.put('/:id',
+  protect,
+  authorize('admin', 'manager'),
+  updateCustomerValidator,
+  validate,
+  customerController.update
+);
 
-// 2. Thêm khách hàng mới
-router.post('/', protect, authorize('admin', 'manager', 'sale', 'reception'), customerController.create);
+// DELETE /api/v1/customers/:id — Xóa khách hàng (chỉ Admin)
+router.delete('/:id',
+  protect,
+  authorize('admin'),
+  customerController.delete
+);
 
-// 3. Sửa khách hàng: Admin và Manager được sửa
-router.put('/:id', protect, authorize('admin', 'manager'), customerController.update);
+// POST /api/v1/customers/:id/freeze — Tạm dừng gói tập
+router.post('/:id/freeze',
+  protect,
+  authorize('admin', 'manager'),
+  customerController.freeze
+);
 
-// 4. Xóa khách hàng: Chỉ Admin được xóa
-router.delete('/:id', protect, authorize('admin'), customerController.delete);
+// POST /api/v1/customers/:id/unfreeze — Kích hoạt lại gói tập
+router.post('/:id/unfreeze',
+  protect,
+  authorize('admin', 'manager'),
+  customerController.unfreeze
+);
 
 module.exports = router;
