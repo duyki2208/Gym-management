@@ -3,7 +3,10 @@ const { format } = require('date-fns');
 
 // Configure transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // You can change this to another provider if needed
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  family: 4, // Ép buộc sử dụng IPv4 để tránh lỗi IPv6 Network Unreachable (ENETUNREACH) trên Render
   auth: {
     user: process.env.EMAIL_USER, // Set in .env
     pass: process.env.EMAIL_PASS  // Set in .env (App Password for Gmail)
