@@ -1,12 +1,17 @@
 const nodemailer = require('nodemailer');
 const { format } = require('date-fns');
+const dns = require('dns');
+
+// Ép buộc Node.js ưu tiên phân giải IPv4 trước IPv6 để khắc phục lỗi ENETUNREACH trên Render
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 // Configure transporter
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
-  family: 4, // Ép buộc sử dụng IPv4 để tránh lỗi IPv6 Network Unreachable (ENETUNREACH) trên Render
   auth: {
     user: process.env.EMAIL_USER, // Set in .env
     pass: process.env.EMAIL_PASS  // Set in .env (App Password for Gmail)

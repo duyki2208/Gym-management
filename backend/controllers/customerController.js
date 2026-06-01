@@ -232,7 +232,7 @@ const createCustomer = async (req, res) => {
         const pop = await CustomerPackage.findById(customerPackage._id).populate("assignedStaff", "fullName");
         staffName = pop?.assignedStaff?.fullName || null;
       }
-      sendRegistrationEmail(
+      await sendRegistrationEmail(
         customer.email,
         customer.name,
         customerPackage.packageName,
@@ -240,7 +240,7 @@ const createCustomer = async (req, res) => {
         customerPackage.endDate,
         customerPackage.price,
         staffName
-      ).catch((err) => console.error("Lỗi gửi email đăng ký:", err));
+      );
     }
 
     const populatedPackage = await CustomerPackage.findById(customerPackage._id).populate("customer");
