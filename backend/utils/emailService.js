@@ -1,30 +1,52 @@
-const nodemailer = require('nodemailer');
 const { format } = require('date-fns');
-const dns = require('dns');
 
-// Ép buộc Node.js ưu tiên phân giải IPv4 trước IPv6 để khắc phục lỗi ENETUNREACH trên Render
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder('ipv4first');
-}
-
-// Configure transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER, // Set in .env
-    pass: process.env.EMAIL_PASS  // Set in .env (App Password for Gmail)
+// Hàm helper để gửi email qua Brevo HTTP API (Port 443) thay thế cho SMTP bị Render chặn
+const sendEmailViaBrevo = async (toEmail, toName, subject, htmlContent) => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.error("Lỗi: BREVO_API_KEY chưa được cấu hình trên môi trường Render!");
+    return false;
   }
-});
 
-transporter.verify(function(error, success) {
-  if (error) {
-    console.error("Lỗi cấu hình Email Transporter:", error);
-  } else {
-    console.log("Email Transporter Ready to send messages!");
+  const senderEmail = process.env.EMAIL_USER || "gymfitnesshungduy@gmail.com";
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": apiKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        sender: {
+          name: "Gym Fitness",
+          email: senderEmail
+        },
+        to: [
+          {
+            email: toEmail,
+            name: toName
+          }
+        ],
+        subject: subject,
+        htmlContent: htmlContent
+      })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      console.log(`Email gửi thành công tới ${toEmail} qua Brevo (Message ID: ${data.messageId || 'N/A'})`);
+      return true;
+    } else {
+      console.error(`Lỗi gửi mail qua Brevo API:`, data);
+      return false;
+    }
+  } catch (error) {
+    console.error(`Lỗi kết nối khi gửi email qua Brevo API:`, error);
+    return false;
   }
-});
+};
 
 // Template for new registration
 const sendRegistrationEmail = async (email, name, packageType, startDate, endDate, price, staffName) => {
@@ -34,11 +56,8 @@ const sendRegistrationEmail = async (email, name, packageType, startDate, endDat
   const formattedEndDate = format(new Date(endDate), "dd/MM/yyyy");
   const formattedPrice = Number(price || 0).toLocaleString("vi-VN");
 
-  const mailOptions = {
-    from: `"Gym Fitness" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: `[Gym Fitness] Xác nhận đăng ký thành công gói tập - Chào mừng ${name}!`,
-    html: `
+  const subject = `[Gym Fitness] Xác nhận đăng ký thành công gói tập - Chào mừng ${name}!`;
+  const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; background-color: #f4f7f6; border-radius: 12px; overflow: hidden; border: 1px solid #dde2df;">
         
         <!-- Header -->
@@ -108,15 +127,9 @@ const sendRegistrationEmail = async (email, name, packageType, startDate, endDat
           <p style="margin: 4px 0 0 0; font-weight: 700; color: #0abf69; font-size: 14px;">Đội ngũ Gym Fitness</p>
         </div>
       </div>
-    `
-  };
+  `;
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Registration email sent: " + info.response);
-  } catch (error) {
-    console.error("Error sending registration email: ", error);
-  }
+  await sendEmailViaBrevo(email, name, subject, htmlContent);
 };
 
 // Template for expiration reminder (14 days)
@@ -124,12 +137,8 @@ const sendExpirationReminderEmail = async (email, name, packageType, endDate) =>
   if (!email) return;
 
   const formattedEndDate = format(new Date(endDate), "dd/MM/yyyy");
-
-  const mailOptions = {
-    from: `"Gym Fitness" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: "Nhắc nhở: Gói tập của bạn sắp hết hạn - Gym Fitness",
-    html: `
+  const subject = "Nhắc nhở: Gói tập của bạn sắp hết hạn - Gym Fitness";
+  const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #ffbb28; padding: 20px; text-align: center;">
           <h2 style="color: #fff; margin: 0;">Thông Báo Gói Tập Sắp Hết Hạn</h2>
@@ -148,15 +157,9 @@ const sendExpirationReminderEmail = async (email, name, packageType, endDate) =>
           <p>Trân trọng,<br><strong>Đội ngũ Gym Fitness</strong></p>
         </div>
       </div>
-    `
-  };
+  `;
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Expiration reminder email sent: " + info.response);
-  } catch (error) {
-    console.error("Error sending expiration reminder email: ", error);
-  }
+  await sendEmailViaBrevo(email, name, subject, htmlContent);
 };
 
 // Template for unfreeze notification
@@ -166,11 +169,8 @@ const sendUnfreezeNotificationEmail = async (email, name, packageType, newEndDat
   const formattedUnfreezeDate = format(new Date(actualUnfreezeDate), "dd/MM/yyyy");
   const formattedEndDate = format(new Date(newEndDate), "dd/MM/yyyy");
 
-  const mailOptions = {
-    from: `"Gym Fitness" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: `[Gym Fitness] Thông báo: Gói tập của bạn đã được kích hoạt lại!`,
-    html: `
+  const subject = `[Gym Fitness] Thông báo: Gói tập của bạn đã được kích hoạt lại!`;
+  const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #0abf69; padding: 20px; text-align: center;">
           <h2 style="color: #fff; margin: 0;">Thông Báo Kích Hoạt Lại Gói Tập</h2>
@@ -197,15 +197,9 @@ const sendUnfreezeNotificationEmail = async (email, name, packageType, newEndDat
           <p>Trân trọng,<br><strong>Đội ngũ Gym Fitness</strong></p>
         </div>
       </div>
-    `
-  };
+  `;
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Unfreeze notification email sent: " + info.response);
-  } catch (error) {
-    console.error("Error sending unfreeze notification email: ", error);
-  }
+  await sendEmailViaBrevo(email, name, subject, htmlContent);
 };
 
 module.exports = {
