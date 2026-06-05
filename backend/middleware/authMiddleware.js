@@ -58,11 +58,24 @@ const authorize = (...allowedRoles) => {
     }
 
     // 2. Lấy role của user hiện tại
-    // Nếu allowedRoles được truyền vào là mảng (ví dụ ['admin']), dùng allowedRoles[0] hoặc thay đổi cách gọi
-    // Ở đây dùng rest parameter nên allowedRoles sẽ là một mảng ['admin', 'manager', ...]
-    const roles = Array.isArray(allowedRoles[0])
-      ? allowedRoles[0]
-      : allowedRoles;
+    let roles = Array.isArray(allowedRoles[0])
+      ? [...allowedRoles[0]]
+      : [...allowedRoles];
+
+    // 3. Tự động ánh xạ quyền cho các vai trò mới
+    // Kế toán (accountant) có quyền ngang Admin
+    if (roles.includes("admin") && !roles.includes("accountant")) {
+      roles.push("accountant");
+    }
+
+    // Các quản lý mới (sm, pm, om) có quyền ngang quản lý chung (manager)
+    if (roles.includes("manager")) {
+      ["sm", "pm", "om"].forEach((r) => {
+        if (!roles.includes(r)) {
+          roles.push(r);
+        }
+      });
+    }
 
     if (roles.includes(req.user.role)) {
       next();

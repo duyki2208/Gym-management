@@ -315,22 +315,29 @@ const NotificationBell = () => {
             {!loading && notifications.map(n => (
               <button
                 key={n.id}
-                onClick={() => { navigate('/customers?status=expiring'); setOpen(false); }}
+                onClick={() => {
+                  if (n.type === 'team_task') {
+                    navigate('/?openTasks=true');
+                  } else {
+                    navigate('/customers?status=expiring');
+                  }
+                  setOpen(false);
+                }}
                 className="w-full flex items-start gap-3 px-4 py-3 hover:bg-orange-50/60 dark:hover:bg-orange-900/10 text-left transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0"
               >
-                <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${n.daysLeft <= 3 ? 'bg-red-100 text-red-500' : 'bg-orange-100 text-orange-500'}`}>
+                <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${n.type === 'team_task' ? 'bg-red-100 text-red-500' : n.daysLeft <= 3 ? 'bg-red-100 text-red-500' : 'bg-orange-100 text-orange-500'}`}>
                   <AlertCircle size={14} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{n.title}</p>
-                  <p className="text-xs text-gray-400">{n.subtitle}</p>
-                  <p className={`text-xs font-bold mt-0.5 ${n.severity === 'high' ? 'text-red-500' : 'text-orange-500'}`}>
-                    {n.daysLeft <= 0 ? 'Đã hết hạn' : `Còn ${n.daysLeft} ngày`}
+                  <p className="text-xs text-gray-400 truncate">{n.subtitle}</p>
+                  <p className={`text-xs font-bold mt-0.5 ${n.type === 'team_task' ? 'text-red-500' : n.severity === 'high' ? 'text-red-500' : 'text-orange-500'}`}>
+                    {n.type === 'team_task' ? 'Cần thực hiện ngay' : n.daysLeft <= 0 ? 'Đã hết hạn' : `Còn ${n.daysLeft} ngày`}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-gray-300 dark:text-gray-600 shrink-0">
                   <Clock size={12} />
-                  <span className="text-[10px]">{new Date(n.endDate).toLocaleDateString('vi-VN')}</span>
+                  <span className="text-[10px]">{n.type === 'team_task' ? 'Hôm nay' : new Date(n.endDate).toLocaleDateString('vi-VN')}</span>
                 </div>
               </button>
             ))}
@@ -373,7 +380,11 @@ const UserMenu = () => {
 
   const roleLabel = {
     admin: 'Quản trị viên',
+    accountant: 'Kế toán',
     manager: 'Quản lý',
+    sm: 'SM (Sale Manager)',
+    pm: 'PM (PT Manager)',
+    om: 'OM (Operation Manager)',
     staff: 'Nhân viên',
     pt: 'PT',
     sale: 'Sale',

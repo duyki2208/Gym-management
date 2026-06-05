@@ -189,7 +189,7 @@ const getInventoryReport = async (req, res) => {
 
     products.forEach(p => {
         totalStockValue += (p.stockQuantity || 0) * (p.sellPrice || 0);
-        if (p.stockQuantity <= 5) {
+        if (p.stockQuantity <= 10) {
             lowStockProducts.push(p);
         }
     });

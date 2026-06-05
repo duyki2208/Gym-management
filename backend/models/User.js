@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       // Danh sách các quyền hợp lệ trong hệ thống của bạn
-      enum: ["admin", "manager", "pt", "sale", "reception"],
+      enum: ["admin", "accountant", "sm", "pm", "om", "pt", "sale", "reception", "manager"],
       default: "reception", // Mặc định là lễ tân cho an toàn
     },
     dob: { type: Date },

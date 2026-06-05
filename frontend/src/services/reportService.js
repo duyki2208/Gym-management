@@ -35,6 +35,11 @@ const getChurnPrediction = async () => {
   return response.data;
 };
 
+const getAuditLogs = async (params = {}) => {
+  const response = await api.get('/audit-logs', { params });
+  return response.data;
+};
+
 export default {
   getSummary,
   getRevenueChart,
@@ -42,6 +47,7 @@ export default {
   getExpiringMembers,
   getRevenueDetails,
   getInventoryReport,
-  getChurnPrediction
+  getChurnPrediction,
+  getAuditLogs
 };
 

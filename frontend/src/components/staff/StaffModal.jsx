@@ -171,7 +171,9 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                 <option value="pt">PT</option>
                 <option value="sale">Sale</option>
                 <option value="reception">Lễ tân</option>
-                <option value="manager">Quản lý</option>
+                <option value="sm">SM (Sale Manager)</option>
+                <option value="pm">PM (PT Manager)</option>
+                <option value="om">OM (Operation Manager)</option>
               </select>
             </div>
 

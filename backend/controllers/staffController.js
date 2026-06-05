@@ -6,7 +6,7 @@ const Customer = require("../models/Customer");
 const getAll = async (req, res) => {
   try {
     const staff = await User.find({
-      role: { $in: ["manager", "pt", "sale", "reception"] },
+      role: { $in: ["manager", "pt", "sale", "reception", "accountant", "sm", "pm", "om"] },
     }).lean();
 
     const now = new Date();
@@ -30,7 +30,7 @@ const create = async (req, res) => {
   try {
     const { username, password, fullName, role, dob, phone, specialty } =
       req.body;
-    const allowedRoles = ["admin", "manager", "pt", "sale", "reception"];
+    const allowedRoles = ["sm", "pm", "om", "pt", "sale", "reception"];
     if (!username || !password || !role) {
       return res.status(400).json({
         message: "Thiếu thông tin bắt buộc (username, password, role)",
@@ -83,7 +83,13 @@ const update = async (req, res) => {
 
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
-    if (role) updateData.role = role;
+    if (role) {
+      const allowedRoles = ["sm", "pm", "om", "pt", "sale", "reception"];
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ message: "Không thể cập nhật chức vụ thành Admin hoặc Kế toán!" });
+      }
+      updateData.role = role;
+    }
     if (phone !== undefined) updateData.phone = phone;
     if (specialty !== undefined) updateData.specialty = specialty;
 
@@ -155,6 +161,32 @@ const updateSchedule = async (req, res) => {
     
     if (!date || !shiftType) {
       return res.status(400).json({ message: "Thiếu ngày (date) hoặc ca làm (shiftType)" });
+    }
+
+    // Lấy thông tin nhân viên được sửa lịch
+    const targetStaff = await User.findById(id);
+    if (!targetStaff) {
+      return res.status(404).json({ message: "Không tìm thấy nhân viên" });
+    }
+
+    // Phân quyền sửa lịch làm việc theo đội quản lý
+    const currentUserRole = req.user.role;
+    let hasPermission = false;
+
+    if (currentUserRole === "admin" || currentUserRole === "accountant") {
+      hasPermission = true;
+    } else if (currentUserRole === "sm" && targetStaff.role === "sale") {
+      hasPermission = true;
+    } else if (currentUserRole === "pm" && targetStaff.role === "pt") {
+      hasPermission = true;
+    } else if (currentUserRole === "om" && targetStaff.role === "reception") {
+      hasPermission = true;
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        message: "Bạn không có quyền cập nhật lịch làm việc cho nhân viên thuộc bộ phận này!" 
+      });
     }
     
     const schedule = await Schedule.findOneAndUpdate(

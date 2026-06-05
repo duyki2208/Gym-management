@@ -130,6 +130,14 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                 ? "PT"
                 : staff.role === "reception"
                 ? "Lễ tân"
+                : staff.role === "accountant"
+                ? "Kế toán"
+                : staff.role === "sm"
+                ? "SM (Sale Manager)"
+                : staff.role === "pm"
+                ? "PM (PT Manager)"
+                : staff.role === "om"
+                ? "OM (Operation Manager)"
                 : staff.role}
             </span>
 

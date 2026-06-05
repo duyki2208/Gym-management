@@ -46,15 +46,15 @@ const menuGroups = [
 
 // Danh sách role có quyền xem từng route
 const rolePermissions = {
-  '/':          ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/customers': ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/checkin':   ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/packages':  ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/products':  ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/history':   ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/staff':     ['admin', 'manager', 'staff', 'pt', 'sale', 'reception'],
-  '/reports':   ['admin', 'manager'],
-  '/settings':  ['admin'],
+  '/':          ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/customers': ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/checkin':   ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/packages':  ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/products':  ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/history':   ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/staff':     ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/reports':   ['admin', 'accountant', 'manager', 'sm', 'pm', 'om'],
+  '/settings':  ['admin', 'accountant'],
 };
 
 // ── NavItem ──────────────────────────────────────────────────────

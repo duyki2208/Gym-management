@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 // Import từ file service vừa tạo
 import { customerService, checkInService } from "../services/customerService";
 import {
@@ -32,13 +33,14 @@ const THEME = {
 };
 
 const History = () => {
+  const [searchParams] = useSearchParams();
   const [rawCustomers, setRawCustomers] = useState([]);
   const [rawCheckins, setRawCheckins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartReady, setChartReady] = useState(false);
 
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("this_week");
+  const [filterType, setFilterType] = useState(searchParams.get("filter") || "this_week");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [activeDropdown, setActiveDropdown] = useState(null);
 

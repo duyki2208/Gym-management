@@ -18,10 +18,34 @@ const Reports = () => {
   const [inventoryData, setInventoryData] = useState({ posRevenue: 0, totalStockValue: 0, lowStockProducts: [] });
   const [activeTab, setActiveTab] = useState("business");
   const [loading, setLoading] = useState(true);
+  const [renderCharts, setRenderCharts] = useState(false);
+
+  // States cho Audit Log
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotalPages, setAuditTotalPages] = useState(1);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditSearch, setAuditSearch] = useState("");
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      setRenderCharts(false);
+      const timer = setTimeout(() => {
+        setRenderCharts(true);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, loading]);
+
+  useEffect(() => {
+    if (activeTab === "audit") {
+      fetchAuditLogs(auditPage, auditSearch);
+    }
+  }, [activeTab, auditPage, auditSearch]);
 
   const fetchData = async () => {
     try {
@@ -42,6 +66,22 @@ const Reports = () => {
       console.error("Error fetching reports:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuditLogs = async (page = 1, search = "") => {
+    setAuditLoading(true);
+    try {
+      const res = await reportService.getAuditLogs({ page, limit: 10, search });
+      if (res && res.success && res.data) {
+        setAuditLogs(res.data.logs || []);
+        setAuditTotalPages(res.data.totalPages || 1);
+        setAuditPage(res.data.currentPage || 1);
+      }
+    } catch (error) {
+      console.error("Lỗi lấy nhật ký hệ thống:", error);
+    } finally {
+      setAuditLoading(false);
     }
   };
 
@@ -129,6 +169,12 @@ const Reports = () => {
         >
            <AlertTriangle size={18} className={activeTab === 'churn' ? 'text-red-500' : 'text-gray-400'}/> Dự đoán Rời bỏ
         </button>
+        <button 
+           className={`py-3 px-6 font-bold border-b-2 transition-colors ${activeTab === 'audit' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+           onClick={() => setActiveTab('audit')}
+        >
+           Nhật ký vận hành
+        </button>
       </div>
 
       {activeTab === 'business' && (
@@ -203,27 +249,33 @@ const Reports = () => {
           {/* Revenue Chart Section */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-bold mb-4 text-gray-800">Biểu Đồ Doanh Thu</h2>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" />
-                  <YAxis 
-                    ticks={revenueTicks}
-                    tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(value)}
-                    domain={[0, 200000000]} 
-                  />
-                  <Tooltip formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)} />
-                  <Legend />
-                  <Bar 
-                    dataKey="revenue" 
-                    fill="#3b82f6" 
-                    radius={[4, 4, 0, 0]} 
-                    name="Doanh Thu"
-                    barSize={40}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[400px] w-full relative">
+              {renderCharts ? (
+                <ResponsiveContainer width="100%" height={380} minWidth={1}>
+                  <BarChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" />
+                    <YAxis 
+                      ticks={revenueTicks}
+                      tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(value)}
+                      domain={[0, 200000000]} 
+                    />
+                    <Tooltip formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)} />
+                    <Legend />
+                    <Bar 
+                      dataKey="revenue" 
+                      fill="#3b82f6" 
+                      radius={[4, 4, 0, 0]} 
+                      name="Doanh Thu"
+                      barSize={40}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[380px] flex items-center justify-center text-gray-400 text-sm">
+                  Đang tải biểu đồ doanh thu...
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,27 +297,33 @@ const Reports = () => {
                  ))}
               </div>
 
-              <div className="w-full md:w-2/3 h-[300px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-                  <PieChart>
-                    <Pie
-                      data={packageData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={80}
-                      outerRadius={120}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                    >
-                      {packageData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="w-full md:w-2/3 h-[300px] relative">
+                {renderCharts ? (
+                  <ResponsiveContainer width="100%" height={300} minWidth={1}>
+                    <PieChart>
+                      <Pie
+                        data={packageData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {packageData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-gray-400 text-sm">
+                    Đang tải biểu đồ tỷ lệ gói tập...
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -348,7 +406,7 @@ const Reports = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="text-orange-500" />
-              <h2 className="text-xl font-bold text-gray-800">Sản Phẩm Sắp Hết Hàng (Tồn kho {"<="} 5)</h2>
+              <h2 className="text-xl font-bold text-gray-800">Sản Phẩm Sắp Hết Hàng (Tồn kho {"<="} 10)</h2>
             </div>
             
             <div className="overflow-x-auto">
@@ -393,6 +451,119 @@ const Reports = () => {
 
       {activeTab === 'churn' && (
         <ChurnPrediction />
+      )}
+
+      {activeTab === 'audit' && (
+        <div className="space-y-6">
+          {/* Filters & Search */}
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div className="relative flex-1 max-w-md w-full">
+              <input
+                className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-gray-50"
+                placeholder="Tìm nhân viên, hành động..."
+                value={auditSearch}
+                onChange={(e) => {
+                  setAuditSearch(e.target.value);
+                  setAuditPage(1);
+                }}
+              />
+            </div>
+            <div className="flex gap-2">
+              <span className="text-xs text-gray-500 font-bold self-center">Chỉ ghi các thao tác thêm, sửa, xóa thành công của nhân viên để quản lý đối soát.</span>
+            </div>
+          </div>
+
+          {/* Audit Logs Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            {auditLoading ? (
+              <div className="p-8 text-center text-gray-500">Đang tải nhật ký hệ thống...</div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50 uppercase text-xs font-bold text-gray-500 border-b">
+                      <tr>
+                        <th className="p-4 w-[15%]">Thời Gian</th>
+                        <th className="p-4 w-[15%]">Nhân Viên</th>
+                        <th className="p-4 w-[35%]">Hành Động</th>
+                        <th className="p-4 w-[10%]">Thao Tác</th>
+                        <th className="p-4 w-[25%]">Chi Tiết</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {auditLogs.length > 0 ? (
+                        auditLogs.map((log) => (
+                          <tr key={log._id} className="hover:bg-gray-50 transition-colors">
+                            <td className="p-4 text-sm text-gray-600">
+                              {new Date(log.createdAt).toLocaleString("vi-VN")}
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-gray-800">{log.username}</span>
+                              {log.user?.role && (
+                                <span className="ml-1.5 px-2 py-0.5 text-[10px] font-black uppercase rounded bg-gray-100 text-gray-600">
+                                  {log.user.role}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 text-sm text-gray-800 font-medium">
+                              {log.action}
+                            </td>
+                            <td className="p-4">
+                              <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                                log.method === "POST" ? "bg-green-100 text-green-700" :
+                                log.method === "PUT" ? "bg-blue-100 text-blue-700" :
+                                "bg-red-100 text-red-700"
+                              }`}>
+                                {log.method === "POST" ? "Thêm" : log.method === "PUT" ? "Sửa" : "Xóa"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-xs font-mono text-gray-500 max-w-xs truncate">
+                              <details className="cursor-pointer">
+                                <summary className="text-primary hover:underline font-sans font-bold">Xem chi tiết</summary>
+                                <pre className="mt-2 p-2 bg-gray-50 border rounded text-[10px] overflow-x-auto whitespace-pre-wrap max-h-32">
+                                  {JSON.stringify(log.details, null, 2)}
+                                </pre>
+                              </details>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="p-8 text-center text-gray-500">
+                            Không có nhật ký vận hành nào phù hợp.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Audit Pagination */}
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+                  <div className="text-sm text-gray-500">
+                    Trang <span className="font-bold">{auditPage}</span> / <span className="font-bold">{auditTotalPages}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setAuditPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={auditPage === 1 || auditLoading}
+                      className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Trang trước
+                    </button>
+                    <button
+                      onClick={() => setAuditPage((prev) => Math.min(prev + 1, auditTotalPages))}
+                      disabled={auditPage >= auditTotalPages || auditLoading}
+                      className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Trang sau
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

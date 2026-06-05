@@ -32,7 +32,7 @@ const Staff = () => {
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
-    setIsAdmin(user.role === "admin");
+    setIsAdmin(user.role === "admin" || user.role === "accountant");
     fetchStaff();
   }, []);
 
@@ -130,6 +130,10 @@ const Staff = () => {
                             ? "bg-blue-100 text-blue-700"
                             : s.role === "reception"
                             ? "bg-green-100 text-green-700"
+                            : ["sm", "pm", "om"].includes(s.role)
+                            ? "bg-pink-100 text-pink-700"
+                            : s.role === "accountant"
+                            ? "bg-indigo-100 text-indigo-700"
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
@@ -141,6 +145,14 @@ const Staff = () => {
                           ? "PT"
                           : s.role === "reception"
                           ? "Lễ tân"
+                          : s.role === "accountant"
+                          ? "Kế toán"
+                          : s.role === "sm"
+                          ? "SM"
+                          : s.role === "pm"
+                          ? "PM"
+                          : s.role === "om"
+                          ? "OM"
                           : s.role || "N/A"}
                       </span>
                     </td>
@@ -226,7 +238,18 @@ const Staff = () => {
       {detailStaff && (
         <StaffDetailModal
           staff={detailStaff}
-          isAdmin={isAdmin || (JSON.parse(localStorage.getItem("gym_user") || "{}").role === "manager")}
+          isAdmin={
+            (() => {
+              const currentUser = JSON.parse(localStorage.getItem("gym_user") || "{}");
+              return (
+                currentUser.role === "admin" ||
+                currentUser.role === "accountant" ||
+                (currentUser.role === "sm" && detailStaff?.role === "sale") ||
+                (currentUser.role === "pm" && detailStaff?.role === "pt") ||
+                (currentUser.role === "om" && detailStaff?.role === "reception")
+              );
+            })()
+          }
           onClose={() => setDetailStaff(null)}
           onScheduleUpdate={async () => {
             const today = new Date().toLocaleDateString("en-CA");

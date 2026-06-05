@@ -34,7 +34,7 @@ const CustomerList = () => {
   const initialSearch = searchParams.get('search') || "";
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
-  const [filterStatus, setFilterStatus] = useState("all"); 
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || "all"); 
   const [filterPayment, setFilterPayment] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
   const [filterPackage, setFilterPackage] = useState("all");
@@ -75,7 +75,7 @@ const CustomerList = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
-    setIsAdmin(user.role === "admin");
+    setIsAdmin(user.role === "admin" || user.role === "accountant");
   }, []);
 
   // Debounce search term
@@ -121,7 +121,7 @@ const CustomerList = () => {
       setPackages(Array.isArray(packageData) ? packageData : []);
       
       const staffs = Array.isArray(staffData) ? staffData : [];
-      setStaffList(staffs.filter(s => ["manager", "pt", "sale"].includes(s.role)));
+      setStaffList(staffs.filter(s => ["manager", "pt", "sale", "sm", "pm", "om", "accountant"].includes(s.role)));
     } catch (err) {
       console.error("Lỗi tải khách hàng:", err);
       setCustomers([]);

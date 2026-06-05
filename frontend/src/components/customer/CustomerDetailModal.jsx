@@ -467,7 +467,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          {/* 2. Package Info */}
                          <section>
                              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
-                                 2. Thông tin & Nhân sự Phụ trách
+                                 2. Thông tin gói & Nhân sự Phụ trách
                              </h3>
                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                  <div className="col-span-2 md:col-span-2">

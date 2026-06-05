@@ -227,7 +227,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
   };
 
   const filteredAndSortedStaff = [...staffList]
-    .filter((s) => ["manager", "pt", "sale"].includes(s.role))
+    .filter((s) => ["manager", "pt", "sale", "sm", "pm", "om", "accountant"].includes(s.role))
     .sort((a, b) => {
       // Sort to group identical roles together
       if (a.role < b.role) return -1;
