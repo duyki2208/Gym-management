@@ -19,10 +19,12 @@ import { customerService } from "../services/customerService";
 import { teamTaskService } from "../services/teamTaskService";
 import { useQuery } from '@tanstack/react-query';
 import toast from "react-hot-toast";
+import { useConfirm } from "../context/ConfirmContext";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   
   // State quản lý Modals
   const [showRevenueModal, setShowRevenueModal] = useState(false);
@@ -403,6 +405,7 @@ const Modal = ({ title, onClose, children }) => (
 
 // Component Popup Quản lý Task Ghi chú
 const TeamTasksModal = ({ onClose }) => {
+  const confirm = useConfirm();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeSlot, setTimeSlot] = useState("");
@@ -528,11 +531,16 @@ const TeamTasksModal = ({ onClose }) => {
   };
 
   const handleDeleteTask = async (id) => {
-    if (window.confirm("Bạn muốn xóa đầu việc này?")) {
+    const isConfirmed = await confirm({
+      title: "Xóa công việc",
+      message: "Bạn có chắc chắn muốn xóa đầu việc này?",
+      type: "danger"
+    });
+    if (isConfirmed) {
       try {
         const res = await teamTaskService.delete(id);
         if (res && res.success) {
-          toast.success("Đã xóa đầu việc");
+          toast.success("Đã xóa đầu việc thành công");
           loadTasks();
         }
       } catch (e) {
@@ -587,7 +595,7 @@ const TeamTasksModal = ({ onClose }) => {
                   <input
                     type="text"
                     className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark"
-                    placeholder="Khung giờ (VD: 08h-10h)"
+                    placeholder="Khung giờ"
                     value={timeSlot}
                     onChange={(e) => setTimeSlot(e.target.value)}
                   />
@@ -729,29 +737,29 @@ const TeamTasksModal = ({ onClose }) => {
 const StatCard = ({ label, value, change, type, icon: Icon, colorClass, onClick }) => (
   <div 
     onClick={onClick}
-    className={`flex flex-col rounded-2xl p-6 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer ${colorClass || 'border-border-light dark:border-border-dark'}`}
+    className={`flex flex-col rounded-2xl p-6 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer min-w-0 w-full ${colorClass || 'border-border-light dark:border-border-dark'}`}
   >
     <div className={`absolute right-4 top-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-300 ${colorClass ? colorClass.split(' ')[0] : ''}`}>
       <Icon size={64} />
     </div>
     
-    <div className="flex items-center gap-2 mb-4">
-      <div className={`p-2 rounded-lg ${colorClass || 'bg-gray-100 text-gray-600'}`}>
+    <div className="flex items-center gap-2 mb-4 min-w-0">
+      <div className={`p-2 rounded-lg shrink-0 ${colorClass || 'bg-gray-100 text-gray-600'}`}>
         <Icon size={20} />
       </div>
-      <p className="text-text-muted-light dark:text-text-muted-dark text-xs font-bold uppercase tracking-wider">
+      <p className="text-text-muted-light dark:text-text-muted-dark text-xs font-bold uppercase tracking-wider break-words flex-1">
         {label}
       </p>
     </div>
 
-    <div className="flex flex-col z-10">
-      <p className="text-text-light dark:text-text-dark tracking-tight text-3xl font-black">
+    <div className="flex flex-col z-10 min-w-0">
+      <p className="text-text-light dark:text-text-dark tracking-tight text-3xl font-black break-words break-all">
         {value}
       </p>
       
       {change && (
         <span
-          className={`text-sm font-bold mt-2 ${
+          className={`text-sm font-bold mt-2 break-words whitespace-pre-wrap ${
             type === "positive" ? "text-green-500" : type === "negative" ? "text-red-500" : type === "warning" ? "text-yellow-500" : "text-gray-500"
           }`}
         >

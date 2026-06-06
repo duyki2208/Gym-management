@@ -26,6 +26,10 @@ const customerSchema = mongoose.Schema(
     email: { type: String, default: "" }, // Email
     price: { type: Number, default: 0 }, // Giá gói
     remainingSessions: { type: Number, default: 0 }, // Số buổi còn lại
+    contractCode: { type: String, default: "" }, // Mã hợp đồng
+    identityCard: { type: String, default: "" }, // Số CCCD
+    emergencyContactName: { type: String, default: "" }, // Tên người liên hệ khẩn cấp
+    emergencyContactPhone: { type: String, default: "" }, // SĐT người liên hệ khẩn cấp
 
     // Thanh toán và Nguồn khách
     paymentStatus: { type: String, enum: ['paid', 'deposit', 'unpaid'], default: 'paid' },

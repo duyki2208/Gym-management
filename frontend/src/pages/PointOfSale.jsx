@@ -203,7 +203,7 @@ const PointOfSale = () => {
                   <div className="flex flex-col items-center justify-center h-full opacity-30 text-center p-6">
                      <ShoppingCart size={48} className="mb-2" />
                      <p className="font-bold">Chưa có sản phẩm.</p>
-                     <p className="text-sm">Bấm vào mặt hàng bên trái để chọn</p>
+                    
                   </div>
                ) : (
                   cart.map(c => (

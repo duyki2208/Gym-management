@@ -220,14 +220,14 @@ const History = () => {
   };
 
   const StatCard = ({ title, value, subText }) => (
-    <div className="flex flex-col gap-2 rounded-xl bg-surface-light dark:bg-surface-dark p-6 border border-border-light dark:border-border-dark shadow-sm">
-      <p className="text-text-light dark:text-text-dark text-base font-medium">
+    <div className="flex flex-col gap-2 rounded-xl bg-surface-light dark:bg-surface-dark p-6 border border-border-light dark:border-border-dark shadow-sm min-w-0 w-full">
+      <p className="text-text-light dark:text-text-dark text-base font-medium break-words">
         {title}
       </p>
-      <p className="text-text-light dark:text-text-dark text-3xl font-bold">
+      <p className="text-text-light dark:text-text-dark text-3xl font-bold break-words break-all">
         {value}
       </p>
-      <p className="text-sm text-gray-500 font-medium">{subText}</p>
+      <p className="text-sm text-gray-500 font-medium break-words whitespace-pre-wrap">{subText}</p>
     </div>
   );
 

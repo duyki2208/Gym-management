@@ -51,7 +51,7 @@ const Login = () => {
                       <div className="flex w-full flex-1 items-stretch rounded-lg">
                         <input 
                           className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b14] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-700/50 bg-white dark:bg-[#102219] focus:border-primary h-14 placeholder:text-gray-500 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" 
-                          placeholder="admin" 
+                          
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
                         />
@@ -66,7 +66,7 @@ const Login = () => {
                       <div className="flex w-full flex-1 items-stretch rounded-lg">
                         <input 
                           className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b14] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-700/50 bg-white dark:bg-[#102219] focus:border-primary h-14 placeholder:text-gray-500 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" 
-                          placeholder="••••••" 
+                          
                           type="password" 
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}

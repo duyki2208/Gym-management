@@ -121,7 +121,7 @@ const ImportGoods = () => {
                       type="text" 
                       className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary bg-gray-50"
                       value={supplier} onChange={(e) => setSupplier(e.target.value)}
-                      placeholder="Tên hoặc SĐT nhà cung cấp..." 
+                      placeholder="Tên hoặc SĐT nhà cung cấp" 
                    />
                 </div>
                 <div>
@@ -130,7 +130,7 @@ const ImportGoods = () => {
                       type="text" 
                       className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary bg-gray-50"
                       value={note} onChange={(e) => setNote(e.target.value)}
-                      placeholder="..." 
+                      
                    />
                 </div>
             </div>
@@ -184,7 +184,7 @@ const ImportGoods = () => {
                        {importDetails.length === 0 && (
                            <tr>
                                <td colSpan={5} className="py-10 text-center text-gray-400">
-                                   Chưa có sản phẩm nào. Hãy chọn từ danh sách bên trái.
+                                   Chưa có sản phẩm nào
                                </td>
                            </tr>
                        )}

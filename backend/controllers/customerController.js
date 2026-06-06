@@ -31,6 +31,7 @@ async function syncCustomerFields(customerId) {
       customer.hasLocker = activePackage.hasLocker;
       customer.hasWater = activePackage.hasWater;
       customer.packageNote = activePackage.packageNote;
+      customer.contractCode = activePackage.contractCode || ""; // Đồng bộ mã hợp đồng
     } else {
       customer.activePackage = null;
       customer.packageType = "Không có";
@@ -63,6 +64,9 @@ function flattenPackage(pkg) {
     email: pkg.customer?.email || "",
     healthNote: pkg.customer?.healthNote || "",
     faceDescriptor: pkg.customer?.faceDescriptor || [],
+    identityCard: pkg.customer?.identityCard || "", // Thêm CCCD
+    emergencyContactName: pkg.customer?.emergencyContactName || "", // Thêm người liên hệ khẩn cấp
+    emergencyContactPhone: pkg.customer?.emergencyContactPhone || "", // Thêm SĐT khẩn cấp
     
     packageType: pkg.packageName,
     startDate: pkg.startDate,
@@ -76,6 +80,7 @@ function flattenPackage(pkg) {
     contractType: pkg.contractType,
     paymentStatus: pkg.paymentStatus,
     paidAmount: pkg.paidAmount,
+    contractCode: pkg.contractCode || "", // Thêm mã hợp đồng
     status: pkg.status,
     frozenPeriods: pkg.frozenPeriods,
     
@@ -117,6 +122,9 @@ const createCustomer = async (req, res) => {
       paidAmount,
       contractCode,
       packageNote,
+      identityCard,
+      emergencyContactName,
+      emergencyContactPhone,
     } = req.body;
 
     const normalizedName = name ? name.trim() : "";
@@ -160,6 +168,9 @@ const createCustomer = async (req, res) => {
         packageType,
         packageNote: packageNote || "",
         endDate: new Date(endDate),
+        identityCard: identityCard || "",
+        emergencyContactName: emergencyContactName || "",
+        emergencyContactPhone: emergencyContactPhone || "",
       });
       await customer.save();
       console.log(`Đã tạo hồ sơ khách hàng mới: ${customer.code}`);
@@ -362,7 +373,21 @@ const updateCustomer = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    const customerFields = ["name", "phone", "dob", "gender", "address", "avatar", "email", "healthNote", "faceDescriptor", "packageNote"];
+    const customerFields = [
+      "name",
+      "phone",
+      "dob",
+      "gender",
+      "address",
+      "avatar",
+      "email",
+      "healthNote",
+      "faceDescriptor",
+      "packageNote",
+      "identityCard",
+      "emergencyContactName",
+      "emergencyContactPhone",
+    ];
     const packageFields = [
       "packageType",
       "startDate",
@@ -378,6 +403,7 @@ const updateCustomer = async (req, res) => {
       "paidAmount",
       "status",
       "packageNote",
+      "contractCode",
     ];
 
     customerFields.forEach((field) => {

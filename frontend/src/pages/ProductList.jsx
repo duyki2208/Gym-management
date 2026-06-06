@@ -4,6 +4,7 @@ import ProductModal from '../components/product/ProductModal';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Search, Edit, Trash2, Package } from 'lucide-react';
+import { useConfirm } from '../context/ConfirmContext';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -13,6 +14,7 @@ const ProductList = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -48,13 +50,18 @@ const ProductList = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Bạn có chắc muốn xoá sản phẩm này?')) {
+    const isConfirmed = await confirm({
+      title: "Xóa sản phẩm",
+      message: "Bạn có chắc chắn muốn xóa sản phẩm này không?",
+      type: "danger"
+    });
+    if (isConfirmed) {
       try {
         await productService.delete(id);
-        toast.success('Đã xoá');
+        toast.success('Đã xóa sản phẩm thành công');
         fetchProducts();
       } catch (error) {
-        toast.error('Không thể xoá');
+        toast.error('Không thể xóa sản phẩm');
       }
     }
   };
@@ -90,35 +97,37 @@ const ProductList = () => {
         {loading ? (
              <div className="col-span-full py-10 text-center text-gray-500">Đang tải...</div>
         ) : products.length > 0 ? (
-            products.map((p) => (
-               <div key={p._id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-                   <div className="h-40 bg-gray-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
-                       {p.imageUrl ? (
-                           <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                       ) : (
-                           <Package size={48} className="text-gray-300" />
-                       )}
-                   </div>
-                   <div className="flex justify-between items-start mb-2">
-                       <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md uppercase tracking-wider">{p.category}</span>
-                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setSelectedProduct(p); setShowModal(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded text-sm"><Edit size={16}/></button>
-                            <button onClick={() => handleDelete(p._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded text-sm"><Trash2 size={16}/></button>
-                       </div>
-                   </div>
-                   <h3 className="font-bold text-lg text-gray-800 leading-tight mb-1">{p.name}</h3>
-                   <div className="flex justify-between items-end mt-4">
-                       <div>
-                           <p className="text-xs text-gray-500 mb-0.5">Giá bán</p>
-                           <p className="font-black text-gray-900 border-b-2 border-primary/20 pb-0.5 inline-block">{p.sellPrice.toLocaleString()} đ</p>
-                       </div>
-                       <div className={`text-right ${p.stockQuantity <= 10 ? 'text-red-600' : 'text-green-600'}`}>
-                           <p className="text-xs mb-0.5 whitespace-nowrap">Tồn kho</p>
-                           <p className="font-black text-lg bg-gray-50 px-2 py-0.5 rounded-md">{p.stockQuantity}</p>
-                       </div>
-                   </div>
-               </div>
-            ))
+             products.map((p) => (
+                <div key={p._id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between min-w-0 w-full">
+                    <div>
+                        <div className="h-40 bg-gray-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+                            {p.imageUrl ? (
+                                <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            ) : (
+                                <Package size={48} className="text-gray-300" />
+                            )}
+                        </div>
+                        <div className="flex justify-between items-start mb-2 gap-2 min-w-0">
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md uppercase tracking-wider truncate shrink-0">{p.category}</span>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                 <button onClick={() => { setSelectedProduct(p); setShowModal(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded text-sm"><Edit size={16}/></button>
+                                 <button onClick={() => handleDelete(p._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded text-sm"><Trash2 size={16}/></button>
+                            </div>
+                        </div>
+                        <h3 className="font-bold text-base text-gray-800 leading-snug mb-1 line-clamp-2 min-h-[3rem] flex items-center break-words" title={p.name}>{p.name}</h3>
+                    </div>
+                    <div className="flex justify-between items-end mt-4 gap-2 border-t border-gray-50 pt-3 min-w-0">
+                        <div className="min-w-0">
+                            <p className="text-xs text-gray-500 mb-0.5 break-words">Giá bán</p>
+                            <p className="font-black text-gray-900 border-b-2 border-primary/20 pb-0.5 inline-block break-words break-all">{p.sellPrice.toLocaleString()} đ</p>
+                        </div>
+                        <div className={`text-right min-w-0 ${p.stockQuantity <= 10 ? 'text-red-600' : 'text-green-600'}`}>
+                            <p className="text-xs mb-0.5 break-words">Tồn kho</p>
+                            <p className="font-black text-lg bg-gray-50 px-2 py-0.5 rounded-md break-words break-all">{p.stockQuantity}</p>
+                        </div>
+                    </div>
+                </div>
+             ))
         ) : (
             <div className="col-span-full py-16 text-center text-gray-500">
                 <Package size={48} className="mx-auto text-gray-300 mb-3" />

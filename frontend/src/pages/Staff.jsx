@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { staffService } from "../services/customerService";
 import StaffModal from "../components/staff/StaffModal";
 import StaffDetailModal from "../components/staff/StaffDetailModal";
+import toast from "react-hot-toast";
+import { useConfirm } from "../context/ConfirmContext";
 
 const Staff = () => {
   const [list, setList] = useState([]);
@@ -11,12 +13,40 @@ const Staff = () => {
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const confirm = useConfirm();
 
   const fetchStaff = async () => {
     try {
       setLoading(true);
       const data = await staffService.getAll();
-      setList(Array.isArray(data) ? data : []);
+      
+      // Dinh nghia do uu tien cua cac chuc vu
+      const getRolePriority = (role) => {
+        const r = (role || "").toLowerCase();
+        if (r === "sm") return 1;
+        if (r === "pm") return 2;
+        if (r === "om") return 3;
+        if (r === "sale") return 4;
+        if (r === "pt") return 5;
+        if (r === "reception") return 6;
+        return 7; // Cac vai tro khac nhu manager, accountant...
+      };
+
+      // Sap xep danh sach nhan vien theo chuc vu, sau do theo ten
+      const sortedData = (Array.isArray(data) ? data : []).sort((a, b) => {
+        const priorityA = getRolePriority(a.role);
+        const priorityB = getRolePriority(b.role);
+        
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        const nameA = (a.fullName || a.name || "").toLowerCase();
+        const nameB = (b.fullName || b.name || "").toLowerCase();
+        return nameA.localeCompare(nameB, "vi");
+      });
+
+      setList(sortedData);
 
       // Lấy lịch làm việc của hôm nay
       const today = new Date().toLocaleDateString("en-CA");
@@ -41,19 +71,26 @@ const Staff = () => {
       await staffService.save(d);
       await fetchStaff();
       setModal(false);
+      toast.success("Lưu thông tin nhân viên thành công!");
     } catch (error) {
       console.error("Lỗi lưu nhân viên:", error);
-      // toast handled by api.js
+      toast.error(error.response?.data?.message || "Lỗi khi lưu nhân viên");
     }
   };
 
   const del = async (id) => {
-    if (window.confirm("Xóa nhân viên này?")) {
+    const isConfirmed = await confirm({
+      title: "Xóa nhân viên",
+      message: "Bạn có chắc chắn muốn xóa nhân viên này khỏi hệ thống?",
+      type: "danger"
+    });
+    if (isConfirmed) {
       try {
         await staffService.delete(id);
         await fetchStaff();
+        toast.success("Đã xóa nhân viên thành công!");
       } catch (error) {
-        // toast handled by api.js
+        toast.error("Không thể xóa nhân viên");
       }
     }
   };

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { packageService } from "../services/customerService";
 import PackageModal from "../components/package/PackageModal";
+import { useConfirm } from "../context/ConfirmContext";
 
 const Packages = () => {
   const [list, setList] = useState([]);
   const [modal, setModal] = useState(false);
   const [edit, setEdit] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
@@ -30,21 +32,28 @@ const Packages = () => {
       const data = await packageService.getAll();
       setList(Array.isArray(data) ? data : []);
       setModal(false);
+      toast.success("Lưu gói tập thành công!");
     } catch (error) {
       console.error("Lỗi lưu gói tập:", error);
-      // Global error handled by api.js
+      toast.error(error.response?.data?.message || "Lỗi khi lưu gói tập");
     }
   };
 
   const del = async (id) => {
-    if (window.confirm("Xóa gói tập này?")) {
+    const isConfirmed = await confirm({
+      title: "Xóa gói tập",
+      message: "Bạn có chắc chắn muốn xóa gói tập này không? Hành động này không thể hoàn tác.",
+      type: "danger"
+    });
+    if (isConfirmed) {
       try {
         await packageService.delete(id);
         const data = await packageService.getAll();
         setList(Array.isArray(data) ? data : []);
+        toast.success("Đã xóa gói tập thành công!");
       } catch (error) {
         console.error("Lỗi xóa gói tập:", error);
-        // Global error handled by api.js
+        toast.error("Lỗi khi xóa gói tập");
       }
     }
   };

@@ -42,7 +42,7 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
               value={formData.name} 
               onChange={e => setFormData({...formData, name: e.target.value})} 
-              placeholder="Ví dụ: Gói 1 tháng" 
+              
             />
           </div>
 
@@ -53,8 +53,8 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
               value={formData.type || 'monthly'}
               onChange={e => setFormData({...formData, type: e.target.value})}
             >
-              <option value="monthly">Theo tháng (Gói thường)</option>
-              <option value="session">Theo buổi (Tập với PT)</option>
+              <option value="monthly">Theo tháng</option>
+              <option value="session">Theo buổi</option>
             </select>
           </div>
           

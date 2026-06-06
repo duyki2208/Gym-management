@@ -4,8 +4,10 @@ import { vi } from "date-fns/locale";
 import { customerService, checkInService, workoutService } from "../../services/customerService";
 import FaceCaptureModal from "./FaceCaptureModal";
 import toast from "react-hot-toast";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => {
+  const confirm = useConfirm();
   const [history, setHistory] = useState([]);
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +136,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   };
 
   const handleDeleteSession = async (sessionId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa buổi tập này? Lượt tập sẽ được hoàn lại cho khách hàng.")) return;
+    const isConfirmed = await confirm({
+      title: "Xóa buổi tập PT",
+      message: "Bạn có chắc chắn muốn xóa buổi tập này? Lượt tập sẽ được hoàn lại cho khách hàng.",
+      type: "danger"
+    });
+    if (!isConfirmed) return;
     try {
       const res = await workoutService.deleteSession(sessionId);
       toast.success(res.message || "Xóa thành công và đã hoàn lại 1 buổi");
@@ -272,7 +279,8 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
   const daysLeft = calculateDaysLeft(customer.endDate);
 
-  const getStatusColor = (endDate) => {
+  const getStatusColor = (endDate, status) => {
+    if (status === "frozen") return "text-purple-600 bg-purple-100 border-purple-200";
     if (!endDate) return "text-green-600 bg-green-100 border-green-200";
     const now = new Date();
     const start = customer.startDate ? new Date(customer.startDate) : now;
@@ -287,7 +295,8 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
     return "text-green-600 bg-green-100 border-green-200";
   };
   
-  const getStatusText = (endDate) => {
+  const getStatusText = (endDate, status) => {
+      if (status === "frozen") return "Bảo lưu";
       if (!endDate) return "Đang hoạt động";
        const now = new Date();
       const start = customer.startDate ? new Date(customer.startDate) : now;
@@ -365,13 +374,14 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
              <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 mb-6">
                 {customer.code || "NO CODE"}
              </span>
-             <div className={`py-2 px-5 rounded-full text-sm font-bold border flex items-center gap-2 font-display ${getStatusColor(customer.endDate)}`}>
+             <div className={`py-2 px-5 rounded-full text-sm font-bold border flex items-center gap-2 font-display ${getStatusColor(customer.endDate, customer.status)}`}>
                  <span className={`w-2 h-2 rounded-full ${
-                     getStatusText(customer.endDate) === "Chưa kích hoạt" ? "bg-sky-500" :
-                     getStatusText(customer.endDate).includes("Sắp hết") ? "bg-yellow-500" :
-                     getStatusText(customer.endDate) === "Hết hạn" ? "bg-red-500" : "bg-green-500"
+                     customer.status === "frozen" ? "bg-purple-500" :
+                     getStatusText(customer.endDate, customer.status) === "Chưa kích hoạt" ? "bg-sky-500" :
+                     getStatusText(customer.endDate, customer.status).includes("Sắp hết") ? "bg-yellow-500" :
+                     getStatusText(customer.endDate, customer.status) === "Hết hạn" ? "bg-red-500" : "bg-green-500"
                  }`}></span>
-                {getStatusText(customer.endDate)}
+                {getStatusText(customer.endDate, customer.status)}
             </div>
             
              <div className="mt-8 w-full space-y-3">
@@ -458,8 +468,27 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                  <InfoRow label="Email" value={customer.email} />
                                  <InfoRow label="Ngày sinh" value={customer.dob ? format(new Date(customer.dob), "dd/MM/yyyy") : null} />
                                  <InfoRow label="Giới tính" value={customer.gender === 'male' ? 'Nam' : customer.gender === 'female' ? 'Nữ' : 'Khác'} />
-                                 <div className="col-span-2">
+                                 <InfoRow label="Số CCCD" value={customer.identityCard} />
+                                 <div className="col-span-3">
                                      <InfoRow label="Địa chỉ" value={customer.address} />
+                                 </div>
+                                 <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 border-t border-red-100 dark:border-red-950/30 pt-4">
+                                     <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex flex-col gap-1 min-w-0">
+                                         <span className="text-sm uppercase font-bold text-red-700 dark:text-red-400 font-display">
+                                             Người liên hệ khẩn cấp
+                                         </span>
+                                         <span className="text-base text-gray-800 dark:text-gray-200 font-display font-bold">
+                                             {customer.emergencyContactName || "-"}
+                                         </span>
+                                     </div>
+                                     <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex flex-col gap-1 min-w-0">
+                                         <span className="text-sm uppercase font-bold text-red-700 dark:text-red-400 font-display">
+                                             SĐT liên hệ khẩn cấp
+                                         </span>
+                                         <span className="text-lg text-red-600 dark:text-red-400 font-display font-black">
+                                             {customer.emergencyContactPhone || "-"}
+                                         </span>
+                                     </div>
                                  </div>
                              </div>
                          </section>
@@ -729,7 +758,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                         <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200 whitespace-nowrap">Đang hoạt động</span>
                                                     )}
                                                     {pkg.status === 'frozen' && (
-                                                        <span className="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-200 whitespace-nowrap">Đang tạm dừng</span>
+                                                        <span className="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold border border-purple-200 whitespace-nowrap">Bảo lưu</span>
                                                     )}
                                                     {pkg.status === 'expired' && (
                                                         <span className="px-2.5 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold border border-red-200 whitespace-nowrap">Hết hạn</span>
@@ -779,7 +808,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">Đang hoạt động</span>
                                                  )}
                                                  {pkg.status === 'frozen' && (
-                                                     <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-200">Đang tạm dừng</span>
+                                                     <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold border border-purple-200">Bảo lưu</span>
                                                  )}
                                                  
                                                  {["admin", "manager"].includes(currentUser.role) && (

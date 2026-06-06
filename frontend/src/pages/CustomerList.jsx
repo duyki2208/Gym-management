@@ -3,8 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { customerService, packageService, staffService } from "../services/customerService";
 import CustomerModal from "../components/customer/CustomerModal"; // Existing Edit/Add Modal
 import CustomerDetailModal from "../components/customer/CustomerDetailModal"; // New Detail Modal
+import toast from "react-hot-toast";
+import { useConfirm } from "../context/ConfirmContext";
 
-const getCustomerStatus = (startDate, endDate) => {
+const getCustomerStatus = (startDate, endDate, status) => {
+  if (status === "frozen") return { status: "frozen", label: "Bảo lưu" };
   if (!endDate) return { status: "active", label: "Hoạt động" };
   const now = new Date();
   const start = startDate ? new Date(startDate) : now;
@@ -24,6 +27,7 @@ const CustomerList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState([]);
   const [packages, setPackages] = useState([]);
+  const confirm = useConfirm();
   
   // Modals
   const [showEditModal, setShowEditModal] = useState(false);
@@ -141,20 +145,27 @@ const CustomerList = () => {
       await customerService.save(data);
       fetchData(); // Reload data
       setShowEditModal(false);
+      toast.success("Lưu thông tin hội viên thành công!");
     } catch (error) {
       console.error("Lỗi lưu khách hàng:", error);
-      // toast handled by api.js
+      toast.error(error.response?.data?.message || "Lỗi khi lưu thông tin hội viên");
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Xóa khách hàng này?")) {
+    const isConfirmed = await confirm({
+      title: "Xóa khách hàng",
+      message: "Bạn có chắc chắn muốn xóa khách hàng này khỏi hệ thống? Hành động này không thể hoàn tác.",
+      type: "danger"
+    });
+    if (isConfirmed) {
       try {
         await customerService.delete(id);
+        toast.success("Đã xóa khách hàng thành công!");
         fetchData(); // Reload data
       } catch (error) {
         console.error("Lỗi xóa khách hàng:", error);
-        // toast handled by api.js
+        toast.error("Không thể xóa khách hàng");
       }
     }
   };
@@ -217,11 +228,11 @@ const CustomerList = () => {
               Trạng thái
               {filterStatus !== 'all' && (
                 <span className="ml-1 bg-green-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  {[{value:'active',label:'Đang tập'},{value:'not_activated',label:'Chưa KH'},{value:'expiring',label:'Sắp hết hạn'},{value:'expired',label:'Hết hạn'}].find(t=>t.value===filterStatus)?.label}
+                  {[{value:'active',label:'Đang tập'},{value:'not_activated',label:'Chưa KH'},{value:'expiring',label:'Sắp hết hạn'},{value:'expired',label:'Hết hạn'},{value:'frozen',label:'Bảo lưu'}].find(t=>t.value===filterStatus)?.label}
                 </span>
               )}
             </button>
-
+ 
             {showStatusDropdown && (
               <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
                 {[
@@ -230,6 +241,7 @@ const CustomerList = () => {
                   { value: 'not_activated', label: 'Chưa kích hoạt'  },
                   { value: 'expiring',      label: 'Sắp hết hạn'     },
                   { value: 'expired',       label: 'Hết hạn'          },
+                  { value: 'frozen',        label: 'Bảo lưu'         },
                 ].map(opt => (
                   <button
                     key={opt.value}
@@ -500,7 +512,7 @@ const CustomerList = () => {
           </thead>
           <tbody className="divide-y divide-gray-100 font-display">
             {displayCustomers.length > 0 ? displayCustomers.map((c) => {
-                const st = getCustomerStatus(c.startDate, c.endDate);
+                const st = getCustomerStatus(c.startDate, c.endDate, c.status);
                 return (
                   <tr 
                     key={c._id || c.id} 
@@ -536,6 +548,8 @@ const CustomerList = () => {
                         className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
                           st.status === "active"
                             ? "bg-green-50 text-green-700 border-green-200"
+                            : st.status === "frozen"
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
                             : st.status === "expiring" 
                             ? "bg-yellow-50 text-yellow-700 border-yellow-200" 
                             : st.status === "not_activated"
@@ -545,6 +559,7 @@ const CustomerList = () => {
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${
                              st.status === "active" ? "bg-green-500" 
+                             : st.status === "frozen" ? "bg-purple-500"
                              : st.status === "expiring" ? "bg-yellow-500" 
                              : st.status === "not_activated" ? "bg-sky-500"
                              : "bg-red-500"

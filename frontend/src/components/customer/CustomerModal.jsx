@@ -51,6 +51,11 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
     contractType: "new",
     contractCode: "",
     packageNote: "",
+
+    // 6. Thông tin khẩn cấp
+    identityCard: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
   });
 
   // Hàm helper để format date cho input type="date"
@@ -112,6 +117,9 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         contractType: customer.contractType || "new",
         contractCode: customer.contractCode || "",
         packageNote: customer.packageNote || "",
+        identityCard: customer.identityCard || "",
+        emergencyContactName: customer.emergencyContactName || "",
+        emergencyContactPhone: customer.emergencyContactPhone || "",
         // Giữ lại _id và các trường khác nhưng không ghi đè date fields đã format
         _id: customer._id,
         id: customer.id,
@@ -142,6 +150,9 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         contractType: "new",
         contractCode: "",
         packageNote: "",
+        identityCard: "",
+        emergencyContactName: "",
+        emergencyContactPhone: "",
       });
     }
   }, [customer]);
@@ -226,13 +237,24 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
     onSave(formData);
   };
 
+  const getRolePriority = (role) => {
+    const r = (role || "").toLowerCase();
+    if (r === "sm") return 1;
+    if (r === "pm") return 2;
+    if (r === "sale") return 3;
+    if (r === "pt") return 4;
+    return 5;
+  };
+
   const filteredAndSortedStaff = [...staffList]
     .filter((s) => ["manager", "pt", "sale", "sm", "pm", "om", "accountant"].includes(s.role))
     .sort((a, b) => {
-      // Sort to group identical roles together
-      if (a.role < b.role) return -1;
-      if (a.role > b.role) return 1;
-      return 0;
+      const priA = getRolePriority(a.role);
+      const priB = getRolePriority(b.role);
+      if (priA !== priB) return priA - priB;
+      const nameA = (a.name || a.fullName || "").toLowerCase();
+      const nameB = (b.name || b.fullName || "").toLowerCase();
+      return nameA.localeCompare(nameB, "vi");
     });
 
   return (
@@ -280,13 +302,16 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mã khách hàng
+                    Số CCCD
                   </label>
                   <input
                     type="text"
-                    disabled
-                    className="w-full p-2 border rounded bg-gray-100 text-gray-500"
-                    value={customer ? formData.code : "Tự động tạo"}
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    
+                    value={formData.identityCard}
+                    onChange={(e) =>
+                      setFormData({ ...formData, identityCard: e.target.value })
+                    }
                   />
                 </div>
                 <div>
@@ -356,6 +381,35 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                     value={formData.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="col-span-2 md:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold text-red-600">
+                    Người liên hệ khẩn cấp
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded border-red-200 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none font-semibold text-gray-800"
+                    
+                    value={formData.emergencyContactName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, emergencyContactName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold text-red-600">
+                    SĐT liên hệ khẩn cấp
+                  </label>
+                  <input
+                    type="tel"
+                    className="w-full p-2 border rounded border-red-200 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none font-semibold text-gray-800"
+                    
+                    value={formData.emergencyContactPhone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, emergencyContactPhone: e.target.value })
                     }
                   />
                 </div>

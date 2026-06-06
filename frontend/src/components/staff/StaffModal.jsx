@@ -107,7 +107,7 @@ const StaffModal = ({ staff, onSave, onClose }) => {
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              placeholder="Ví dụ: Nguyễn Văn A"
+              
             />
           </div>
 
@@ -125,11 +125,11 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
                 }
-                placeholder="username"
+                
               />
               {staff && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Không thể thay đổi username
+                 
                 </p>
               )}
             </div>
@@ -149,7 +149,7 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                placeholder={staff ? "Nhập mật khẩu mới..." : "Mật khẩu"}
+                
               />
             </div>
           </div>
@@ -188,7 +188,7 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                placeholder="09xx..."
+                
               />
             </div>
           </div>
@@ -219,7 +219,7 @@ const StaffModal = ({ staff, onSave, onClose }) => {
               onChange={(e) =>
                 setFormData({ ...formData, specialty: e.target.value })
               }
-              placeholder="VD: Yoga, Bodybuilding..."
+              
             />
           </div>
 

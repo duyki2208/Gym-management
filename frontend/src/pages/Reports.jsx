@@ -190,32 +190,32 @@ const Reports = () => {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Doanh thu tháng này</p>
-                <p className="text-2xl font-bold text-green-600">{summary.totalRevenue.toLocaleString()} VND</p>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-500 text-sm break-words">Doanh thu tháng này</p>
+                <p className="text-2xl font-bold text-green-600 break-words break-all">{summary.totalRevenue.toLocaleString()} VND</p>
               </div>
-              <div className="bg-green-100 p-3 rounded-full text-green-600">
+              <div className="bg-green-100 p-3 rounded-full text-green-600 shrink-0">
                 <DollarSign size={24} />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Thành viên đang tập</p>
-                <p className="text-2xl font-bold text-blue-600">{summary.activeMembers}</p>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-500 text-sm break-words">Thành viên đang tập</p>
+                <p className="text-2xl font-bold text-blue-600 break-words break-all">{summary.activeMembers}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-full text-blue-600">
+              <div className="bg-blue-100 p-3 rounded-full text-blue-600 shrink-0">
                 <Users size={24} />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Khách mới (Tháng này)</p>
-                <p className="text-2xl font-bold text-purple-600">{summary.newMembers}</p>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-500 text-sm break-words">Khách mới (Tháng này)</p>
+                <p className="text-2xl font-bold text-purple-600 break-words break-all">{summary.newMembers}</p>
               </div>
-              <div className="bg-purple-100 p-3 rounded-full text-purple-600">
+              <div className="bg-purple-100 p-3 rounded-full text-purple-600 shrink-0">
                 <TrendingUp size={24} />
               </div>
             </div>
@@ -223,25 +223,25 @@ const Reports = () => {
 
           {/* Member Insights */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-               <div>
-                 <p className="text-gray-500 text-sm font-medium mb-1">Tỷ lệ giữ chân</p>
-                 <div className="flex items-center gap-2">
-                   <p className="text-3xl font-bold text-green-600">{summary.retentionRate}%</p>
-                   <span className="flex items-center text-sm text-green-600 bg-green-50 px-2 py-1 rounded-full"><ArrowUpRight size={16}/> Tích cực</span>
+             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full">
+               <div className="min-w-0 flex-1">
+                 <p className="text-gray-500 text-sm font-medium mb-1 break-words">Tỷ lệ giữ chân</p>
+                 <div className="flex items-center gap-2 flex-wrap">
+                   <p className="text-3xl font-bold text-green-600 break-words break-all">{summary.retentionRate}%</p>
+                   <span className="flex items-center text-sm text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0"><ArrowUpRight size={16}/> Tích cực</span>
                  </div>
-                 <p className="text-xs text-gray-400 mt-2">Dựa trên tỷ lệ khách hàng còn Active/Tổng khách hàng</p>
+                 <p className="text-xs text-gray-400 mt-2 break-words">Dựa trên tỷ lệ khách hàng còn Active/Tổng khách hàng</p>
                </div>
              </div>
 
-             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-               <div>
-                 <p className="text-gray-500 text-sm font-medium mb-1">Tỷ lệ rời bỏ</p>
-                 <div className="flex items-center gap-2">
-                   <p className="text-3xl font-bold text-red-600">{summary.churnRate}%</p>
-                   <span className="flex items-center text-sm text-red-600 bg-red-50 px-2 py-1 rounded-full"><ArrowDownRight size={16}/> Cần chú ý</span>
+             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full">
+               <div className="min-w-0 flex-1">
+                 <p className="text-gray-500 text-sm font-medium mb-1 break-words">Tỷ lệ rời bỏ</p>
+                 <div className="flex items-center gap-2 flex-wrap">
+                   <p className="text-3xl font-bold text-red-600 break-words break-all">{summary.churnRate}%</p>
+                   <span className="flex items-center text-sm text-red-600 bg-red-50 px-2 py-1 rounded-full shrink-0"><ArrowDownRight size={16}/> Cần chú ý</span>
                  </div>
-                 <p className="text-xs text-gray-400 mt-2">Phần trăm khách hàng đã hết hạn và chưa gia hạn</p>
+                 <p className="text-xs text-gray-400 mt-2 break-words">Phần trăm khách hàng đã hết hạn và chưa gia hạn</p>
                </div>
              </div>
           </div>
@@ -382,22 +382,22 @@ const Reports = () => {
       {activeTab === 'inventory' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Doanh thu POS (Tháng này)</p>
-                <p className="text-2xl font-bold text-green-600">{inventoryData.posRevenue.toLocaleString()} VND</p>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-500 text-sm break-words">Doanh thu POS (Tháng này)</p>
+                <p className="text-2xl font-bold text-green-600 break-words break-all">{inventoryData.posRevenue.toLocaleString()} VND</p>
               </div>
-              <div className="bg-green-100 p-3 rounded-full text-green-600">
+              <div className="bg-green-100 p-3 rounded-full text-green-600 shrink-0">
                 <ShoppingCart size={24} />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Tổng giá trị tồn kho</p>
-                <p className="text-2xl font-bold text-blue-600">{inventoryData.totalStockValue.toLocaleString()} VND</p>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-500 text-sm break-words">Tổng giá trị tồn kho</p>
+                <p className="text-2xl font-bold text-blue-600 break-words break-all">{inventoryData.totalStockValue.toLocaleString()} VND</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-full text-blue-600">
+              <div className="bg-blue-100 p-3 rounded-full text-blue-600 shrink-0">
                 <Package size={24} />
               </div>
             </div>
@@ -469,7 +469,7 @@ const Reports = () => {
               />
             </div>
             <div className="flex gap-2">
-              <span className="text-xs text-gray-500 font-bold self-center">Chỉ ghi các thao tác thêm, sửa, xóa thành công của nhân viên để quản lý đối soát.</span>
+              <span className="text-xs text-gray-500 font-bold self-center"></span>
             </div>
           </div>
 
