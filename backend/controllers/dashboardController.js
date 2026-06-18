@@ -3,6 +3,7 @@ const CheckIn = require("../models/CheckIn");
 const Invoice = require("../models/Invoice");
 const Setting = require("../models/Setting");
 const TeamTask = require("../models/TeamTask");
+const Transaction = require("../models/Transaction");
 const {
   startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, startOfMonth, endOfMonth
 } = require("date-fns");
@@ -45,8 +46,8 @@ const getStats = async (req, res) => {
       todayTasks,
       recentCheckIns
     ] = await Promise.all([
-      // Đếm hội viên mới trong tháng hiện tại (dựa trên startDate)
-      Customer.countDocuments({ startDate: { $gte: thisMonthStart, $lte: thisMonthEnd } }),
+      // Đếm hội viên mới trong tháng hiện tại (dựa trên createdAt)
+      Customer.countDocuments({ createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd } }),
       
       // Lấy danh sách ID khách hàng check-in độc nhất hôm nay
       CheckIn.distinct("customerId", { time: { $gte: todayStart, $lte: todayEnd } }),
@@ -57,42 +58,44 @@ const getStats = async (req, res) => {
       // Lấy toàn bộ lượt check-in hôm nay để vẽ biểu đồ giờ cao điểm
       CheckIn.find({ time: { $gte: todayStart, $lte: todayEnd } }).lean(),
       
-      // Tính doanh thu thực tế từ Invoice (loại bỏ hóa đơn chưa thanh toán)
-      Invoice.aggregate([
+      // Tính doanh thu thực tế từ Transaction (tiền thực thu)
+      Transaction.aggregate([
         {
           $match: {
             createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
-            paymentStatus: "paid"
+            status: "success",
+            type: { $in: ["package_purchase", "pos_sale"] }
           }
         },
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: "$total" }
+            totalRevenue: { $sum: "$amount" }
           }
         }
       ]),
 
-      // Lấy doanh thu từng ngày trong tuần này
-      Invoice.aggregate([
+      // Lấy doanh thu từng ngày trong tuần này từ Transaction
+      Transaction.aggregate([
         {
           $match: {
             createdAt: { $gte: thisWeekStart, $lte: thisWeekEnd },
-            paymentStatus: "paid"
+            status: "success",
+            type: { $in: ["package_purchase", "pos_sale"] }
           }
         },
         {
           $group: {
             _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-            revenue: { $sum: "$total" }
+            revenue: { $sum: "$amount" }
           }
         }
       ]),
 
       // Lấy danh sách 20 hội viên đăng ký mới gần nhất trong tháng hiện tại
-      Customer.find({ startDate: { $gte: thisMonthStart, $lte: thisMonthEnd } })
+      Customer.find({ createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd } })
         .select("name code phone packageType startDate avatar price")
-        .sort({ startDate: -1 })
+        .sort({ createdAt: -1 })
         .limit(20)
         .lean(),
 

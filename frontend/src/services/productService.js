@@ -42,5 +42,16 @@ export const posService = {
   getOrderStatus: async (id) => {
     const res = await api.get(`/pos/order-status/${id}`);
     return res.data;
+  },
+  confirmPayment: async (id) => {
+    const res = await api.patch(`/pos/orders/${id}/confirm`);
+    return res.data;
+  },
+  cancelOrder: async (id) => {
+    const res = await api.patch(`/pos/orders/${id}/cancel`);
+    return res.data;
   }
 };
+
+
+

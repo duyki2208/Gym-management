@@ -4,6 +4,17 @@ const customerController = require('../controllers/customerController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { createCustomerValidator, updateCustomerValidator } = require('../validators/customerValidator');
 const validate = require('../middleware/validate');
+const multer = require('multer');
+
+// Multer cho upload ảnh khuôn mặt
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Chỉ chấp nhận file ảnh'));
+  },
+});
 
 // GET  /api/v1/customers — Xem danh sách
 router.get('/',
@@ -49,6 +60,14 @@ router.post('/:id/unfreeze',
   protect,
   authorize('admin', 'manager'),
   customerController.unfreeze
+);
+
+// POST /api/v1/customers/:id/enroll-face — Đăng ký khuôn mặt qua InsightFace
+router.post('/:id/enroll-face',
+  protect,
+  authorize('admin', 'manager', 'reception'),
+  upload.single('image'),
+  customerController.enrollFace
 );
 
 module.exports = router;

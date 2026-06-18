@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 // Import từ file service vừa tạo
 import { customerService, checkInService } from "../services/customerService";
+import reportService from "../services/reportService";
 import {
   AreaChart,
   Area,
@@ -36,6 +37,7 @@ const History = () => {
   const [searchParams] = useSearchParams();
   const [rawCustomers, setRawCustomers] = useState([]);
   const [rawCheckins, setRawCheckins] = useState([]);
+  const [activeMembersCount, setActiveMembersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [chartReady, setChartReady] = useState(false);
 
@@ -72,9 +74,10 @@ const History = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [customersData, checkinsData] = await Promise.all([
+        const [customersData, checkinsData, summaryData] = await Promise.all([
           customerService.getAll({ limit: 10000 }), // Lấy tất cả khách hàng (giới hạn lớn) để lọc client-side
           checkInService.getAll(),
+          reportService.getSummary(),
         ]);
         
         // Handle response format from updated getAll (object with customers array)
@@ -82,6 +85,9 @@ const History = () => {
         setRawCustomers(customers);
         
         setRawCheckins(Array.isArray(checkinsData) ? checkinsData : []);
+        if (summaryData) {
+          setActiveMembersCount(summaryData.activeMembers || 0);
+        }
       } catch (error) {
         console.error("Lỗi tải dữ liệu:", error);
       } finally {
@@ -160,10 +166,6 @@ const History = () => {
         } catch (e) { return false; }
     });
 
-    const activeCustomers = rawCustomers.filter(
-      (c) => c.endDate && new Date(c.endDate) >= now
-    ).length;
-
     const periodCheckins = filteredCheckins.length;
     
     // Revenue from new registrations in period
@@ -171,12 +173,12 @@ const History = () => {
 
     return {
       totalCustomers: newCustomersInPeriod.length,
-      activeCustomers,
+      activeCustomers: activeMembersCount,
       periodCheckins,
       revenue,
       growth: { total: 0, active: 0, revenue: 0, checkin: 0 },
     };
-  }, [rawCustomers, filteredCheckins, dateRange]);
+  }, [rawCustomers, filteredCheckins, dateRange, activeMembersCount]);
 
   const peakHourData = useMemo(() => {
     const hours = Array(24).fill(0);

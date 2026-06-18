@@ -1,184 +1,231 @@
-import React, { useRef, useState, useEffect } from 'react';
-import * as faceapi from '@vladmandic/face-api';
+/**
+ * FaceCaptureModal.jsx
+ * Modal chụp ảnh khuôn mặt để đăng ký vào DB qua InsightFace.
+ * KHÔNG dùng face-api.js — chỉ chụp JPEG và POST lên backend.
+ */
+
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
-const FaceCaptureModal = ({ onClose, onCapture }) => {
+const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [detecting, setDetecting] = useState(false);
-  const [faceData, setFaceData] = useState(null);
 
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        const MODEL_URL = '/models';
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
-        setModelsLoaded(true);
-      } catch (err) {
-        console.error("Lỗi tải models:", err);
-        toast.error("Lỗi tải mô hình AI. Xem console.");
-      }
-    };
-    loadModels();
-  }, []);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [preview, setPreview] = useState(null); // base64 ảnh đã chụp
 
+  // Khởi động camera
   useEffect(() => {
-    if (!modelsLoaded) return;
-    
-    const startVideo = async () => {
+    const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        });
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
       } catch (err) {
-        console.error("Lỗi mở camera:", err);
-        toast.error("Không thể mở Camera. Vui lòng cấp quyền.");
+        console.error('Lỗi mở camera:', err);
+        setCameraError('Không thể mở Camera. Vui lòng cấp quyền truy cập.');
       }
     };
 
-    startVideo();
+    startCamera();
 
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [modelsLoaded]);
+  }, []);
 
-  const handleVideoPlay = () => {
-    if (detecting) return;
-    setDetecting(true);
+  const handleVideoPlay = () => setCameraReady(true);
 
-    const matchAndDraw = async () => {
-      if (!videoRef.current || !canvasRef.current || videoRef.current.paused || videoRef.current.ended) {
-        setDetecting(false);
-        return;
+  // Chụp ảnh từ video
+  const capturePhoto = useCallback(() => {
+    if (!videoRef.current || !cameraReady) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    // Mirror lại để ảnh lưu đúng chiều (không bị lật như gương)
+    ctx.scale(-1, 1);
+    ctx.drawImage(videoRef.current, -canvas.width, 0);
+
+    const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+    setPreview(imageBase64);
+  }, [cameraReady]);
+
+  // Gửi ảnh lên backend
+  const handleEnroll = async () => {
+    if (!preview) {
+      toast.error('Vui lòng chụp ảnh trước');
+      return;
+    }
+    setIsProcessing(true);
+
+    try {
+      // Convert base64 → Blob
+      const response = await fetch(preview);
+      const blob = await response.blob();
+
+      const formData = new FormData();
+      formData.append('image', blob, 'face.jpg');
+      formData.append('imageBase64', preview); // Dùng làm avatar
+
+      const customerId = customer.customerId || customer._id;
+      const res = await api.post(
+        `/customers/${customerId}/enroll-face`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      if (res.data.success) {
+        toast.success('Đăng ký khuôn mặt thành công!');
+        if (onSuccess) onSuccess(preview); // Trả ảnh về để cập nhật avatar
+        onClose();
+      } else {
+        toast.error(res.data.message || 'Lỗi đăng ký khuôn mặt');
       }
-
-      const detection = await faceapi.detectSingleFace(
-        videoRef.current, 
-        new faceapi.TinyFaceDetectorOptions()
-      ).withFaceLandmarks().withFaceDescriptor();
-
-      if (!canvasRef.current || !videoRef.current) return;
-
-      if (canvasRef.current && videoRef.current) {
-        const displaySize = { width: videoRef.current.videoWidth, height: videoRef.current.videoHeight };
-        if (displaySize.width > 0) {
-          faceapi.matchDimensions(canvasRef.current, displaySize);
-
-          if (detection) {
-            const resizedDetection = faceapi.resizeResults(detection, displaySize);
-            const ctx = canvasRef.current.getContext('2d');
-            ctx.clearRect(0, 0, displaySize.width, displaySize.height);
-            faceapi.draw.drawDetections(canvasRef.current, resizedDetection);
-            // faceapi.draw.drawFaceLandmarks(canvasRef.current, resizedDetection);
-            
-            // Set data temporarily to allow button to be enabled
-            setFaceData({
-                descriptor: Array.from(detection.descriptor), // Convert Float32Array to simple Array
-                box: detection.detection.box
-            });
-          } else {
-             const ctx = canvasRef.current.getContext('2d');
-             ctx.clearRect(0, 0, displaySize.width, displaySize.height);
-             setFaceData(null);
-          }
-        }
-      }
-
-      setTimeout(() => matchAndDraw(), 100);
-    };
-
-    matchAndDraw();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Lỗi kết nối đến Face Service';
+      toast.error(msg);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleCapture = () => {
-      if (!faceData) return;
-      
-      // Chụp ảnh base64 từ video
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      const imageUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-      onCapture({
-          imageUrl,
-          descriptor: faceData.descriptor
-      });
-      toast.success("Mẫu khuôn mặt đã được lưu!");
-      onClose();
-  };
+  const resetPreview = () => setPreview(null);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chụp mẫu sinh trắc học</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Đăng ký khuôn mặt
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">{customer?.name}</p>
+          </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div className="p-6 flex flex-col items-center">
-            {!modelsLoaded ? (
-                <div className="p-10 flex flex-col items-center justify-center">
-                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="mt-4 text-gray-500 font-medium">Đang tải mô hình AI...</p>
-                </div>
-            ) : (
-                <div className="relative rounded-xl overflow-hidden border-2 border-gray-100 bg-black max-w-full inline-block">
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <video 
-                        ref={videoRef} 
-                        onPlay={handleVideoPlay}
-                        autoPlay 
-                        muted 
-                        className="w-full h-auto object-cover max-h-[60vh]"
-                        style={{ transform: "scaleX(-1)" }} // Mirror effect for better UX
-                    />
-                    <canvas 
-                        ref={canvasRef} 
-                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                        style={{ transform: "scaleX(-1)" }}
-                    />
-                    
-                    {!faceData && (
-                        <div className="absolute bottom-4 left-0 right-0 text-center">
-                             <span className="bg-black/60 text-white px-4 py-2 rounded-lg text-sm">Hãy nhìn thẳng vào Camera...</span>
-                        </div>
-                    )}
-                </div>
-            )}
-            
-            <div className="mt-6 flex justify-end gap-3 w-full">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-6 py-2.5 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50"
-                 >
-                    Hủy
-                 </button>
-                 <button
-                    type="button"
-                    onClick={handleCapture}
-                    disabled={!faceData}
-                    className="px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 bg-primary text-white hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/30"
-                 >
-                    <span className="material-symbols-outlined">camera</span>
-                    Lấy Mẫu Khuôn Mặt
-                 </button>
+        {/* Body */}
+        <div className="p-5 flex flex-col items-center gap-4">
+          {cameraError ? (
+            <div className="text-center text-red-600 py-8">
+              <span className="material-symbols-outlined text-4xl block mb-2">videocam_off</span>
+              <p className="font-bold">{cameraError}</p>
             </div>
+          ) : (
+            <>
+              {/* Camera / Preview */}
+              <div className="relative rounded-xl overflow-hidden bg-black w-full max-w-sm aspect-[4/3]">
+                {!preview ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      ref={videoRef}
+                      onPlay={handleVideoPlay}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                      style={{ transform: 'scaleX(-1)' }}
+                    />
+                    {!cameraReady && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                    {/* Khung hướng dẫn */}
+                    {cameraReady && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-40 h-48 border-4 border-dashed border-white/60 rounded-full opacity-60" />
+                      </div>
+                    )}
+                    <p className="absolute bottom-3 left-0 right-0 text-center">
+                      <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full">
+                        Nhìn thẳng vào camera
+                      </span>
+                    </p>
+                  </>
+                ) : (
+                  // Hiển thị ảnh đã chụp
+                  <img src={preview} alt="Xem trước" className="w-full h-full object-cover" />
+                )}
+              </div>
+
+              {/* Hướng dẫn */}
+              <ul className="text-xs text-gray-500 list-disc list-inside space-y-1 self-start w-full max-w-sm">
+                <li>Đảm bảo khuôn mặt rõ ràng, đủ ánh sáng</li>
+                <li>Nhìn thẳng, không đội mũ hay đeo khẩu trang</li>
+                <li>Giữ khuôn mặt trong khung oval</li>
+              </ul>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center p-5 border-t border-gray-100 dark:border-gray-700 gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            Hủy
+          </button>
+
+          <div className="flex gap-2">
+            {preview ? (
+              <>
+                <button
+                  type="button"
+                  onClick={resetPreview}
+                  className="px-5 py-2.5 rounded-xl font-bold border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Chụp lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEnroll}
+                  disabled={isProcessing}
+                  className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-base">face_retouching_natural</span>
+                      Lưu khuôn mặt
+                    </>
+                  )}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={capturePhoto}
+                disabled={!cameraReady || isProcessing}
+                className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-base">camera</span>
+                Chụp ảnh
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

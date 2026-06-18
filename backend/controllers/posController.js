@@ -214,3 +214,98 @@ exports.getSales = async (req, res) => {
     res.status(500).json({ message: 'Lỗi lấy danh sách bán hàng', error: error.message });
   }
 };
+
+// @desc    Xác nhận thanh toán thủ công cho đơn hàng POS VietQR
+// @route   PATCH /api/v1/pos/orders/:id/confirm
+exports.confirmPayment = async (req, res) => {
+  try {
+    const saleOrder = await SaleOrder.findById(req.params.id).populate('customer');
+    if (!saleOrder) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    if (saleOrder.status !== 'Chờ thanh toán') {
+      return res.status(400).json({ success: false, message: 'Đơn hàng này không ở trạng thái chờ thanh toán' });
+    }
+
+    // Cập nhật trạng thái đơn hàng sang Đã thanh toán
+    saleOrder.status = 'Đã thanh toán';
+    await saleOrder.save();
+
+    // Tạo Giao dịch
+    await Transaction.create({
+      type: 'pos_sale',
+      amount: saleOrder.totalAmount,
+      paymentMethod: 'Chuyển khoản QR',
+      customer: saleOrder.customer ? saleOrder.customer._id : null,
+      customerName: saleOrder.customer ? saleOrder.customer.name : 'Khách Lẻ',
+      saleOrder: saleOrder._id,
+      status: 'success',
+      staff: req.user ? req.user._id : null
+    });
+
+    // Truy vấn thông tin sản phẩm để tạo hóa đơn
+    const invoiceItems = [];
+    for (const item of saleOrder.details) {
+      const product = await Product.findById(item.product);
+      invoiceItems.push({
+        name: product ? product.name : 'Sản phẩm',
+        quantity: item.quantity,
+        price: item.sellPrice,
+        total: item.quantity * item.sellPrice
+      });
+    }
+
+    // Tạo Hóa đơn
+    await Invoice.create({
+      customer: saleOrder.customer ? saleOrder.customer._id : null,
+      customerName: saleOrder.customer ? saleOrder.customer.name : 'Khách Lẻ',
+      customerPhone: saleOrder.customer ? saleOrder.customer.phone : '',
+      type: 'pos',
+      referenceId: saleOrder._id,
+      items: invoiceItems,
+      subtotal: saleOrder.totalAmount,
+      total: saleOrder.totalAmount,
+      paymentMethod: 'Chuyển khoản QR',
+      paymentStatus: 'paid',
+      staff: req.user ? req.user._id : null
+    });
+
+    res.status(200).json({ success: true, message: 'Đã xác nhận thanh toán đơn hàng thành công', saleOrder });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi xác nhận thanh toán', error: error.message });
+  }
+};
+
+// @desc    Hủy đơn hàng chờ thanh toán và hoàn trả tồn kho
+// @route   PATCH /api/v1/pos/orders/:id/cancel
+exports.cancelOrder = async (req, res) => {
+  try {
+    const saleOrder = await SaleOrder.findById(req.params.id);
+    if (!saleOrder) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    if (saleOrder.status !== 'Chờ thanh toán') {
+      return res.status(400).json({ success: false, message: 'Chỉ có thể hủy đơn hàng đang ở trạng thái chờ thanh toán' });
+    }
+
+    // Cập nhật trạng thái đơn hàng sang Đã huỷ
+    saleOrder.status = 'Đã huỷ';
+    await saleOrder.save();
+
+    // Hoàn trả tồn kho cho từng sản phẩm trong đơn hàng
+    for (const item of saleOrder.details) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.stockQuantity += item.quantity;
+        await product.save();
+      }
+    }
+
+    res.status(200).json({ success: true, message: 'Đã hủy đơn hàng và hoàn trả tồn kho thành công' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi hủy đơn hàng', error: error.message });
+  }
+};
+

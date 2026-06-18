@@ -4,50 +4,11 @@ const Transaction = require("../models/Transaction");
 const Invoice = require("../models/Invoice");
 const { CUSTOMER_STATUS } = require("../utils/constants");
 const { sendRegistrationEmail } = require("../utils/emailService");
+const syncCustomerFields = require("../utils/syncCustomer");
+const faceClient = require("../utils/faceServiceClient");
 const mongoose = require("mongoose");
 
-async function syncCustomerFields(customerId) {
-  try {
-    let activePackage = await CustomerPackage.findOne({ customer: customerId, status: "active" }).sort({ endDate: -1 });
-    if (!activePackage) {
-      activePackage = await CustomerPackage.findOne({ customer: customerId }).sort({ createdAt: -1 });
-    }
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) return;
-
-    if (activePackage) {
-      customer.activePackage = activePackage._id;
-      customer.packageType = activePackage.packageName;
-      customer.startDate = activePackage.startDate;
-      customer.endDate = activePackage.endDate;
-      customer.remainingSessions = activePackage.remainingSessions;
-      customer.price = activePackage.price;
-      customer.paymentStatus = activePackage.paymentStatus;
-      customer.paidAmount = activePackage.paidAmount;
-      customer.contractType = activePackage.contractType;
-      customer.trainer = activePackage.trainer;
-      customer.assignedStaff = activePackage.assignedStaff;
-      customer.hasLocker = activePackage.hasLocker;
-      customer.hasWater = activePackage.hasWater;
-      customer.packageNote = activePackage.packageNote;
-      customer.contractCode = activePackage.contractCode || ""; // Đồng bộ mã hợp đồng
-    } else {
-      customer.activePackage = null;
-      customer.packageType = "Không có";
-      customer.startDate = new Date();
-      customer.endDate = new Date();
-      customer.remainingSessions = 0;
-      customer.price = 0;
-      customer.paymentStatus = "unpaid";
-      customer.paidAmount = 0;
-      customer.packageNote = "";
-    }
-    await customer.save();
-  } catch (err) {
-    console.error("Lỗi đồng bộ hồ sơ khách hàng:", err);
-  }
-}
 
 function flattenPackage(pkg) {
   if (!pkg) return null;
@@ -107,7 +68,8 @@ const createCustomer = async (req, res) => {
       avatar,
       email,
       healthNote,
-      faceDescriptor,
+      faceEmbedding,
+
       packageType,
       startDate,
       endDate,
@@ -164,8 +126,8 @@ const createCustomer = async (req, res) => {
         avatar,
         email,
         healthNote,
-        faceDescriptor,
         packageType,
+
         packageNote: packageNote || "",
         endDate: new Date(endDate),
         identityCard: identityCard || "",
@@ -176,7 +138,8 @@ const createCustomer = async (req, res) => {
       console.log(`Đã tạo hồ sơ khách hàng mới: ${customer.code}`);
     } else {
       console.log(`Tìm thấy hồ sơ khách hàng cũ. Sử dụng lại mã: ${customer.code}`);
-      if (faceDescriptor && faceDescriptor.length > 0) customer.faceDescriptor = faceDescriptor;
+      if (faceEmbedding && faceEmbedding.length > 0) customer.faceEmbedding = faceEmbedding;
+
       if (email) customer.email = email;
       if (healthNote) customer.healthNote = healthNote;
       if (avatar) customer.avatar = avatar;
@@ -382,7 +345,8 @@ const updateCustomer = async (req, res) => {
       "avatar",
       "email",
       "healthNote",
-      "faceDescriptor",
+      "faceEmbedding",
+
       "packageNote",
       "identityCard",
       "emergencyContactName",
@@ -587,6 +551,66 @@ const unfreezeCustomer = async (req, res) => {
   }
 };
 
+
+/**
+ * @desc   Đăng ký/Cập nhật khuôn mặt cho khách hàng qua InsightFace
+ * @route  POST /api/v1/customers/:id/enroll-face
+ * @access Private
+ */
+const enrollFace = async (req, res) => {
+  try {
+    let customer = await Customer.findById(req.params.id);
+    if (!customer) {
+      const customerPackage = await CustomerPackage.findById(req.params.id);
+      if (customerPackage) {
+        customer = await Customer.findById(customerPackage.customer);
+      }
+    }
+
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Vui lòng gửi ảnh kèm theo" });
+    }
+
+    // Gọi Python service để lấy embedding
+    const result = await faceClient.getEmbedding(req.file.buffer);
+
+    if (!result.found) {
+      return res.status(422).json({
+        success: false,
+        message: result.message || "Không phát hiện khuôn mặt trong ảnh. Hãy chụp lại.",
+      });
+    }
+
+    // Lưu embedding vào DB
+    customer.faceEmbedding = result.embedding;
+    // Lưu ảnh avatar dưới dạng base64 (giống logic cũ)
+    if (req.body.imageBase64) {
+      customer.avatar = req.body.imageBase64;
+    }
+    await customer.save();
+
+    res.json({
+      success: true,
+      message: "Cập nhật khuôn mặt thành công!",
+      data: { embeddingSize: result.embedding.length },
+    });
+  } catch (error) {
+    // Xử lý lỗi khi Python service down
+    if (error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED') {
+      return res.status(503).json({
+        success: false,
+        message: "Dịch vụ nhận diện khuôn mặt chưa khởi động. Vui lòng chạy face-service trước.",
+      });
+    }
+    console.error("enrollFace error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAll: getAllCustomers,
   create: createCustomer,
@@ -594,4 +618,5 @@ module.exports = {
   update: updateCustomer,
   freeze: freezeCustomer,
   unfreeze: unfreezeCustomer,
+  enrollFace,
 };

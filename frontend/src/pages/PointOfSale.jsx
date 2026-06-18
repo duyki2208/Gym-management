@@ -17,6 +17,7 @@ const PointOfSale = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [orderStatus, setOrderStatus] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
     const initFetch = async () => {
@@ -105,6 +106,26 @@ const PointOfSale = () => {
          setProducts(prods);
      } catch (err) {
          toast.error(err.response?.data?.message || "Lỗi thanh toán");
+     }
+  };
+
+  const handleConfirmPayment = async () => {
+     if (!lastOrder) return;
+     try {
+        setIsConfirming(true);
+        await posService.confirmPayment(lastOrder._id);
+        setOrderStatus('Đã thanh toán');
+        toast.success("Xác nhận thanh toán thành công!");
+        try {
+           const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav");
+           audio.play();
+        } catch (e) {
+           console.log("Không thể phát âm thanh thông báo", e);
+        }
+     } catch (err) {
+        toast.error(err.response?.data?.message || "Lỗi xác nhận thanh toán");
+     } finally {
+        setIsConfirming(false);
      }
   };
 
@@ -258,13 +279,9 @@ const PointOfSale = () => {
          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur flex justify-center items-center p-4">
              <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
                  {orderStatus === 'Chờ thanh toán' ? (
-                     <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 text-center text-white">
-                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 animate-pulse">
-                            <QrCode size={32} className="text-white" />
-                         </div>
-                         <h2 className="text-2xl font-black">CHỜ THANH TOÁN</h2>
-                         <p className="text-orange-50 mt-1">Đơn hàng: {lastOrder._id?.substr(-8).toUpperCase()}</p>
-                     </div>
+                      <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-center text-white">
+                          <p className="text-white font-bold text-lg">Đơn hàng: {lastOrder._id?.substr(-8).toUpperCase()}</p>
+                      </div>
                   ) : (
                      <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 text-center text-white">
                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -293,13 +310,28 @@ const PointOfSale = () => {
                      {lastOrder.paymentMethod === 'Chuyển khoản QR' && (
                          orderStatus === 'Chờ thanh toán' ? (
                             <div className="bg-white border-2 border-dashed border-gray-200 p-3 rounded-2xl flex flex-col items-center">
-                               <p className="text-xs font-bold text-gray-500 mb-2 uppercase text-center">Quét mã để thanh toán</p>
                                <img 
                                   src={`https://img.vietqr.io/image/970436-1031934220-compact2.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
                                   alt="VietQR" 
-                                  className="w-48 h-48 rounded-xl object-contain"
+                                  className="w-56 h-56 rounded-xl object-contain"
                                />
                                <p className="text-xs mt-2 text-center text-gray-500 font-semibold"> Vietcombank • LE HUNG DUY</p>
+                               
+                               <button
+                                  onClick={handleConfirmPayment}
+                                  disabled={isConfirming}
+                                  className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-sm"
+                               >
+                                  {isConfirming ? (
+                                     <>
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Đang xác nhận...
+                                     </>
+                                  ) : (
+                                     "Xác nhận đã nhận tiền"
+                                  )}
+                               </button>
+
                                <div className="flex items-center gap-2 mt-3 text-amber-600 font-bold text-xs animate-pulse">
                                   <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                                   Đang chờ quét mã chuyển tiền...

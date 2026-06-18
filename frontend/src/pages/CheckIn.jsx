@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { customerService, checkInService } from "../services/customerService";
+import { checkInService } from "../services/customerService";
 import { getCustomerStatus } from "../utils/dateUtils";
 import { LogIn, CheckCircle, XCircle, ScanFace } from "lucide-react";
 import AutoCheckIn from "../components/customer/AutoCheckIn";
@@ -18,21 +18,23 @@ const CheckIn = () => {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
     setIsAdmin(user.role === "admin");
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const data = await customerService.getAll({ limit: 10000 }); // Lấy tất cả khách để search client-side tạm thời
-        const customersList = data.customers || (Array.isArray(data) ? data : []);
-        setCustomers(customersList);
-      } catch (err) {
-        console.error("Lỗi tải khách hàng:", err);
-        setCustomers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    fetchCustomers();
   }, []);
+
+  const fetchCustomers = async (search = "") => {
+    setLoading(true);
+    try {
+      // Dùng endpoint chuyên dụng: KHÔNG có faceDescriptor, có phân trang
+      const result = await checkInService.getCheckInList({ search, limit: 100 });
+      setCustomers(result.customers || []);
+    } catch (err) {
+      console.error("Lỗi tải khách hàng:", err);
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleCheckIn = async (customer) => {
     if (!customer || !customer._id) {
@@ -64,18 +66,14 @@ const CheckIn = () => {
           data: customer,
       };
       setSuccessCheckins(prev => [...prev, checkinRecord]);
-
-      // Refresh danh sách để cập nhật
-      const newData = await customerService.getAll({ limit: 10000 });
-      const customersList = newData.customers || (Array.isArray(newData) ? newData : []);
-      setCustomers(customersList);
+      // Không cần fetch lại — chỉ cần hiển thị popup thành công
     } catch (error) {
       console.error("Lỗi check-in:", error);
-      // toast.error handled by api.js global interceptor
     } finally {
       setCheckingIn(null);
     }
   };
+
 
   if (loading) {
     return <div className="p-10 text-center">Đang tải dữ liệu...</div>;

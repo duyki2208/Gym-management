@@ -1,14 +1,102 @@
 const CheckIn = require("../models/CheckIn");
 const Customer = require("../models/Customer");
 const CustomerPackage = require("../models/CustomerPackage");
+const faceClient = require("../utils/faceServiceClient");
 
-// Lấy tất cả lịch sử check-in
+// Cache embeddings trong memory, refresh mỗi 5 phút
+// Tránh query MongoDB mỗi lần có người đứng trước camera
+let embeddingCache = [];
+let cacheFetchedAt = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 phút
+
+async function getEmbeddingCandidates() {
+  if (Date.now() - cacheFetchedAt < CACHE_TTL_MS && embeddingCache.length > 0) {
+    return embeddingCache;
+  }
+  const customers = await Customer.find(
+    { faceEmbedding: { $exists: true, $not: { $size: 0 } } },
+    '_id name code faceEmbedding packageType endDate'
+  ).lean();
+
+  embeddingCache = customers.map(c => ({
+    member_id: c._id.toString(),
+    embedding: c.faceEmbedding,
+    // metadata không gửi lên Python, giữ ở Node.js để lookup sau
+    _meta: { name: c.name, code: c.code, packageType: c.packageType, endDate: c.endDate },
+  }));
+  cacheFetchedAt = Date.now();
+  return embeddingCache;
+}
+
+// Invalidate cache khi có cập nhật embedding mới
+function invalidateEmbeddingCache() {
+  cacheFetchedAt = 0;
+}
+
+
+// Lấy danh sách khách hàng dành riêng cho trang Check-in
+// KHÔNG trả về faceDescriptor — chỉ lấy fields cần thiết để hiển thị
+const getCheckInList = async (req, res) => {
+  try {
+    const { search = "", page = 1, limit = 50 } = req.query;
+
+    const query = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { code: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const customers = await Customer.find(query)
+      .select("_id name code phone packageType startDate endDate avatar") // KHÔNG có faceDescriptor
+      .sort({ name: 1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await Customer.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        customers,
+        total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: parseInt(page),
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi lấy danh sách check-in:", error);
+    res.status(500).json({ success: false, message: "Lỗi lấy danh sách khách hàng" });
+  }
+};
+
+// Lấy tất cả lịch sử check-in (có phân trang)
 const getAll = async (req, res) => {
   try {
-    const checkins = await CheckIn.find().sort({ time: -1 });
-    res.json(checkins);
+    const { page = 1, limit = 50 } = req.query;
+    const checkins = await CheckIn.find()
+      .sort({ time: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await CheckIn.countDocuments();
+
+    res.json({
+      success: true,
+      data: {
+        checkins,
+        total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: parseInt(page),
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi lấy lịch sử check-in" });
+    console.error("Lỗi lấy lịch sử check-in:", error);
+    res.status(500).json({ success: false, message: "Lỗi lấy lịch sử check-in" });
   }
 };
 
@@ -16,9 +104,10 @@ const getAll = async (req, res) => {
 const create = async (req, res) => {
   try {
     const { customerId, time } = req.body;
-    if (!customerId)
-      return res.status(400).json({ message: "Thiếu customerId" });
-    
+    if (!customerId) {
+      return res.status(400).json({ success: false, message: "Thiếu customerId" });
+    }
+
     let customer = await Customer.findById(customerId);
     if (!customer) {
       // Fallback nếu client truyền lên ID gói tập thay vì ID hội viên
@@ -28,8 +117,10 @@ const create = async (req, res) => {
       }
     }
 
-    if (!customer)
-      return res.status(404).json({ message: "Không tìm thấy khách hàng" });
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng" });
+    }
+
     const checkin = new CheckIn({
       customerId: customer._id,
       customerName: customer.name,
@@ -38,10 +129,94 @@ const create = async (req, res) => {
       time: time || new Date(),
     });
     await checkin.save();
-    res.status(201).json(checkin);
+
+    res.status(201).json({ success: true, data: checkin, message: "Check-in thành công" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi tạo check-in" });
+    console.error("Lỗi tạo check-in:", error);
+    res.status(500).json({ success: false, message: "Lỗi tạo check-in" });
   }
 };
 
-module.exports = { getAll, create };
+
+/**
+ * @desc  Nhận diện khuôn mặt từ frame camera và check-in tự động
+ * @route POST /api/v1/checkins/recognize
+ * @access Private
+ */
+const recognizeFace = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Thiếu ảnh" });
+    }
+
+    // Lấy tất cả candidates có faceEmbedding (có cache)
+    const candidates = await getEmbeddingCandidates();
+
+    if (candidates.length === 0) {
+      return res.json({
+        success: true,
+        matched: false,
+        reason: 'no_enrolled_faces',
+        message: 'Chưa có khách hàng nào đã đăng ký khuôn mặt'
+      });
+    }
+
+    // Chỉ gửi member_id + embedding lên Python (không gửi _meta)
+    const candidatesForPython = candidates.map(c => ({
+      member_id: c.member_id,
+      embedding: c.embedding,
+    }));
+
+    // Gọi Python InsightFace service
+    const result = await faceClient.recognize(req.file.buffer, candidatesForPython);
+
+    if (!result.matched) {
+      return res.json({
+        success: true,
+        matched: false,
+        reason: result.reason,
+        confidence: result.best_confidence,
+      });
+    }
+
+    // Tìm metadata của khách hàng đã khớp từ cache
+    const matchedCandidate = candidates.find(c => c.member_id === result.member_id);
+    const meta = matchedCandidate?._meta || {};
+
+    // Ghi lịch sử check-in
+    const checkin = new CheckIn({
+      customerId: result.member_id,
+      customerName: meta.name || '',
+      customerCode: meta.code || '',
+      packageType: meta.packageType || '',
+      time: new Date(),
+    });
+    await checkin.save();
+
+    res.json({
+      success: true,
+      matched: true,
+      confidence: result.confidence,
+      member: {
+        _id: result.member_id,
+        name: meta.name,
+        code: meta.code,
+        packageType: meta.packageType,
+        endDate: meta.endDate,
+      },
+      checkinId: checkin._id,
+    });
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED') {
+      return res.status(503).json({
+        success: false,
+        message: 'Dịch vụ nhận diện khuôn mặt chưa khởi động. Vui lòng chạy face-service trước.',
+      });
+    }
+    console.error('recognizeFace error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getAll, create, getCheckInList, recognizeFace, invalidateEmbeddingCache };
+

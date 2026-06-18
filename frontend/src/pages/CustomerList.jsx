@@ -656,6 +656,7 @@ const CustomerList = () => {
                  setShowDetailModal(false);
                  setSelectedCustomer(null);
              }}
+             onUpdate={fetchData}
           />
       )}
     </div>

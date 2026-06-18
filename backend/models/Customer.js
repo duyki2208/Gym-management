@@ -36,9 +36,8 @@ const customerSchema = mongoose.Schema(
     paidAmount: { type: Number, default: 0 },
     contractType: { type: String, enum: ['new', 'renew', 'upgrade'], default: 'new' },
 
-    // Sinh trắc học
-    faceDescriptor: { type: [Number], default: [] }, // Vector 128 chiều
-    // Trạng thái (Active/Inactive tính theo endDate ở Frontend hoặc Backend đều được)
+    // Sinh trắc học — vector 512 chiều từ InsightFace (thay thế face-api.js 128 chiều)
+    faceEmbedding: { type: [Number], default: [] },
   },
   {
     timestamps: true, // Tự động tạo createdAt, updatedAt

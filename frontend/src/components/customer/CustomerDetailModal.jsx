@@ -155,26 +155,14 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
     }
   };
 
-  const handleFaceCapture = async (data) => {
-    try {
-        setIsSavingFace(true);
-        const updatedData = {
-            ...customer,
-            faceDescriptor: data.descriptor,
-            avatar: data.imageUrl
-        };
-        await customerService.save(updatedData);
-        toast.success("Cập nhật khuôn mặt thành công!");
-        customer.avatar = data.imageUrl;
-        customer.faceDescriptor = data.descriptor;
-        if (onUpdate) onUpdate();
-    } catch (err) {
-        console.error("Face capture error", err);
-        toast.error("Lỗi lưu mẫu khuôn mặt.");
-    } finally {
-        setIsSavingFace(false);
-    }
+  const handleFaceCapture = async (imageBase64) => {
+    // FaceCaptureModal mới tự gọi API enroll-face rồi mới gọi callback
+    // ở đây chỉ cần cập nhật avatar local
+    customer.avatar = imageBase64;
+    customer.faceEmbedding = true; // Đánh dấu đã có embedding
+    if (onUpdate) onUpdate();
   };
+
 
   const handleFreezeClick = (pkgId) => {
     setSelectedPkgId(pkgId);
@@ -365,7 +353,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                className="mb-4 px-4 py-2 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2"
             >
                <span className="material-symbols-outlined text-xl">face_retouching_natural</span>
-               {isSavingFace ? "Đang lưu..." : (customer.faceDescriptor && customer.faceDescriptor.length > 0 ? "Chụp lại nhận diện" : "Chụp nhận diện")}
+               {isSavingFace ? "Đang lưu..." : (customer.faceEmbedding && customer.faceEmbedding.length > 0 ? "Chụp lại nhận diện" : "Chụp nhận diện")}
             </button>
 
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-1">
@@ -1016,9 +1004,10 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
          )}
       </div>
       {showFaceModal && (
-          <FaceCaptureModal 
+          <FaceCaptureModal
+              customer={customer}
               onClose={() => setShowFaceModal(false)}
-              onCapture={handleFaceCapture}
+              onSuccess={handleFaceCapture}
           />
       )}
     </div>

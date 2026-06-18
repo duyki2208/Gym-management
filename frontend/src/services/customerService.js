@@ -130,12 +130,27 @@ export const customerService = {
 };
 
 export const checkInService = {
-  getAll: async () => {
+  getAll: async (params = {}) => {
     try {
-      const response = await api.get('/checkins');
-      return ensureArray(response.data);
+      const response = await api.get('/checkins', { params });
+      // Hỗ trợ response format cũ và mới có pagination
+      const data = response.data;
+      if (data?.success && data?.data?.checkins) return data.data.checkins;
+      return ensureArray(data);
     } catch (error) {
       return [];
+    }
+  },
+  // Lấy danh sách khách cho trang Check-in — KHÔNG có faceDescriptor
+  getCheckInList: async (params = {}) => {
+    try {
+      const response = await api.get('/checkins/checkin-list', { params });
+      const data = response.data;
+      if (data?.success && data?.data?.customers) return data.data;
+      return { customers: ensureArray(data), total: 0 };
+    } catch (error) {
+      console.error("Lỗi lấy danh sách check-in:", error);
+      return { customers: [], total: 0 };
     }
   },
   create: async (data) => {
@@ -143,6 +158,7 @@ export const checkInService = {
     return response.data;
   },
 };
+
 
 export const packageService = {
   getAll: async () => {

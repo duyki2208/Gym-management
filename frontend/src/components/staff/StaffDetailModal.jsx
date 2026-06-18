@@ -110,18 +110,18 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col md:flex-row gap-8">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8 flex flex-col md:flex-row gap-8">
           {/* Thông tin cá nhân */}
           <div className="w-full md:w-1/3 flex flex-col items-center bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-            <div className="w-32 h-32 rounded-full bg-blue-100 dark:bg-blue-900 border-4 border-white dark:border-gray-800 shadow-lg flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-6xl text-blue-500">
+            <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 border-4 border-white dark:border-gray-800 shadow-lg flex items-center justify-center mb-3">
+              <span className="material-symbols-outlined text-5xl text-blue-500">
                 badge
               </span>
             </div>
             <h3 className="text-xl font-bold mb-1 text-center">
               {staff.fullName || staff.name}
             </h3>
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 mb-6">
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 mb-4">
               {staff.role === "manager"
                 ? "Quản lý"
                 : staff.role === "sale"
@@ -141,7 +141,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                 : staff.role}
             </span>
 
-            <div className="w-full space-y-4">
+            <div className="w-full space-y-3">
               <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-gray-100/80 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase">
                   Ngày sinh
@@ -203,10 +203,10 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                     <tr>
-                      <th className="p-3 text-sm font-bold text-gray-600 dark:text-gray-300 w-1/3">
+                      <th className="py-2.5 px-3 text-sm font-bold text-gray-600 dark:text-gray-300 w-1/3">
                         Thứ / Ngày
                       </th>
-                      <th className="p-3 text-sm font-bold text-gray-600 dark:text-gray-300">
+                      <th className="py-2.5 px-3 text-sm font-bold text-gray-600 dark:text-gray-300">
                         Ca làm (Sáng/Chiều/Full)
                       </th>
                     </tr>
@@ -227,7 +227,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                             isTodayStr ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
                           }`}
                         >
-                          <td className="p-3 flex gap-3 items-center">
+                          <td className="py-2 px-3 flex gap-3 items-center">
                             <span
                               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                                 isTodayStr
@@ -247,7 +247,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                               </div>
                             </div>
                           </td>
-                          <td className="p-3">
+                          <td className="py-2 px-3">
                             {isAdmin ? (
                               <select
                                 className={`w-40 p-2 rounded-lg text-sm font-bold border transition-colors outline-none cursor-pointer ${
