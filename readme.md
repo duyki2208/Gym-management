@@ -7,8 +7,7 @@
 ![alt text](dashboard.png)
 ![alt text](Customers.png)
 ![alt text](products.png)
-<!-- Chèn 2-3 ảnh chụp màn hình ở đây: dashboard, trang check-in, trang POS -->
-<!-- ![Dashboard](./docs/screenshot-dashboard.png) -->
+
 
 ---
 
@@ -75,8 +74,6 @@ cd face-service
 pip install -r requirements.txt
 gunicorn app:app
 ```
-
-> Lưu ý: điền chính xác tên thư mục/biến môi trường theo cấu trúc thật của repo trước khi đăng.
 
 ## Một số vấn đề kỹ thuật đã phát hiện và xử lý
 
