@@ -55,7 +55,7 @@ Client (React) ──▶ Backend API (Node/Express) ──▶ MongoDB
 
 ### Backend
 ```bash
-cd server
+cd backend
 npm install
 cp .env.example .env   # điền MONGO_URI, JWT_SECRET, BREVO_API_KEY...
 npm run dev
@@ -63,7 +63,7 @@ npm run dev
 
 ### Frontend
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev
 ```
