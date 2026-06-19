@@ -1,5 +1,7 @@
 const WorkoutSession = require("../models/WorkoutSession");
 const Customer = require("../models/Customer");
+const CustomerPackage = require("../models/CustomerPackage");
+const syncCustomerFields = require("../utils/syncCustomer");
 
 // Get workout history for a specific customer
 exports.getWorkoutsByCustomer = async (req, res) => {
@@ -44,9 +46,22 @@ exports.deductSession = async (req, res) => {
 
     await newSession.save();
 
-    // Deduct from customer
-    customer.remainingSessions -= 1;
-    await customer.save();
+    // Deduct from active package if available, else fallback to customer directly
+    if (customer.activePackage) {
+      const activePkg = await CustomerPackage.findById(customer.activePackage);
+      if (activePkg) {
+        activePkg.remainingSessions = Math.max(0, activePkg.remainingSessions - 1);
+        await activePkg.save();
+        await syncCustomerFields(customer._id);
+        customer.remainingSessions = activePkg.remainingSessions; // Cập nhật local in-memory
+      } else {
+        customer.remainingSessions = Math.max(0, customer.remainingSessions - 1);
+        await customer.save();
+      }
+    } else {
+      customer.remainingSessions = Math.max(0, customer.remainingSessions - 1);
+      await customer.save();
+    }
 
     res.status(201).json({
       message: "Trừ buổi tập thành công",
@@ -77,9 +92,22 @@ exports.deleteSession = async (req, res) => {
     // Xóa session
     await session.deleteOne();
 
-    // Hoàn lại 1 buổi tập cho customer
-    customer.remainingSessions += 1;
-    await customer.save();
+    // Hoàn lại 1 buổi tập cho customer package nếu có, ngược lại cập nhật trực tiếp trên hồ sơ khách hàng
+    if (customer.activePackage) {
+      const activePkg = await CustomerPackage.findById(customer.activePackage);
+      if (activePkg) {
+        activePkg.remainingSessions += 1;
+        await activePkg.save();
+        await syncCustomerFields(customer._id);
+        customer.remainingSessions = activePkg.remainingSessions; // Cập nhật local in-memory
+      } else {
+        customer.remainingSessions += 1;
+        await customer.save();
+      }
+    } else {
+      customer.remainingSessions += 1;
+      await customer.save();
+    }
 
     res.json({
       message: "Xóa buổi tập thành công và đã hoàn lại 1 buổi",

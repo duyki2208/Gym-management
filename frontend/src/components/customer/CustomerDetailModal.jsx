@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 import { customerService, checkInService, workoutService } from "../../services/customerService";
 import FaceCaptureModal from "./FaceCaptureModal";
 import toast from "react-hot-toast";
@@ -15,7 +14,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const [isDeducting, setIsDeducting] = useState(false);
   const [isSessionPackage, setIsSessionPackage] = useState(false);
   const [showFaceModal, setShowFaceModal] = useState(false);
-  const [isSavingFace, setIsSavingFace] = useState(false);
+  const isSavingFace = false;
   
   const defaultPt = customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff.fullName : (customer?.trainer || "");
   const [ptName, setPtName] = useState(defaultPt);
@@ -95,7 +94,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
     fetchWorkoutHistory();
   }, [customer, activeTab]);
 
-  const fetchCustomerPackages = async () => {
+  const fetchCustomerPackages = useCallback(async () => {
     if (!customer?.phone) return;
     try {
       setLoadingPackages(true);
@@ -106,13 +105,13 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
     } finally {
       setLoadingPackages(false);
     }
-  };
+  }, [customer?.phone]);
 
   useEffect(() => {
     if (activeTab === 'packages') {
       fetchCustomerPackages();
     }
-  }, [customer, activeTab]);
+  }, [activeTab, fetchCustomerPackages]);
 
   const handleDeductSession = async () => {
     if (!ptName) {
@@ -312,7 +311,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                 </span>
              </div>
         ) : (
-             <span className={`text-base text-gray-700 dark:text-gray-300 font-display font-medium break-all md:break-words min-w-0 overflow-hidden`}>
+             <span className={`text-base text-gray-700 dark:text-gray-300 font-display ${boldValue ? 'font-bold' : 'font-medium'} break-all md:break-words min-w-0 overflow-hidden`}>
                  {value || "-"}
              </span>
         )}

@@ -17,6 +17,9 @@ const checkInSchema = mongoose.Schema(
   }
 );
 
+checkInSchema.index({ customerId: 1 });
+checkInSchema.index({ time: -1 });
+
 const CheckIn = mongoose.model('CheckIn', checkInSchema);
 
 module.exports = CheckIn;

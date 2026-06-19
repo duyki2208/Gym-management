@@ -28,7 +28,7 @@ const auditLogger = (req, res, next) => {
 
         // Lọc bỏ password và thông tin nhạy cảm trước khi ghi log
         const details = { ...req.body };
-        const sensitiveKeys = ["password", "token", "accessToken", "refreshToken", "faceDescriptor"];
+        const sensitiveKeys = ["password", "token", "accessToken", "refreshToken", "faceDescriptor", "faceEmbedding"];
         sensitiveKeys.forEach((key) => {
           if (details[key] !== undefined) {
             details[key] = "[FILTERED]";

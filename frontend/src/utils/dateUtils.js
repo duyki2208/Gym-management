@@ -1,6 +1,9 @@
 // src/utils/dateUtils.js
 
-export const getCustomerStatus = (startDate, endDate) => {
+export const getCustomerStatus = (startDate, endDate, status) => {
+  if (status === 'frozen') {
+    return { status: 'frozen', label: 'Bảo lưu', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+  }
   if (!endDate) return { status: 'active', label: 'Hoạt động', color: 'bg-green-50 text-green-700 border-green-200' };
   
   const now = new Date();

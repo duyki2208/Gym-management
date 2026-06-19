@@ -42,4 +42,7 @@ const customerPackageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+customerPackageSchema.index({ customer: 1 });
+customerPackageSchema.index({ status: 1 });
+
 module.exports = mongoose.model("CustomerPackage", customerPackageSchema);

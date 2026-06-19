@@ -21,7 +21,7 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
 
   if (!customer) return null;
 
-  const status = getCustomerStatus(customer.startDate, customer.endDate);
+  const status = getCustomerStatus(customer.startDate, customer.endDate, customer.activePackage?.status || customer.status);
   const daysLeft = customer.endDate 
     ? Math.max(0, Math.ceil((new Date(customer.endDate) - new Date()) / (1000 * 60 * 60 * 24)))
     : 0;
@@ -39,6 +39,12 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
     statusLabel = "GÓI TẬP HẾT HẠN";
     leftAccentClass = "bg-red-500";
     progressBarClass = "bg-red-500";
+  } else if (status.status === "frozen") {
+    statusBadgeClass = "bg-purple-100 text-purple-700 border-purple-200";
+    statusIcon = <AlertCircle size={14} className="text-purple-600" />;
+    statusLabel = "GÓI TẬP BẢO LƯU";
+    leftAccentClass = "bg-purple-500";
+    progressBarClass = "bg-purple-500";
   } else if (status.status === "expiring") {
     statusBadgeClass = "bg-yellow-100 text-yellow-700 border-yellow-200";
     statusIcon = <AlertTriangle size={14} className="text-yellow-600" />;

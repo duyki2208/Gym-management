@@ -41,3 +41,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Screenshots / docs images (local only)
+docs/images/
+
+# AI agent config (local dev only)
+.agent/

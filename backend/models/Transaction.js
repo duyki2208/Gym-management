@@ -37,4 +37,7 @@ transactionSchema.pre("validate", async function () {
   }
 });
 
+transactionSchema.index({ customer: 1 });
+transactionSchema.index({ createdAt: 1, status: 1 });
+
 module.exports = mongoose.model("Transaction", transactionSchema);

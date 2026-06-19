@@ -15,14 +15,20 @@ async function getEmbeddingCandidates() {
   }
   const customers = await Customer.find(
     { faceEmbedding: { $exists: true, $not: { $size: 0 } } },
-    '_id name code faceEmbedding packageType endDate'
-  ).lean();
+    '_id name code faceEmbedding packageType endDate activePackage'
+  ).populate('activePackage', 'status').lean();
 
   embeddingCache = customers.map(c => ({
     member_id: c._id.toString(),
     embedding: c.faceEmbedding,
     // metadata không gửi lên Python, giữ ở Node.js để lookup sau
-    _meta: { name: c.name, code: c.code, packageType: c.packageType, endDate: c.endDate },
+    _meta: { 
+      name: c.name, 
+      code: c.code, 
+      packageType: c.packageType, 
+      endDate: c.endDate,
+      status: c.activePackage?.status || 'active'
+    },
   }));
   cacheFetchedAt = Date.now();
   return embeddingCache;
@@ -50,7 +56,8 @@ const getCheckInList = async (req, res) => {
     }
 
     const customers = await Customer.find(query)
-      .select("_id name code phone packageType startDate endDate avatar") // KHÔNG có faceDescriptor
+      .select("_id name code phone packageType startDate endDate avatar activePackage") // Lấy thêm activePackage
+      .populate("activePackage", "status") // Populate status
       .sort({ name: 1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
@@ -193,10 +200,20 @@ const recognizeFace = async (req, res) => {
     });
     await checkin.save();
 
+    // Kiểm tra cảnh báo hết hạn hoặc bảo lưu gói tập
+    const today = new Date();
+    let warning = null;
+    if (meta.endDate && new Date(meta.endDate) < today) {
+      warning = "expired";
+    } else if (meta.status === "frozen") {
+      warning = "frozen";
+    }
+
     res.json({
       success: true,
       matched: true,
       confidence: result.confidence,
+      warning,
       member: {
         _id: result.member_id,
         name: meta.name,

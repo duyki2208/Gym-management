@@ -132,7 +132,6 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
               <div className="relative rounded-xl overflow-hidden bg-black w-full max-w-sm aspect-[4/3]">
                 {!preview ? (
                   <>
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                     <video
                       ref={videoRef}
                       onPlay={handleVideoPlay}

@@ -25,6 +25,7 @@ function flattenPackage(pkg) {
     email: pkg.customer?.email || "",
     healthNote: pkg.customer?.healthNote || "",
     faceDescriptor: pkg.customer?.faceDescriptor || [],
+    faceEmbedding: pkg.customer?.faceEmbedding || [],
     identityCard: pkg.customer?.identityCard || "", // Thêm CCCD
     emergencyContactName: pkg.customer?.emergencyContactName || "", // Thêm người liên hệ khẩn cấp
     emergencyContactPhone: pkg.customer?.emergencyContactPhone || "", // Thêm SĐT khẩn cấp

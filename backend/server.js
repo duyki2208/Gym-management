@@ -8,10 +8,11 @@ const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 
 // Initialize Cron Jobs
-const startExpirationCron = require("./jobs/expirationCron");
-startExpirationCron();
-
-connectDB();
+if (process.env.NODE_ENV !== "test") {
+  const startExpirationCron = require("./jobs/expirationCron");
+  startExpirationCron();
+  connectDB();
+}
 
 const app = express();
 
@@ -80,5 +81,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (process.env.NODE_ENV !== "test") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;

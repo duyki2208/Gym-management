@@ -36,18 +36,28 @@ const CheckIn = () => {
   };
 
 
-  const handleCheckIn = async (customer) => {
+  const handleCheckIn = async (customer, isAlreadyCheckedIn = false) => {
     if (!customer || !customer._id) {
       toast.error("Thông tin khách hàng không hợp lệ.");
       return;
     }
 
     // Kiểm tra trạng thái gói tập
-    const status = getCustomerStatus(customer.endDate);
+    const status = getCustomerStatus(customer.startDate, customer.endDate, customer.activePackage?.status || customer.status);
     if (status.status === "expired") {
       toast.error(
         "Gói tập của khách hàng đã hết hạn. Vui lòng gia hạn trước khi check-in."
       );
+      return;
+    }
+
+    if (isAlreadyCheckedIn) {
+      // Đã được lưu ở server trong API recognize rồi, chỉ cần hiển thị popup thành công
+      const checkinRecord = {
+          id: Date.now().toString(),
+          data: customer,
+      };
+      setSuccessCheckins(prev => [...prev, checkinRecord]);
       return;
     }
 
@@ -151,7 +161,7 @@ const CheckIn = () => {
               <tbody>
                 {filteredCustomers.length > 0 ? (
                   filteredCustomers.map((c) => {
-                    const status = getCustomerStatus(c.startDate, c.endDate);
+                    const status = getCustomerStatus(c.startDate, c.endDate, c.activePackage?.status || c.status);
                     const isCheckingIn = checkingIn === c._id;
                     return (
                       <tr key={c._id || c.id} className="border-t hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -162,6 +172,7 @@ const CheckIn = () => {
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${status.color}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
                               status.status === 'active' ? 'bg-green-500'
+                              : status.status === 'frozen' ? 'bg-purple-500'
                               : status.status === 'expiring' ? 'bg-yellow-500'
                               : status.status === 'not_activated' ? 'bg-sky-500'
                               : 'bg-red-500'

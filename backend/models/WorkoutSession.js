@@ -32,4 +32,7 @@ const workoutSessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+workoutSessionSchema.index({ customer: 1 });
+workoutSessionSchema.index({ date: -1 });
+
 module.exports = mongoose.model("WorkoutSession", workoutSessionSchema);

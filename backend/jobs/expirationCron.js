@@ -34,6 +34,23 @@ const startExpirationCron = () => {
       }
 
       const now = new Date();
+
+      // 1. Tự động chuyển các gói hết hạn sang trạng thái "expired"
+      const expiredPackages = await CustomerPackage.find({
+        status: "active",
+        endDate: { $lt: now }
+      });
+
+      console.log(`Found ${expiredPackages.length} active packages past their end date. Marking as expired...`);
+
+      for (const pkg of expiredPackages) {
+        pkg.status = "expired";
+        await pkg.save();
+        await syncCustomerFields(pkg.customer);
+        console.log(`Auto-expired package for customer ID: ${pkg.customer} (Package: ${pkg.packageName})`);
+      }
+
+      // 2. Kiểm tra các gói đang bảo lưu để tự động kích hoạt lại
       const frozenPackages = await CustomerPackage.find({ status: "frozen" }).populate("customer");
       
       console.log(`Found ${frozenPackages.length} packages currently frozen. Checking for auto-unfreeze...`);

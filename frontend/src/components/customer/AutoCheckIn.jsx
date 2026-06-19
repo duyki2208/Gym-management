@@ -99,16 +99,27 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
 
         lastCheckInRef.current = { id: data.member._id, time: now };
 
-        setStatusText(`✅ Nhận diện: ${data.member.name}`);
-        setStatusColor('green');
+        if (data.warning === "expired") {
+          setStatusText(`⚠️ Hết hạn: ${data.member.name}`);
+          setStatusColor('red');
+          toast.error(`Hội viên ${data.member.name} đã hết hạn gói tập!`);
+        } else if (data.warning === "frozen") {
+          setStatusText(`❄️ Bảo lưu: ${data.member.name}`);
+          setStatusColor('yellow');
+          toast.error(`Hội viên ${data.member.name} đang bảo lưu gói tập!`);
+        } else {
+          setStatusText(`✅ Nhận diện: ${data.member.name}`);
+          setStatusColor('green');
+        }
+
         setLastMatched({
           name: data.member.name,
           code: data.member.code,
           confidence: data.confidence,
         });
 
-        // Gọi callback để trang CheckIn xử lý popup + âm thanh
-        if (onCheckIn) onCheckIn(data.member);
+        // Gọi callback để trang CheckIn xử lý popup + âm thanh, truyền cờ true báo hiệu đã được check-in
+        if (onCheckIn) onCheckIn(data.member, true);
 
       } catch (err) {
         if (err.response?.status === 503) {
@@ -156,7 +167,6 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
         </h3>
 
         <div className="relative rounded-2xl overflow-hidden border-4 border-gray-100 dark:border-gray-700 bg-black shadow-inner w-full max-w-sm aspect-[4/3]">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={videoRef}
             onPlay={handleVideoPlay}
