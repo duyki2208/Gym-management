@@ -171,15 +171,18 @@ const updateSchedule = async (req, res) => {
 
     // Phân quyền sửa lịch làm việc theo đội quản lý
     const currentUserRole = req.user.role;
+    const isSelf = req.user._id.toString() === id;
     let hasPermission = false;
 
-    if (currentUserRole === "admin" || currentUserRole === "accountant") {
+    if (isSelf) {
       hasPermission = true;
-    } else if (currentUserRole === "sm" && targetStaff.role === "sale") {
+    } else if (currentUserRole === "admin" || currentUserRole === "accountant") {
       hasPermission = true;
-    } else if (currentUserRole === "pm" && targetStaff.role === "pt") {
+    } else if (currentUserRole === "sm" && (targetStaff.role === "sale" || targetStaff.role === "sm")) {
       hasPermission = true;
-    } else if (currentUserRole === "om" && targetStaff.role === "reception") {
+    } else if (currentUserRole === "pm" && (targetStaff.role === "pt" || targetStaff.role === "pm")) {
+      hasPermission = true;
+    } else if (currentUserRole === "om" && (targetStaff.role === "reception" || targetStaff.role === "om")) {
       hasPermission = true;
     }
 

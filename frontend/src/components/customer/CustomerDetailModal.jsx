@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { customerService, checkInService, workoutService } from "../../services/customerService";
+import { customerService, checkInService, workoutService, staffService } from "../../services/customerService";
 import FaceCaptureModal from "./FaceCaptureModal";
 import toast from "react-hot-toast";
 import { useConfirm } from "../../context/ConfirmContext";
@@ -16,8 +16,11 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const [showFaceModal, setShowFaceModal] = useState(false);
   const isSavingFace = false;
   
-  const defaultPt = customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff.fullName : (customer?.trainer || "");
-  const [ptName, setPtName] = useState(defaultPt);
+  const defaultPt = customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff._id : '';
+  const defaultPtName = customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff.fullName : (customer?.trainer || "");
+  const [ptId, setPtId] = useState(defaultPt);
+  const [ptName, setPtName] = useState(defaultPtName);
+  const [ptList, setPtList] = useState([]);
   
   const [note, setNote] = useState("");
   const [activeTab, setActiveTab] = useState("info"); // 'info' | 'history' | 'workout' | 'packages'
@@ -41,6 +44,20 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   // Quyền trừ buổi tập
   const currentUser = JSON.parse(localStorage.getItem("gym_user") || "{}");
   const canDeduct = ["admin", "manager", "reception"].includes(currentUser.role);
+
+  // Fetch danh sách PT khi mở tab workout
+  useEffect(() => {
+    const fetchPTs = async () => {
+      try {
+        const allStaff = await staffService.getAll();
+        const pts = (Array.isArray(allStaff) ? allStaff : []).filter(s => s.role === 'pt');
+        setPtList(pts);
+      } catch (err) {
+        console.error('Lỗi lấy danh sách PT:', err);
+      }
+    };
+    fetchPTs();
+  }, []);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -114,13 +131,19 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   }, [activeTab, fetchCustomerPackages]);
 
   const handleDeductSession = async () => {
-    if (!ptName) {
-      toast.error("Vui lòng nhập tên Huấn luyện viên (PT)");
+    if (!ptId && !ptName) {
+      toast.error("Vui lòng chọn Huấn luyện viên (PT)");
       return;
     }
     try {
       setIsDeducting(true);
-      const res = await workoutService.deduct(customer._id, { ptName, note });
+      const payload = { note };
+      if (ptId) {
+        payload.ptId = ptId;
+      } else {
+        payload.ptName = ptName;
+      }
+      const res = await workoutService.deduct(customer._id, payload);
       toast.success(res.message || "Trừ buổi thành công");
       // Cập nhật local state thay vì fetch lại toàn bộ list
       setWorkoutHistory([res.session, ...workoutHistory]);
@@ -615,13 +638,23 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                             
                             {canDeduct && isSessionPackage && customer.remainingSessions > 0 && (
                                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                                    <input 
-                                        type="text" 
-                                        className="text-sm border-gray-300 rounded-lg px-3 py-2 w-full sm:w-32 focus:ring-blue-500 focus:border-blue-500 outline-none border"
-                                        value={ptName}
-                                        onChange={(e) => setPtName(e.target.value)}
-                                        title="Tên PT Hướng dẫn"
-                                    />
+                                    <select
+                                        className="text-sm border-gray-300 rounded-lg px-3 py-2 w-full sm:w-40 focus:ring-blue-500 focus:border-blue-500 outline-none border bg-white dark:bg-gray-800"
+                                        value={ptId}
+                                        onChange={(e) => {
+                                            setPtId(e.target.value);
+                                            const selected = ptList.find(p => p._id === e.target.value);
+                                            setPtName(selected?.fullName || selected?.username || '');
+                                        }}
+                                        title="Chọn PT Hướng dẫn"
+                                    >
+                                        <option value="">-- Chọn PT --</option>
+                                        {ptList.map(pt => (
+                                            <option key={pt._id} value={pt._id}>
+                                                {pt.fullName || pt.username}
+                                            </option>
+                                        ))}
+                                    </select>
                                     <input 
                                         type="text" 
                                         className="text-sm border-gray-300 rounded-lg px-3 py-2 w-full sm:w-40 focus:ring-blue-500 focus:border-blue-500 outline-none border"
@@ -664,7 +697,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                     {format(new Date(w.date), "HH:mm")}
                                                 </td>
                                                 <td className="px-6 py-4 text-blue-700 font-bold">
-                                                    {w.ptName}
+                                                    {w.pt?.fullName || w.ptName}
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-500">
                                                     <div className="flex justify-between items-center w-full">

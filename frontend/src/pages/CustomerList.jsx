@@ -33,6 +33,7 @@ const CustomerList = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [contractTypeAlert, setContractTypeAlert] = useState(null); // Cảnh báo 409
   
   // Pagination & Filtering State
   const initialSearch = searchParams.get('search') || "";
@@ -74,6 +75,28 @@ const CustomerList = () => {
       }
     }
   }, [customers, searchParams, setSearchParams]);
+
+  // Auto-open modal with pre-filled details when converting from Lead
+  useEffect(() => {
+    const convertName = searchParams.get('convertName');
+    if (convertName) {
+      const convertPhone = searchParams.get('convertPhone') || "";
+      const convertEmail = searchParams.get('convertEmail') || "";
+      const convertSource = searchParams.get('convertSource') || "other";
+      const convertStaff = searchParams.get('convertStaff') || "";
+      
+      setSelectedCustomer({
+        name: convertName,
+        phone: convertPhone,
+        email: convertEmail,
+        source: convertSource,
+        assignedStaff: convertStaff,
+        contractType: "new"
+      });
+      setShowEditModal(true);
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
   
   // Check Admin Role
   const [isAdmin, setIsAdmin] = useState(false);
@@ -142,13 +165,21 @@ const CustomerList = () => {
 
   const handleSave = async (data) => {
     try {
+      setContractTypeAlert(null); // Reset alert cũ
       await customerService.save(data);
-      fetchData(); // Reload data
+      fetchData();
       setShowEditModal(false);
+      setContractTypeAlert(null);
       toast.success("Lưu thông tin hội viên thành công!");
     } catch (error) {
+      const errData = error.response?.data;
+      // Lỗi 409: khách cũ chọn sai contractType — không đóng modal, hiển thị cảnh báo trên form
+      if (error.response?.status === 409 && errData?.code === "CONTRACT_TYPE_MISMATCH") {
+        setContractTypeAlert(errData);
+        return;
+      }
       console.error("Lỗi lưu khách hàng:", error);
-      toast.error(error.response?.data?.message || "Lỗi khi lưu thông tin hội viên");
+      toast.error(errData?.message || "Lỗi khi lưu thông tin hội viên");
     }
   };
 
@@ -641,9 +672,12 @@ const CustomerList = () => {
           customer={selectedCustomer}
           packages={packages}
           onSave={handleSave}
+          contractTypeAlert={contractTypeAlert}
+          onDismissAlert={() => setContractTypeAlert(null)}
           onClose={() => {
             setShowEditModal(false);
             setSelectedCustomer(null);
+            setContractTypeAlert(null);
           }}
         />
       )}

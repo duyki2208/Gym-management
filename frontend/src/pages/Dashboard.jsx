@@ -14,6 +14,11 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  Dumbbell,
+  TrendingUp,
+  Sparkles,
+  Coins,
+  Trophy,
 } from "lucide-react";
 import { customerService } from "../services/customerService";
 import { teamTaskService } from "../services/teamTaskService";
@@ -115,6 +120,277 @@ const Dashboard = () => {
       setShowTasksModal(true);
     }
   };
+
+  if (dashboardData?.isPT) {
+    const ptStats = dashboardData.ptStats;
+    const ptRemaining = ptStats.target - ptStats.achieved;
+
+    return (
+      <div className="flex flex-col gap-6">
+        {/* Tầng 1: KPI Cards cho PT */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            label="Buổi dạy tháng này"
+            value={`${ptStats.achieved} / ${ptStats.target}`}
+            change={`Đạt ${ptStats.percentage}% chỉ tiêu`}
+            type={ptStats.percentage >= 100 ? "positive" : "warning"}
+            icon={Dumbbell}
+            colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900/30 border-blue-200/50 hover:bg-blue-50/50"
+          />
+          <StatCard
+            label="Khách đang phụ trách"
+            value={ptStats.activeClients}
+            change="Hội viên đang hoạt động"
+            type="positive"
+            icon={Users}
+            colorClass="text-green-600 bg-green-100 dark:bg-green-900/30 border-green-200/50 hover:bg-green-50/50"
+          />
+          <StatCard
+            label="Khách mới tháng này"
+            value={ptStats.newClients}
+            change="Mới nhận trong tháng"
+            type="positive"
+            icon={TrendingUp}
+            colorClass="text-purple-600 bg-purple-100 dark:bg-purple-900/30 border-purple-200/50 hover:bg-purple-50/50"
+          />
+          <StatCard
+            label="Ghi chú ca trực"
+            value={
+              stats.upcomingTask 
+                ? `Lúc ${stats.upcomingTask.timeSlot}` 
+                : stats.pendingTasksCount > 0 
+                  ? `${stats.pendingTasksCount} việc` 
+                  : "Hoàn thành"
+            }
+            change={
+              stats.upcomingTask 
+                ? `Cần làm: ${stats.upcomingTask.task}` 
+                : stats.pendingTasksCount > 0 
+                  ? "Việc chưa làm hôm nay" 
+                  : "Đã làm hết việc hôm nay"
+            }
+            type={stats.upcomingTask ? "negative" : stats.pendingTasksCount > 0 ? "warning" : "positive"}
+            icon={ClipboardList}
+            colorClass={
+              stats.upcomingTask 
+                ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-extrabold" 
+                : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
+            }
+            onClick={() => handleCardClick("tasks")}
+          />
+        </div>
+
+        {/* Tầng 2: Buổi dạy gần đây & KPI Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+            <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
+              Lịch sử các buổi dạy gần đây
+            </h3>
+            <div className="space-y-4">
+              {activities.length > 0 ? (
+                activities.map((act) => (
+                  <div key={act.id} className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0">
+                    <div className="flex items-center justify-center size-10 rounded-full shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                      <Dumbbell size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">
+                        {act.customerName}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {act.note || "Dạy buổi tập"} • Lúc {act.time}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-text-muted-light text-sm text-center py-4">Chưa dạy buổi nào trong hôm nay.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
+            <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
+              Tiến trình & Cảnh báo chỉ tiêu
+            </h3>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium">
+                <span className="text-gray-500">Chỉ tiêu buổi dạy</span>
+                <span className="font-bold">{ptStats.achieved} / {ptStats.target} buổi ({ptStats.percentage}%)</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 h-3 rounded-full overflow-hidden">
+                <div className="bg-blue-600 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, ptStats.percentage)}%` }}></div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 text-sm">
+              <p className="font-bold text-blue-700 dark:text-blue-400 mb-1 flex items-center gap-1">
+                <Sparkles size={16} /> Tỷ lệ giữ chân khách
+              </p>
+              <p className="text-gray-600 dark:text-gray-300">Tỷ lệ giữ chân khách hàng hiện tại của bạn đạt: <strong className="text-blue-600 font-bold">{ptStats.retentionRate}%</strong></p>
+            </div>
+
+            <div className={`p-4 rounded-xl border text-sm ${ptRemaining <= 0 ? 'bg-green-50/50 border-green-100 text-green-700' : 'bg-yellow-50/50 border-yellow-100 text-yellow-700'}`}>
+              <p className="font-bold mb-1">Cảnh báo KPI</p>
+              {ptRemaining <= 0 ? (
+                <p>Chúc mừng! Bạn đã hoàn thành chỉ tiêu dạy học của tháng này! 🎉</p>
+              ) : (
+                <p>Còn <strong className="font-bold">{dashboardData.daysLeft} ngày</strong> trong tháng này. Bạn cần dạy thêm <strong className="font-bold">{ptRemaining} buổi</strong> nữa để đạt mục tiêu.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal công việc ca trực */}
+        {showTasksModal && (
+          <TeamTasksModal 
+            onClose={() => {
+              setShowTasksModal(false);
+              refetch(); // Tải lại số lượng tasks trên Card Dashboard
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (dashboardData?.isSale) {
+    const saleStats = dashboardData.saleStats;
+    const revRemaining = saleStats.revenue.target - saleStats.revenue.achieved;
+
+    return (
+      <div className="flex flex-col gap-6">
+        {/* Tầng 1: KPI Cards cho Sale */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            label="Doanh số chốt tháng này"
+            value={`${saleStats.revenue.achieved.toLocaleString("vi-VN")} đ`}
+            change={`Đạt ${saleStats.revenue.percentage}% chỉ tiêu`}
+            type={saleStats.revenue.percentage >= 100 ? "positive" : "warning"}
+            icon={DollarSign}
+            colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200/50 hover:bg-emerald-50/50"
+          />
+          <StatCard
+            label="Hợp đồng mới tháng này"
+            value={`${saleStats.newContracts.achieved} / ${saleStats.newContracts.target}`}
+            change={`Đạt ${saleStats.newContracts.percentage}% mục tiêu`}
+            type={saleStats.newContracts.percentage >= 100 ? "positive" : "warning"}
+            icon={Users}
+            colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900/30 border-blue-200/50 hover:bg-blue-50/50"
+          />
+          <StatCard
+            label="Gói gia hạn tháng này"
+            value={`${saleStats.renewContracts.achieved} / ${saleStats.renewContracts.target}`}
+            change={`Đạt ${saleStats.renewContracts.percentage}% mục tiêu`}
+            type={saleStats.renewContracts.percentage >= 100 ? "positive" : "warning"}
+            icon={Activity}
+            colorClass="text-purple-600 bg-purple-100 dark:bg-purple-900/30 border-purple-200/50 hover:bg-purple-50/50"
+          />
+          <StatCard
+            label="Ghi chú ca trực"
+            value={
+              stats.upcomingTask 
+                ? `Lúc ${stats.upcomingTask.timeSlot}` 
+                : stats.pendingTasksCount > 0 
+                  ? `${stats.pendingTasksCount} việc` 
+                  : "Hoàn thành"
+            }
+            change={
+              stats.upcomingTask 
+                ? `Cần làm: ${stats.upcomingTask.task}` 
+                : stats.pendingTasksCount > 0 
+                  ? "Việc chưa làm hôm nay" 
+                  : "Đã làm hết việc hôm nay"
+            }
+            type={stats.upcomingTask ? "negative" : stats.pendingTasksCount > 0 ? "warning" : "positive"}
+            icon={ClipboardList}
+            colorClass={
+              stats.upcomingTask 
+                ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-extrabold" 
+                : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
+            }
+            onClick={() => handleCardClick("tasks")}
+          />
+        </div>
+
+        {/* Tầng 2: Hợp đồng gần đây & KPI Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+            <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
+              Lịch sử chốt hợp đồng gần đây
+            </h3>
+            <div className="space-y-4">
+              {activities.length > 0 ? (
+                activities.map((act) => (
+                  <div key={act.id} className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0">
+                    <div className="flex items-center justify-center size-10 rounded-full shrink-0 bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      <Coins size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">
+                        {act.customerName}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {act.note} • Lúc {act.time}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-text-muted-light text-sm text-center py-4">Chưa chốt hợp đồng nào hôm nay.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
+            <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
+              Tiến trình KPI & Doanh số
+            </h3>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium">
+                <span className="text-gray-500">Chỉ tiêu doanh số</span>
+                <span className="font-bold">{saleStats.revenue.achieved.toLocaleString()} / {saleStats.revenue.target.toLocaleString()} đ ({saleStats.revenue.percentage}%)</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 h-3 rounded-full overflow-hidden">
+                <div className="bg-emerald-600 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, saleStats.revenue.percentage)}%` }}></div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30 text-sm flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300">
+                <Trophy size={20} />
+              </div>
+              <div>
+                <p className="font-bold text-emerald-800 dark:text-emerald-400">Động lực chốt Sale</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Mỗi hợp đồng mới chốt được tính hoa hồng trực tiếp theo % cấu hình.</p>
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-xl border text-sm ${revRemaining <= 0 ? 'bg-green-50/50 border-green-100 text-green-700' : 'bg-yellow-50/50 border-yellow-100 text-yellow-700'}`}>
+              <p className="font-bold mb-1">Cảnh báo KPI</p>
+              {revRemaining <= 0 ? (
+                <p>Chúc mừng! Bạn đã hoàn thành chỉ tiêu doanh số của tháng này! 🎉</p>
+              ) : (
+                <p>Còn <strong className="font-bold">{dashboardData.daysLeft} ngày</strong>. Bạn cần chốt thêm <strong className="font-bold">{revRemaining.toLocaleString()} đ</strong> để đạt target.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal công việc ca trực */}
+        {showTasksModal && (
+          <TeamTasksModal 
+            onClose={() => {
+              setShowTasksModal(false);
+              refetch(); // Tải lại số lượng tasks trên Card Dashboard
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

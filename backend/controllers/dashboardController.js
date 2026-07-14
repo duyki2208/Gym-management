@@ -4,6 +4,9 @@ const Invoice = require("../models/Invoice");
 const Setting = require("../models/Setting");
 const TeamTask = require("../models/TeamTask");
 const Transaction = require("../models/Transaction");
+const KPITarget = require("../models/KPITarget");
+const CustomerPackage = require("../models/CustomerPackage");
+const WorkoutSession = require("../models/WorkoutSession");
 const {
   startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, startOfMonth, endOfMonth
 } = require("date-fns");
@@ -25,16 +28,245 @@ const getStats = async (req, res) => {
 
     // Format ngày hôm nay
     const todayStr = format(today, "yyyy-MM-dd");
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
 
-    // 1. Lấy cấu hình hệ thống (để có target doanh thu)
+    // Lấy cấu hình hệ thống
     let setting = await Setting.findOne();
     if (!setting) {
       setting = new Setting();
       await setting.save();
     }
-    const targetRevenue = setting.targetRevenue || 100000000; // Mặc định 100 triệu
+    const targetRevenue = setting.targetRevenue || 100000000;
 
-    // 2. Chạy các truy vấn song song để tối ưu hiệu năng
+    // Lấy toàn bộ công việc chưa hoàn thành hôm nay để phân tích
+    const todayTasks = await TeamTask.find({ date: todayStr, isCompleted: false }).lean();
+    const pendingTasksCount = todayTasks.length;
+    
+    // Quy đổi giờ bắt đầu theo mốc 5h sáng chuẩn ca trực
+    const getStartTime = (timeSlot) => {
+      if (!timeSlot) return null;
+      const match = timeSlot.match(/(\d+)(?::(\d+))?/);
+      if (match) {
+        let hour = parseInt(match[1], 10);
+        const minute = match[2] ? parseInt(match[2], 10) : 0;
+        if (hour < 5) {
+          hour += 24; // Đẩy mốc 0h-4h sáng xuống sau 23h đêm
+        }
+        return { hour, minute };
+      }
+      return null;
+    };
+
+    const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
+    const vnTime = new Date(utc + (3600000 * 7));
+    const currentHour = vnTime.getHours();
+    const currentMinute = vnTime.getMinutes();
+    
+    // Quy đổi giờ hiện tại theo mốc 5h sáng chuẩn ca trực
+    let currentHourShift = currentHour;
+    if (currentHourShift < 5) {
+      currentHourShift += 24;
+    }
+    const currentTotalMinutes = currentHourShift * 60 + currentMinute;
+
+    let upcomingTask = null;
+    let minTaskMinutes = Infinity;
+
+    todayTasks.forEach(task => {
+      const taskTime = getStartTime(task.timeSlot);
+      if (taskTime) {
+        const taskTotalMinutes = taskTime.hour * 60 + taskTime.minute;
+        const diff = taskTotalMinutes - currentTotalMinutes;
+        // Việc cận giờ: trước giờ bắt đầu <= 30 phút và chưa hoàn thành, nhưng trễ không quá 5 phút (nếu trễ > 5p sẽ bị khóa)
+        if (diff <= 30 && diff >= -5) {
+          if (taskTotalMinutes < minTaskMinutes) {
+            minTaskMinutes = taskTotalMinutes;
+            upcomingTask = task;
+          }
+        }
+      }
+    });
+
+    const commonData = {
+      pendingTasksCount,
+      upcomingTask: upcomingTask ? {
+        _id: upcomingTask._id,
+        timeSlot: upcomingTask.timeSlot,
+        task: upcomingTask.task
+      } : null,
+    };
+
+    const role = req.user?.role;
+    const userId = req.user?._id;
+
+    if (role === "pt") {
+      // === 🏋️ DASHBOARD PT (Xem chỉ số & KPI của PT) ===
+      const [customTarget, actualSessions, assignedCustomers, sessionCustomers, newClientsCount] = await Promise.all([
+        KPITarget.findOne({ staff: userId, month: currentMonth, year: currentYear }),
+        WorkoutSession.countDocuments({
+          pt: userId,
+          status: "completed",
+          date: { $gte: thisMonthStart, $lte: thisMonthEnd },
+        }),
+        Customer.find({ assignedStaff: userId, endDate: { $gte: today } }).select("_id"),
+        WorkoutSession.distinct("customer", {
+          pt: userId,
+          date: { $gte: thisMonthStart, $lte: thisMonthEnd },
+        }),
+        Customer.countDocuments({
+          assignedStaff: userId,
+          createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+        }),
+      ]);
+
+      const sessionTarget = customTarget?.ptSessionTarget !== undefined
+        ? customTarget.ptSessionTarget
+        : setting.ptMonthlySessionTarget || 80;
+
+      const activeClientIds = new Set();
+      assignedCustomers.forEach((c) => activeClientIds.add(c._id.toString()));
+      sessionCustomers.forEach((id) => activeClientIds.add(id.toString()));
+      const activeClientsCount = activeClientIds.size;
+
+      const totalClientsEver = await WorkoutSession.distinct("customer", { pt: userId });
+      const activeClientsEver = await Customer.countDocuments({
+        _id: { $in: totalClientsEver },
+        endDate: { $gte: today },
+      });
+
+      const retentionRate = totalClientsEver.length > 0
+        ? Math.round((activeClientsEver / totalClientsEver.length) * 100)
+        : 100;
+
+      // Lấy 5 buổi dạy gần nhất của PT này
+      const recentWorkouts = await WorkoutSession.find({ pt: userId })
+        .populate("customer", "name code phone")
+        .sort({ date: -1 })
+        .limit(5)
+        .lean();
+
+      return res.json({
+        success: true,
+        data: {
+          ...commonData,
+          isPT: true,
+          ptStats: {
+            target: sessionTarget,
+            achieved: actualSessions,
+            percentage: sessionTarget > 0 ? Math.round((actualSessions / sessionTarget) * 100) : 0,
+            activeClients: activeClientsCount,
+            newClients: newClientsCount,
+            retentionRate,
+          },
+          recentActivities: recentWorkouts.map(w => ({
+            id: w._id,
+            customerName: w.customer?.name || w.ptName,
+            time: w.date ? new Date(w.date).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "--:--",
+            type: "workout",
+            note: w.note || "Dạy buổi tập"
+          }))
+        }
+      });
+    }
+
+    if (role === "sale" || role === "sm") {
+      // === 💰 DASHBOARD SALE (Xem chỉ số doanh số & hợp đồng) ===
+      const [customTarget, packagesSoldBySale, actualNewContracts, actualRenewContracts] = await Promise.all([
+        KPITarget.findOne({ staff: userId, month: currentMonth, year: currentYear }),
+        CustomerPackage.find({
+          assignedStaff: userId,
+          createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+        }).select("_id"),
+        CustomerPackage.countDocuments({
+          assignedStaff: userId,
+          contractType: "new",
+          createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+        }),
+        CustomerPackage.countDocuments({
+          assignedStaff: userId,
+          contractType: "renew",
+          createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+        }),
+      ]);
+
+      const packageIds = packagesSoldBySale.map((p) => p._id);
+
+      // Doanh thu thực tế do Sale mang lại
+      const revenueAgg = await Transaction.aggregate([
+        {
+          $match: {
+            status: "success",
+            $or: [
+              { staff: userId },
+              { customerPackage: { $in: packageIds } },
+            ],
+            createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$amount" },
+          },
+        },
+      ]);
+
+      const actualRevenue = revenueAgg[0]?.totalRevenue || 0;
+
+      const revenueTarget = customTarget?.saleRevenueTarget !== undefined
+        ? customTarget.saleRevenueTarget
+        : setting.saleMonthlyRevenueTarget || 100000000;
+
+      const newContractTarget = customTarget?.saleNewContractTarget !== undefined
+        ? customTarget.saleNewContractTarget
+        : setting.saleMonthlyContractTarget || 20;
+
+      const renewTarget = customTarget?.saleRenewTarget !== undefined
+        ? customTarget.saleRenewTarget
+        : setting.saleMonthlyRenewTarget || 15;
+
+      // Lấy 5 hợp đồng gần nhất do Sale này chốt
+      const recentContracts = await CustomerPackage.find({ assignedStaff: userId })
+        .populate("customer", "name code phone")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean();
+
+      return res.json({
+        success: true,
+        data: {
+          ...commonData,
+          isSale: true,
+          saleStats: {
+            revenue: {
+              target: revenueTarget,
+              achieved: actualRevenue,
+              percentage: revenueTarget > 0 ? Math.round((actualRevenue / revenueTarget) * 100) : 0,
+            },
+            newContracts: {
+              target: newContractTarget,
+              achieved: actualNewContracts,
+              percentage: newContractTarget > 0 ? Math.round((actualNewContracts / newContractTarget) * 100) : 0,
+            },
+            renewContracts: {
+              target: renewTarget,
+              achieved: actualRenewContracts,
+              percentage: renewTarget > 0 ? Math.round((actualRenewContracts / renewTarget) * 100) : 0,
+            },
+          },
+          recentActivities: recentContracts.map(c => ({
+            id: c._id,
+            customerName: c.customer?.name || "N/A",
+            time: c.createdAt ? new Date(c.createdAt).toLocaleDateString("vi-VN") : "--/--",
+            type: "sale",
+            note: `${c.packageName} - ${c.contractType === 'new' ? 'HĐ mới' : 'Gia hạn'}`
+          }))
+        }
+      });
+    }
+
+    // === 📊 DASHBOARD ADMIN / MANAGER / RECEPTIONIST (Tổng quan toàn phòng tập) ===
     const [
       newCustomersCount,
       uniqueCheckInCustomerIds,
@@ -43,7 +275,6 @@ const getStats = async (req, res) => {
       revenueAggregation,
       weeklyRevenueAggregation,
       newCustomersList,
-      todayTasks,
       recentCheckIns
     ] = await Promise.all([
       // Đếm hội viên mới trong tháng hiện tại (dựa trên createdAt)
@@ -98,9 +329,6 @@ const getStats = async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(20)
         .lean(),
-
-      // Lấy toàn bộ công việc chưa hoàn thành hôm nay để phân tích
-      TeamTask.find({ date: todayStr, isCompleted: false }).lean(),
       
       // Lấy 5 hoạt động check-in gần nhất cho panel vận hành
       CheckIn.find().sort({ time: -1 }).limit(5).lean()
@@ -114,54 +342,6 @@ const getStats = async (req, res) => {
     
     // Tính % hoàn thành chỉ tiêu doanh thu
     const revenuePercentage = Math.round((revenueThisMonth / targetRevenue) * 100);
-
-    // Tính số việc chưa hoàn thành và tìm việc cận giờ
-    const pendingTasksCount = todayTasks.length;
-    
-    // Quy đổi giờ bắt đầu theo mốc 5h sáng chuẩn ca trực
-    const getStartTime = (timeSlot) => {
-      if (!timeSlot) return null;
-      const match = timeSlot.match(/(\d+)(?::(\d+))?/);
-      if (match) {
-        let hour = parseInt(match[1], 10);
-        const minute = match[2] ? parseInt(match[2], 10) : 0;
-        if (hour < 5) {
-          hour += 24; // Đẩy mốc 0h-4h sáng xuống sau 23h đêm
-        }
-        return { hour, minute };
-      }
-      return null;
-    };
-
-    const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
-    const vnTime = new Date(utc + (3600000 * 7));
-    const currentHour = vnTime.getHours();
-    const currentMinute = vnTime.getMinutes();
-    
-    // Quy đổi giờ hiện tại theo mốc 5h sáng chuẩn ca trực
-    let currentHourShift = currentHour;
-    if (currentHourShift < 5) {
-      currentHourShift += 24;
-    }
-    const currentTotalMinutes = currentHourShift * 60 + currentMinute;
-
-    let upcomingTask = null;
-    let minTaskMinutes = Infinity;
-
-    todayTasks.forEach(task => {
-      const taskTime = getStartTime(task.timeSlot);
-      if (taskTime) {
-        const taskTotalMinutes = taskTime.hour * 60 + taskTime.minute;
-        const diff = taskTotalMinutes - currentTotalMinutes;
-        // Việc cận giờ: trước giờ bắt đầu <= 30 phút và chưa hoàn thành, nhưng trễ không quá 5 phút (nếu trễ > 5p sẽ bị khóa)
-        if (diff <= 30 && diff >= -5) {
-          if (taskTotalMinutes < minTaskMinutes) {
-            minTaskMinutes = taskTotalMinutes;
-            upcomingTask = task;
-          }
-        }
-      }
-    });
 
     // Map doanh thu tuần này
     const allDaysInWeek = eachDayOfInterval({ start: thisWeekStart, end: thisWeekEnd });
@@ -191,6 +371,7 @@ const getStats = async (req, res) => {
     res.json({
       success: true,
       data: {
+        ...commonData,
         revenue: revenueThisMonth,
         targetRevenue: targetRevenue,
         revenuePercentage: revenuePercentage,
@@ -200,12 +381,6 @@ const getStats = async (req, res) => {
         yesterdayCheckIns: yesterdayCheckInsCount,
         checkInChange: checkInChange,
         weeklyRevenue: weeklyRevenue,
-        pendingTasksCount: pendingTasksCount,
-        upcomingTask: upcomingTask ? {
-          _id: upcomingTask._id,
-          timeSlot: upcomingTask.timeSlot,
-          task: upcomingTask.task
-        } : null,
         peakHours: peakHours,
         recentActivities: recentCheckIns.map(ci => ({
           id: ci._id,

@@ -29,19 +29,43 @@ const getSettings = async (req, res) => {
 // @access  Private/Admin
 const updateSettings = async (req, res) => {
   try {
-    const { gymName, address, targetRevenue } = req.body;
+    const {
+      // Thông tin cơ bản
+      gymName, address, targetRevenue,
+      // Hoa hồng PT
+      ptSessionPrice, ptCommissionRate,
+      // Hoa hồng Sale
+      saleNewContractRate, saleRenewRate, saleUpsellRate,
+      // KPI
+      ptMonthlySessionTarget,
+      saleMonthlyRevenueTarget, saleMonthlyContractTarget, saleMonthlyRenewTarget,
+      // Vận hành
+      gymCapacity, minStockAlert,
+    } = req.body;
+
     let setting = await Setting.findOne();
     
     if (!setting) {
-      setting = new Setting({
-        gymName,
-        address,
-        targetRevenue: targetRevenue ? Number(targetRevenue) : undefined
-      });
-    } else {
-      if (gymName !== undefined) setting.gymName = gymName;
-      if (address !== undefined) setting.address = address;
-      if (targetRevenue !== undefined) setting.targetRevenue = Number(targetRevenue);
+      setting = new Setting();
+    }
+
+    // Cập nhật các trường — chỉ cập nhật nếu có gửi lên
+    const numericFields = {
+      targetRevenue, ptSessionPrice, ptCommissionRate,
+      saleNewContractRate, saleRenewRate, saleUpsellRate,
+      ptMonthlySessionTarget,
+      saleMonthlyRevenueTarget, saleMonthlyContractTarget, saleMonthlyRenewTarget,
+      gymCapacity, minStockAlert,
+    };
+
+    if (gymName !== undefined) setting.gymName = gymName;
+    if (address !== undefined) setting.address = address;
+
+    // Cập nhật các trường số
+    for (const [key, value] of Object.entries(numericFields)) {
+      if (value !== undefined && value !== null) {
+        setting[key] = Number(value);
+      }
     }
     
     await setting.save();

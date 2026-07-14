@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productService, posService } from '../services/productService';
 import { customerService } from '../services/customerService';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, User, Package, QrCode, CheckCircle } from 'lucide-react';
 

@@ -35,6 +35,8 @@ const customerSchema = mongoose.Schema(
     paymentStatus: { type: String, enum: ['paid', 'deposit', 'unpaid'], default: 'paid' },
     paidAmount: { type: Number, default: 0 },
     contractType: { type: String, enum: ['new', 'renew', 'upgrade'], default: 'new' },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    source: { type: String, default: "other" },
 
     // Sinh trắc học — vector 512 chiều từ InsightFace (thay thế face-api.js 128 chiều)
     faceEmbedding: { type: [Number], default: [] },

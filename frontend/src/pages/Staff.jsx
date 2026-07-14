@@ -278,12 +278,14 @@ const Staff = () => {
           isAdmin={
             (() => {
               const currentUser = JSON.parse(localStorage.getItem("gym_user") || "{}");
+              const isSelf = currentUser._id === (detailStaff?._id || detailStaff?.id);
               return (
+                isSelf ||
                 currentUser.role === "admin" ||
                 currentUser.role === "accountant" ||
-                (currentUser.role === "sm" && detailStaff?.role === "sale") ||
-                (currentUser.role === "pm" && detailStaff?.role === "pt") ||
-                (currentUser.role === "om" && detailStaff?.role === "reception")
+                (currentUser.role === "sm" && (detailStaff?.role === "sale" || detailStaff?.role === "sm")) ||
+                (currentUser.role === "pm" && (detailStaff?.role === "pt" || detailStaff?.role === "pm")) ||
+                (currentUser.role === "om" && (detailStaff?.role === "reception" || detailStaff?.role === "om"))
               );
             })()
           }

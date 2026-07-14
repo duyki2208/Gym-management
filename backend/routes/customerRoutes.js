@@ -23,19 +23,26 @@ router.get('/',
   customerController.getAll
 );
 
-// POST /api/v1/customers — Thêm khách hàng mới
-router.post('/',
+// GET  /api/v1/customers/check-existing — Kiểm tra khách cũ real-time (KHÔNG ghi dữ liệu)
+router.get('/check-existing',
   protect,
   authorize('admin', 'manager', 'sale', 'reception'),
+  customerController.checkExisting
+);
+
+// POST /api/v1/customers — Thêm khách hàng mới (chỉ Admin)
+router.post('/',
+  protect,
+  authorize('admin'),
   createCustomerValidator,
   validate,
   customerController.create
 );
 
-// PUT  /api/v1/customers/:id — Sửa khách hàng
+// PUT  /api/v1/customers/:id — Sửa khách hàng (chỉ Admin)
 router.put('/:id',
   protect,
-  authorize('admin', 'manager'),
+  authorize('admin'),
   updateCustomerValidator,
   validate,
   customerController.update
@@ -48,17 +55,17 @@ router.delete('/:id',
   customerController.delete
 );
 
-// POST /api/v1/customers/:id/freeze — Tạm dừng gói tập
+// POST /api/v1/customers/:id/freeze — Tạm dừng gói tập (chỉ Admin)
 router.post('/:id/freeze',
   protect,
-  authorize('admin', 'manager'),
+  authorize('admin'),
   customerController.freeze
 );
 
-// POST /api/v1/customers/:id/unfreeze — Kích hoạt lại gói tập
+// POST /api/v1/customers/:id/unfreeze — Kích hoạt lại gói tập (chỉ Admin)
 router.post('/:id/unfreeze',
   protect,
-  authorize('admin', 'manager'),
+  authorize('admin'),
   customerController.unfreeze
 );
 

@@ -5,6 +5,7 @@ dotenv.config();
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 
 // Initialize Cron Jobs
@@ -58,6 +59,7 @@ const apiLimiter = rateLimit({
 app.use("/api/v1/auth/login", authLimiter);
 app.use("/api/v1", apiLimiter);
 
+app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
 
 // --- ROUTES ---

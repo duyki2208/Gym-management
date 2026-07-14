@@ -6,7 +6,9 @@ const { CUSTOMER_STATUS } = require("../utils/constants");
 const { sendRegistrationEmail } = require("../utils/emailService");
 const syncCustomerFields = require("../utils/syncCustomer");
 const faceClient = require("../utils/faceServiceClient");
+const { createSaleCommission } = require("./commissionController");
 const mongoose = require("mongoose");
+const { sendZaloNotification } = require("../utils/zaloService");
 
 
 
@@ -88,6 +90,8 @@ const createCustomer = async (req, res) => {
       identityCard,
       emergencyContactName,
       emergencyContactPhone,
+      referredBy,
+      source,
     } = req.body;
 
     const normalizedName = name ? name.trim() : "";
@@ -116,6 +120,7 @@ const createCustomer = async (req, res) => {
     }
     
     let customer = await Customer.findOne(checkQuery);
+    const isNewCustomer = !customer; // Đánh dấu trước khi tạo mới
 
     if (!customer) {
       customer = new Customer({
@@ -134,17 +139,50 @@ const createCustomer = async (req, res) => {
         identityCard: identityCard || "",
         emergencyContactName: emergencyContactName || "",
         emergencyContactPhone: emergencyContactPhone || "",
+        referredBy: referredBy || undefined,
+        source: source || "other",
       });
       await customer.save();
       console.log(`Đã tạo hồ sơ khách hàng mới: ${customer.code}`);
     } else {
       console.log(`Tìm thấy hồ sơ khách hàng cũ. Sử dụng lại mã: ${customer.code}`);
-      if (faceEmbedding && faceEmbedding.length > 0) customer.faceEmbedding = faceEmbedding;
 
+      // ⚠️ Chặn sớm: khách cũ không được dùng contractType "new"
+      if (!contractType || contractType === "new") {
+        return res.status(409).json({
+          code: "CONTRACT_TYPE_MISMATCH",
+          message: `Khách hàng "${customer.name}" (${customer.code}) đã có hồ sơ trong hệ thống. Vui lòng chọn lại nguồn hợp đồng cho phù hợp.`,
+          customerInfo: {
+            _id: customer._id,
+            name: customer.name,
+            code: customer.code,
+            phone: customer.phone,
+          },
+          suggestion: ["renew", "upgrade"],
+          isNewCustomer: false,
+        });
+      }
+
+      if (faceEmbedding && faceEmbedding.length > 0) customer.faceEmbedding = faceEmbedding;
       if (email) customer.email = email;
       if (healthNote) customer.healthNote = healthNote;
       if (avatar) customer.avatar = avatar;
+      if (referredBy) customer.referredBy = referredBy;
+      if (source) customer.source = source;
       await customer.save();
+    }
+
+    // Kiểm tra kỳ hoa hồng Sale đã bị khóa (approved hoặc paid) chưa
+    const CommissionPeriod = require("../models/CommissionPeriod");
+    const now = new Date();
+    const lockedPeriod = await CommissionPeriod.findOne({
+      month: now.getMonth() + 1,
+      year: now.getFullYear(),
+      type: "sale",
+      status: { $in: ["approved", "paid"] }
+    });
+    if (lockedPeriod) {
+      return res.status(400).json({ message: "Kỳ thanh toán hoa hồng Sale tháng này đã được duyệt hoặc chi trả, dữ liệu đã bị khóa." });
     }
 
     const customerPackage = new CustomerPackage({
@@ -165,6 +203,43 @@ const createCustomer = async (req, res) => {
       paidAmount: paidAmount || 0,
       status: "active",
     });
+
+    // Logic referral: tặng thêm 1 tháng cho người giới thiệu
+    if (referredBy) {
+      try {
+        const referrerPackage = await CustomerPackage.findOne({
+          customer: referredBy,
+          status: "active"
+        }).sort({ endDate: -1 });
+
+        const referrerCustomer = await Customer.findById(referredBy).select("name code");
+
+        if (referrerPackage && referrerCustomer) {
+          const oldEndDate = new Date(referrerPackage.endDate);
+          const newEndDate = new Date(oldEndDate);
+          newEndDate.setDate(newEndDate.getDate() + 30);
+          referrerPackage.endDate = newEndDate;
+
+          const rewardNote = `+1 tháng (Tặng từ việc giới thiệu hội viên mới: ${customer.name} - ${customer.code || customer.phone})`;
+          referrerPackage.packageNote = referrerPackage.packageNote 
+            ? `${referrerPackage.packageNote}\n${rewardNote}` 
+            : rewardNote;
+
+          await referrerPackage.save();
+          console.log(`Đã tặng thêm 1 tháng cho người giới thiệu: ${referrerCustomer.name} (${referrerPackage._id})`);
+        }
+
+        if (referrerCustomer) {
+          const introNote = `Được giới thiệu bởi hội viên: ${referrerCustomer.name} - ${referrerCustomer.code || referrerCustomer.phone}`;
+          customerPackage.packageNote = customerPackage.packageNote 
+            ? `${customerPackage.packageNote}\n${introNote}` 
+            : introNote;
+        }
+      } catch (refErr) {
+        console.error("Lỗi cộng thưởng giới thiệu hội viên:", refErr);
+      }
+    }
+
     await customerPackage.save();
 
     await syncCustomerFields(customer._id);
@@ -192,7 +267,7 @@ const createCustomer = async (req, res) => {
 
     await Transaction.create({
       type: "package_purchase",
-      amount: customerPackage.paidAmount || customerPackage.price || 0,
+      amount: paidAmount || 0,
       paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
       customer: customer._id,
       customerName: customer.name,
@@ -200,6 +275,17 @@ const createCustomer = async (req, res) => {
       status: "success",
       staff: req.user ? req.user._id : undefined,
     });
+
+    // Tự động tạo hoa hồng Sale nếu có nhân viên bán gói
+    if (customerPackage.assignedStaff) {
+      await createSaleCommission({
+        staffId: customerPackage.assignedStaff,
+        customerPackageId: customerPackage._id,
+        customerId: customer._id,
+        packagePrice: customerPackage.price || 0,
+        contractType: customerPackage.contractType || "new",
+      });
+    }
 
     if (customer.email) {
       let staffName = null;
@@ -218,8 +304,22 @@ const createCustomer = async (req, res) => {
       );
     }
 
+    // Gửi tin nhắn Zalo OA giả lập
+    if (customer.phone) {
+      try {
+        await sendZaloNotification({
+          phone: customer.phone,
+          message: `Chúc mừng ${customer.name} đã đăng ký thành công gói tập ${customerPackage.packageName}. Thời hạn gói: từ ${new Date(customerPackage.startDate).toLocaleDateString("vi-VN")} đến ${new Date(customerPackage.endDate).toLocaleDateString("vi-VN")}. Hân hạnh được phục vụ quý khách!`,
+          type: "package_purchase"
+        });
+      } catch (zErr) {
+        console.error("Lỗi gửi tin nhắn Zalo OA khi mua gói tập:", zErr);
+      }
+    }
+
     const populatedPackage = await CustomerPackage.findById(customerPackage._id).populate("customer");
-    res.status(201).json(flattenPackage(populatedPackage));
+    const responseData = flattenPackage(populatedPackage);
+    res.status(201).json({ ...responseData, isNewCustomer });
   } catch (error) {
     console.error("Error creating customer:", error);
     res.status(400).json({ message: error.message || "Lỗi tạo khách hàng" });
@@ -352,6 +452,8 @@ const updateCustomer = async (req, res) => {
       "identityCard",
       "emergencyContactName",
       "emergencyContactPhone",
+      "referredBy",
+      "source",
     ];
     const packageFields = [
       "packageType",
@@ -425,6 +527,33 @@ const deleteCustomer = async (req, res) => {
     }
 
     const customerId = customerPackage.customer;
+
+    // Kiểm tra kỳ hoa hồng Sale đã bị khóa (approved hoặc paid) chưa
+    const CommissionPeriod = require("../models/CommissionPeriod");
+    const pkgMonth = new Date(customerPackage.createdAt).getMonth() + 1;
+    const pkgYear = new Date(customerPackage.createdAt).getFullYear();
+    const lockedPeriod = await CommissionPeriod.findOne({
+      month: pkgMonth,
+      year: pkgYear,
+      type: "sale",
+      status: { $in: ["approved", "paid"] }
+    });
+    if (lockedPeriod) {
+      return res.status(400).json({ message: "Kỳ thanh toán hoa hồng Sale của gói tập này đã được duyệt hoặc chi trả, không thể xóa." });
+    }
+
+    // Thu hồi hoa hồng liên quan nếu có
+    const Commission = require("../models/Commission");
+    await Commission.updateMany(
+      { customerPackage: customerPackage._id, status: "active" },
+      {
+        status: "revoked",
+        revokedReason: "Xóa hợp đồng / gói tập",
+        revokedAt: new Date(),
+        revokedBy: req.user ? req.user._id : undefined,
+      }
+    );
+
     await customerPackage.deleteOne();
 
     // Kiểm tra xem khách hàng này còn gói tập nào khác không
@@ -612,6 +741,64 @@ const enrollFace = async (req, res) => {
   }
 };
 
+
+/**
+ * GET /api/v1/customers/check-existing?name=...&phone=...&dob=...
+ * Kiểm tra khách hàng có tồn tại không (KHÔNG ghi dữ liệu).
+ * Dùng để validate real-time trên form trước khi submit.
+ */
+const checkExistingCustomer = async (req, res) => {
+  try {
+    const { name, phone, dob } = req.query;
+
+    if (!name || !phone) {
+      return res.json({ exists: false });
+    }
+
+    const normalizedName = name.trim();
+    const normalizedPhone = phone.trim();
+
+    const checkQuery = {
+      name: { $regex: new RegExp(`^${normalizedName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') },
+      phone: normalizedPhone,
+    };
+
+    let parsedDob = null;
+    if (dob && dob !== "Invalid Date") {
+      const d = new Date(dob);
+      if (!isNaN(d.getTime())) parsedDob = d;
+    }
+
+    if (parsedDob) {
+      checkQuery.dob = parsedDob;
+    } else {
+      checkQuery.$or = [
+        { dob: { $exists: false } },
+        { dob: null },
+      ];
+    }
+
+    const customer = await Customer.findOne(checkQuery).select('_id name code phone dob');
+
+    if (!customer) {
+      return res.json({ exists: false });
+    }
+
+    return res.json({
+      exists: true,
+      customer: {
+        _id: customer._id,
+        name: customer.name,
+        code: customer.code,
+        phone: customer.phone,
+      },
+    });
+  } catch (error) {
+    console.error("checkExistingCustomer error:", error);
+    res.status(500).json({ exists: false });
+  }
+};
+
 module.exports = {
   getAll: getAllCustomers,
   create: createCustomer,
@@ -620,4 +807,5 @@ module.exports = {
   freeze: freezeCustomer,
   unfreeze: unfreezeCustomer,
   enrollFace,
+  checkExisting: checkExistingCustomer,
 };

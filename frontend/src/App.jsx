@@ -26,8 +26,10 @@ import History from './pages/History';
 import Packages from './pages/Packages';
 import Staff from './pages/Staff';
 import Reports from './pages/Reports';
+import Commissions from './pages/Commissions';
 import Settings from './pages/Settings';
 import ProductsMain from './pages/ProductsMain';
+import Leads from './pages/Leads';
 
 const App = () => {
 
@@ -55,8 +57,10 @@ const App = () => {
                         <Route path="/packages" element={<Packages />} />
                         <Route path="/staff" element={<Staff />} />
                         <Route path="/reports" element={<Reports />} />
+                        <Route path="/commissions" element={<Commissions />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/products/*" element={<ProductsMain />} />
+                        <Route path="/leads" element={<Leads />} />
                         
                         {/* Fallback cho route sai */}
                         <Route path="*" element={<Navigate to="/" replace />} />

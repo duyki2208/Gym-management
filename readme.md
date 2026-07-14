@@ -1,6 +1,6 @@
 # GymPro – Gym Management System
 
-> A comprehensive gym management platform with face recognition check-in, POS, staff management, and revenue reporting.
+A comprehensive gym management platform with face recognition check-in, POS, staff management, and revenue reporting.
 
 **🔗 Live Demo:** [gym-management-eight-omega.vercel.app](https://gym-management-eight-omega.vercel.app)
 

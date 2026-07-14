@@ -1,10 +1,27 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { X } from "lucide-react";
-import { staffService } from "../../services/customerService";
+import { staffService, customerService } from "../../services/customerService";
+import api from "../../services/api";
 
-const CustomerModal = ({ customer, packages, onSave, onClose }) => {
+const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert, onDismissAlert }) => {
   const [staffList, setStaffList] = useState([]);
+  const [customerList, setCustomerList] = useState([]);
+  // Cảnh báo real-time khách cũ chọn sai contractType
+  const [existingCustomerAlert, setExistingCustomerAlert] = useState(null);
+  const [referralSearch, setReferralSearch] = useState("");
+
+  useEffect(() => {
+    const fetchCustomersList = async () => {
+      try {
+        const response = await customerService.getAll({ limit: 1000 });
+        setCustomerList(response?.customers || []);
+      } catch (err) {
+        console.error("Lỗi lấy danh sách khách hàng giới thiệu:", err);
+      }
+    };
+    fetchCustomersList();
+  }, []);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -56,6 +73,10 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
     identityCard: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
+
+    // 7. Referral
+    source: "other",
+    referredBy: "",
   });
 
   // Hàm helper để format date cho input type="date"
@@ -120,6 +141,8 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         identityCard: customer.identityCard || "",
         emergencyContactName: customer.emergencyContactName || "",
         emergencyContactPhone: customer.emergencyContactPhone || "",
+        source: customer.source || "other",
+        referredBy: customer.referredBy?._id || customer.referredBy || "",
         // Giữ lại _id và các trường khác nhưng không ghi đè date fields đã format
         _id: customer._id,
         id: customer.id,
@@ -153,6 +176,8 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         identityCard: "",
         emergencyContactName: "",
         emergencyContactPhone: "",
+        source: "other",
+        referredBy: "",
       });
     }
   }, [customer]);
@@ -226,12 +251,40 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
     });
   };
 
+  const filteredReferrals = customerList.filter(c => 
+    c.name?.toLowerCase().includes(referralSearch.toLowerCase()) || 
+    c.phone?.includes(referralSearch) || 
+    c.code?.toLowerCase().includes(referralSearch.toLowerCase())
+  );
+
+  // Real-time check: khi name hoặc phone thay đổi (chỉ áp dụng cho form tạo mới)
+  useEffect(() => {
+    if (customer) return; // Chỉ check khi tạo mới, không check khi edit
+    const { name, phone, dob } = formData;
+    if (!name.trim() || !phone.trim()) {
+      setExistingCustomerAlert(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const result = await customerService.checkExisting({ name, phone, dob: dob || undefined });
+      if (result.exists) {
+        setExistingCustomerAlert(result.customer);
+      } else {
+        setExistingCustomerAlert(null);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [formData.name, formData.phone, formData.dob, customer]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.packageType || !formData.endDate || !formData.assignedStaff) {
-      toast.error(
-        "Vui lòng điền nhân viên tư vấn, gói tập và ngày hết hạn hợp lệ."
-      );
+    if (!formData.packageType || !formData.price || !formData.paymentStatus || !formData.assignedStaff || !formData.endDate) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc: Gói tập, giá gói, trạng thái thanh toán và nhân viên tư vấn.");
+      return;
+    }
+    // Chặn submit nếu khách cũ vẫn chọn contractType "new"
+    if (existingCustomerAlert && formData.contractType === "new") {
+      toast.error("Khách hàng đã có hồ sơ! Vui lòng chọn nguồn hợp đồng là \"Gia hạn\" hoặc \"Nâng cấp\".");
       return;
     }
     onSave(formData);
@@ -279,7 +332,98 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-8">
-          {/* 1. THÔNG TIN CƠ BẢN */}
+
+          {/* ⚠️ Cảnh báo Contract Type Mismatch */}
+          {contractTypeAlert && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-amber-500 text-xl mt-0.5">⚠️</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-800 text-sm mb-1">
+                    Khách hàng đã có trong hệ thống
+                  </p>
+                  <p className="text-amber-700 text-sm mb-3">
+                    {contractTypeAlert.message}
+                  </p>
+                  {contractTypeAlert.customerInfo && (
+                    <p className="text-amber-600 text-xs mb-3">
+                      Mã KH: <strong>{contractTypeAlert.customerInfo.code}</strong>{" "}
+                      &mdash; SĐT: <strong>{contractTypeAlert.customerInfo.phone}</strong>
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-amber-700 text-xs font-medium">Chọn lại nguồn hợp đồng:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, contractType: "renew" }));
+                        onDismissAlert?.();
+                      }}
+                      className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      Gia hạn (Renew)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, contractType: "upgrade" }));
+                        onDismissAlert?.();
+                      }}
+                      className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                    >
+                      Nâng cấp (Upgrade)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onDismissAlert}
+                      className="ml-auto px-2 py-1 text-xs text-amber-600 hover:text-amber-800 underline"
+                    >
+                      Bỏ qua
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🔴 Cảnh báo REAL-TIME: phát hiện khách cũ ngay khi điền form */}
+          {existingCustomerAlert && formData.contractType === "new" && (
+            <div className="rounded-lg border-2 border-red-300 bg-red-50 p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 text-xl mt-0.5">🚫</span>
+                <div className="flex-1">
+                  <p className="font-bold text-red-800 text-sm mb-1">
+                    Khách hàng đã có hồ sơ — Không thể dùng "Khách mới"
+                  </p>
+                  <p className="text-red-700 text-sm mb-2">
+                    <strong>{existingCustomerAlert.name}</strong> ({existingCustomerAlert.code}) đã được đăng ký
+                    trong hệ thống. Hợp đồng sẽ không được tạo cho đến khi bạn chọn đúng nguồn hợp đồng.
+                  </p>
+                  <p className="text-red-600 text-xs mb-3">
+                    SĐT: <strong>{existingCustomerAlert.phone}</strong>
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-red-700 text-xs font-semibold">Chọn nguồn hợp đồng phù hợp:</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, contractType: "renew" }))}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                      ✅ Gia hạn (Renew)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, contractType: "upgrade" }))}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm"
+                    >
+                      ⬆️ Nâng cấp (Upgrade)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <section>
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
               1. Thông tin cơ bản
@@ -446,10 +590,11 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
 
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giá gói (VNĐ)
+                  Giá gói (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-600"
                   value={formData.price}
                   onChange={(e) =>
@@ -458,12 +603,13 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                 />
               </div>
 
-              {/* Row 2 */}
+              {/* Row 2: Trạng thái thanh toán & Nhân viên tư vấn */}
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thanh toán
+                  Trạng thái thanh toán <span className="text-red-500">*</span>
                 </label>
                 <select
+                  required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.paymentStatus}
                   onChange={(e) => handlePaymentStatusChange(e.target.value)}
@@ -474,22 +620,40 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
               </div>
 
               <div className="col-span-2 md:col-span-1">
-                {formData.paymentStatus === "deposit" && (
-                  <>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Số tiền cọc (VNĐ)
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-orange-600 font-bold"
-                      value={formData.paidAmount}
-                      onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value })}
-                    />
-                  </>
-                )}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nhân viên tư vấn <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.assignedStaff}
+                  onChange={(e) => setFormData({ ...formData, assignedStaff: e.target.value })}
+                >
+                  <option value="">-- Chọn nhân viên --</option>
+                  {filteredAndSortedStaff.map((s) => (
+                    <option key={s._id || s.id} value={s._id || s.id}>
+                      {s.name || s.fullName} ({s.role})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Row 3 */}
+              {/* Row 3: Số tiền đặt cọc */}
+              {formData.paymentStatus === "deposit" && (
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Số tiền cọc (VNĐ)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-orange-600 font-bold"
+                    value={formData.paidAmount}
+                    onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {/* Row 4: Ngày bắt đầu & Ngày hết hạn */}
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ngày bắt đầu
@@ -514,7 +678,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                 />
               </div>
 
-              {/* Row 4 */}
+              {/* Row 5: Nguồn hợp đồng & Mã hợp đồng */}
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nguồn hợp đồng
@@ -543,27 +707,84 @@ const CustomerModal = ({ customer, packages, onSave, onClose }) => {
                 />
               </div>
 
-              {/* Row 5 */}
+              {/* Row 6: Nguồn khách hàng & Hội viên giới thiệu (Được chuyển từ phần 1) */}
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nhân viên tư vấn <span className="text-red-500">*</span>
+                  Nguồn khách hàng
                 </label>
                 <select
-                  required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.assignedStaff}
-                  onChange={(e) => setFormData({ ...formData, assignedStaff: e.target.value })}
+                  value={formData.source}
+                  onChange={(e) =>
+                    setFormData({ ...formData, source: e.target.value })
+                  }
                 >
-                  <option value="">-- Chọn nhân viên --</option>
-                  {filteredAndSortedStaff.map((s) => (
-                    <option key={s._id || s.id} value={s._id || s.id}>
-                      {s.name || s.fullName} ({s.role})
-                    </option>
-                  ))}
+                  <option value="facebook">Facebook</option>
+                  <option value="hotline">Hotline</option>
+                  <option value="referral">Giới thiệu (Referral)</option>
+                  <option value="web">Website</option>
+                  <option value="other">Khác</option>
                 </select>
               </div>
 
-              <div className="col-span-2 md:col-span-1">
+              <div className="col-span-2 md:col-span-1 relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Hội viên giới thiệu
+                </label>
+                {formData.referredBy ? (
+                  <div className="flex items-center justify-between p-2 border rounded bg-blue-50 border-blue-200">
+                    <span className="text-sm font-bold text-blue-700">
+                      {customerList.find(c => c._id === formData.referredBy)?.name || "Đã chọn hội viên"} (
+                      {customerList.find(c => c._id === formData.referredBy)?.code || ""}
+                      )
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, referredBy: "" });
+                        setReferralSearch("");
+                      }}
+                      className="text-xs text-red-500 hover:underline font-bold"
+                    >
+                      Thay đổi
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="text"
+                      
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      value={referralSearch}
+                      onChange={(e) => setReferralSearch(e.target.value)}
+                    />
+                    {referralSearch.trim() !== "" && (
+                      <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                        {filteredReferrals.length === 0 ? (
+                          <p className="p-3 text-xs text-gray-400 text-center">Không tìm thấy hội viên nào</p>
+                        ) : (
+                          filteredReferrals.slice(0, 10).map((c) => (
+                            <button
+                              key={c._id}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, referredBy: c._id });
+                                setReferralSearch("");
+                              }}
+                              className="w-full text-left p-2 hover:bg-blue-50 hover:text-blue-700 text-xs font-semibold border-b border-gray-100 last:border-0 transition-colors"
+                            >
+                              {c.name} ({c.code || c.phone})
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Row 7: Ghi chú gói tập (Phần ghi chú gói tập để 1 dòng -> col-span-2) */}
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ghi chú gói tập
                 </label>

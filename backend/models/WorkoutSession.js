@@ -7,6 +7,12 @@ const workoutSessionSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
+    // PT phụ trách buổi tập — liên kết trực tiếp đến User (role: pt)
+    pt: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    // Giữ lại ptName để backward compat với dữ liệu cũ và hiển thị nhanh
     ptName: {
       type: String,
       required: true, // Tên PT hướng dẫn (ví dụ: PT Minh)
@@ -34,5 +40,6 @@ const workoutSessionSchema = new mongoose.Schema(
 
 workoutSessionSchema.index({ customer: 1 });
 workoutSessionSchema.index({ date: -1 });
+workoutSessionSchema.index({ pt: 1, date: -1 }); // Index mới cho aggregate hoa hồng PT
 
 module.exports = mongoose.model("WorkoutSession", workoutSessionSchema);

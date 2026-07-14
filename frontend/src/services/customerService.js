@@ -100,8 +100,20 @@ export const customerService = {
         return response.data;
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi lưu dữ liệu";
-      throw new Error(errorMessage);
+      // Re-throw để giữ nguyên axios error (status, response.data) cho caller xử lý
+      throw error;
+    }
+  },
+
+  // Kiểm tra khách hàng đã tồn tại chưa (real-time, không ghi dữ liệu)
+  checkExisting: async ({ name, phone, dob }) => {
+    try {
+      const params = { name, phone };
+      if (dob) params.dob = dob;
+      const response = await api.get('/customers/check-existing', { params });
+      return response.data; // { exists: boolean, customer?: {...} }
+    } catch {
+      return { exists: false };
     }
   },
 

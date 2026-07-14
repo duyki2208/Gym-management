@@ -26,12 +26,20 @@ export const authService = {
     }
   },
 
-  // Hàm đăng xuất
-  logout: () => {
-    localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
-    localStorage.removeItem('gym_token');
-    // Điều hướng về login
-    window.location.href = '/login'; 
+  // Hàm đăng xuất — Gọi API để xóa Session thiết bị này trong DB
+  logout: async () => {
+    try {
+      // Gọi API logout để backend xóa đúng Session của thiết bị hiện tại
+      // (không ảnh hưởng đến các thiết bị khác của cùng user)
+      await api.post('/auth/logout');
+    } catch (e) {
+      // Nếu API lỗi (token đã hết hạn), vẫn tiến hành clear localStorage
+      console.warn('Logout API call failed:', e.message);
+    } finally {
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
+      localStorage.removeItem('gym_token');
+      window.location.href = '/login';
+    }
   },
 
   // Lấy thông tin user hiện tại

@@ -13,8 +13,10 @@ import {
   Settings,
   Store,
   Dumbbell,
+  Coins,
   ChevronLeft,
   ChevronRight,
+  Target,
 } from 'lucide-react';
 
 // ── Menu cấu trúc theo nhóm ─────────────────────────────────────
@@ -23,6 +25,7 @@ const menuGroups = [
     label: 'Chính',
     items: [
       { path: '/',          icon: LayoutDashboard, label: 'Tổng quan' },
+      { path: '/leads',     icon: Target,          label: 'Khách tiềm năng' },
       { path: '/customers', icon: Users,            label: 'Khách hàng' },
       { path: '/checkin',   icon: QrCode,           label: 'Check-in'   },
     ],
@@ -39,6 +42,7 @@ const menuGroups = [
   {
     label: 'Phân tích',
     items: [
+      { path: '/commissions', icon: Coins, label: 'Hoa hồng' },
       { path: '/reports', icon: BarChart3, label: 'Báo cáo ' },
     ],
   },
@@ -47,14 +51,16 @@ const menuGroups = [
 // Danh sách role có quyền xem từng route
 const rolePermissions = {
   '/':          ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
+  '/leads':     ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'sale'],
   '/customers': ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
   '/checkin':   ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
   '/packages':  ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
   '/products':  ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
   '/history':   ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
   '/staff':     ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'],
-  '/reports':   ['admin', 'accountant', 'manager', 'sm', 'pm', 'om'],
-  '/settings':  ['admin', 'accountant'],
+  '/reports':     ['admin', 'accountant', 'manager', 'sm', 'pm', 'om'],
+  '/commissions': ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'pt', 'sale'],
+  '/settings':    ['admin', 'accountant'],
 };
 
 // ── NavItem ──────────────────────────────────────────────────────

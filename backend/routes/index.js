@@ -21,7 +21,10 @@ router.use('/inventory',     require('./inventoryRoutes'));
 router.use('/pos',           require('./posRoutes'));
 router.use('/notifications', require('./notificationRoutes'));
 router.use('/settings',      require('./settingRoutes'));
+router.use('/commissions',   require('./commissionRoutes'));
+router.use('/kpi',           require('./kpiRoutes'));
 router.use('/team-tasks',    require('./teamTaskRoutes'));
 router.use('/audit-logs',    require('./auditRoutes'));
+router.use('/leads',         require('./leadRoutes'));
 
 module.exports = router;

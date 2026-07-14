@@ -293,11 +293,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                 </table>
               )}
             </div>
-            {!isAdmin && (
-              <p className="text-xs text-gray-400 mt-4 text-center">
-                *Chỉ quản trị viên mới có thể xếp lịch làm việc
-              </p>
-            )}
+            
           </div>
         </div>
       </div>

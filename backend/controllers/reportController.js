@@ -2,7 +2,16 @@ const Customer = require("../models/Customer");
 const Package = require("../models/Package");
 const CheckIn = require("../models/CheckIn");
 const Transaction = require("../models/Transaction");
-const { startOfMonth, endOfMonth, subDays, addDays, startOfDay, endOfDay, eachDayOfInterval, format } = require("date-fns");
+const User = require("../models/User");
+const Commission = require("../models/Commission");
+const KPITarget = require("../models/KPITarget");
+const Setting = require("../models/Setting");
+const CustomerPackage = require("../models/CustomerPackage");
+const WorkoutSession = require("../models/WorkoutSession");
+const Product = require("../models/Product");
+const TeamTask = require("../models/TeamTask");
+const CommissionPeriod = require("../models/CommissionPeriod");
+const { startOfMonth, endOfMonth, subDays, subMonths, addDays, startOfDay, endOfDay, eachDayOfInterval, format } = require("date-fns");
 
 
 // @desc    Get dashboard summary statistics
@@ -10,9 +19,12 @@ const { startOfMonth, endOfMonth, subDays, addDays, startOfDay, endOfDay, eachDa
 // @access  Private
 const getSummary = async (req, res) => {
   try {
+    const { month, year } = req.query;
     const today = new Date();
-    const firstDayOfMonth = startOfMonth(today);
-    const lastDayOfMonth = endOfMonth(today);
+    const m = parseInt(month) || today.getMonth() + 1;
+    const y = parseInt(year) || today.getFullYear();
+    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
+    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
 
     // Tính doanh thu từ Transaction (tiền thực thu) thay vì Customer.price (giá gói)
     const [revenueAggregation, newMembersCount, activeMembers, totalEverMembers] = await Promise.all([
@@ -35,8 +47,14 @@ const getSummary = async (req, res) => {
       Customer.countDocuments({
         createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
       }),
-      Customer.countDocuments({ endDate: { $gte: today } }),
-      Customer.countDocuments(),
+      // Hội viên hoạt động tại thời điểm đó (có gói bao phủ kỳ báo cáo)
+      Customer.countDocuments({
+        startDate: { $lte: lastDayOfMonth },
+        endDate: { $gte: firstDayOfMonth }
+      }),
+      Customer.countDocuments({
+        createdAt: { $lte: lastDayOfMonth }
+      }),
     ]);
 
     const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
@@ -67,9 +85,12 @@ const getSummary = async (req, res) => {
 // @access  Private
 const getRevenueChart = async (req, res) => {
   try {
+    const { month, year } = req.query;
     const today = new Date();
-    const firstDayOfMonth = startOfMonth(today);
-    const lastDayOfMonth = endOfMonth(today);
+    const m = parseInt(month) || today.getMonth() + 1;
+    const y = parseInt(year) || today.getFullYear();
+    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
+    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
 
     // Tính doanh thu từ Transaction (tiền thực thu) theo ngày
     const revenueByDay = await Transaction.aggregate([
@@ -160,9 +181,12 @@ const getExpiringMembers = async (req, res) => {
 // @access  Private
 const getRevenueDetails = async (req, res) => {
   try {
+    const { month, year } = req.query;
     const today = new Date();
-    const firstDayOfMonth = startOfMonth(today);
-    const lastDayOfMonth = endOfMonth(today);
+    const m = parseInt(month) || today.getMonth() + 1;
+    const y = parseInt(year) || today.getFullYear();
+    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
+    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
 
     // Lấy chi tiết giao dịch từ Transaction (tiền thực thu)
     const transactions = await Transaction.find({
@@ -193,7 +217,6 @@ const getRevenueDetails = async (req, res) => {
 };
 
 
-const Product = require("../models/Product");
 const SaleOrder = require("../models/SaleOrder");
 
 // @desc    Get inventory and POS sales report
@@ -201,9 +224,12 @@ const SaleOrder = require("../models/SaleOrder");
 // @access  Private
 const getInventoryReport = async (req, res) => {
   try {
+    const { month, year } = req.query;
     const today = new Date();
-    const firstDayOfMonth = startOfMonth(today);
-    const lastDayOfMonth = endOfMonth(today);
+    const m = parseInt(month) || today.getMonth() + 1;
+    const y = parseInt(year) || today.getFullYear();
+    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
+    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
 
     const [posRevenueAggregation, products] = await Promise.all([
       Transaction.aggregate([
@@ -336,6 +362,582 @@ const getChurnPrediction = async (req, res) => {
   }
 };
 
+// @desc    Báo cáo doanh thu nâng cao
+// @route   GET /api/reports/revenue-advanced
+// @access  Private
+const getRevenueAdvanced = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const today = new Date();
+    const m = parseInt(month) || today.getMonth() + 1;
+    const y = parseInt(year) || today.getFullYear();
+
+    const start = startOfMonth(new Date(y, m - 1, 1));
+    const end = endOfMonth(new Date(y, m - 1, 1));
+
+    // 1. Phân chia nguồn doanh thu trong tháng này
+    const revenueBySource = await Transaction.aggregate([
+      {
+        $match: {
+          status: "success",
+          createdAt: { $gte: start, $lte: end },
+          type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+        }
+      },
+      {
+        $group: {
+          _id: "$type",
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const sources = {
+      package_purchase: 0,
+      pos_sale: 0,
+      pt_session: 0
+    };
+    revenueBySource.forEach(item => {
+      if (sources[item._id] !== undefined) {
+        sources[item._id] = item.total;
+      }
+    });
+
+    const totalRevenueThisMonth = sources.package_purchase + sources.pos_sale + sources.pt_session;
+
+    // 2. Doanh thu tháng trước (MoM)
+    let prevM = m - 1;
+    let prevY = y;
+    if (prevM === 0) {
+      prevM = 12;
+      prevY = y - 1;
+    }
+    const prevStart = startOfMonth(new Date(prevY, prevM - 1, 1));
+    const prevEnd = endOfMonth(new Date(prevY, prevM - 1, 1));
+
+    const revenuePrevMonthAgg = await Transaction.aggregate([
+      {
+        $match: {
+          status: "success",
+          createdAt: { $gte: prevStart, $lte: prevEnd },
+          type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+    const totalRevenuePrevMonth = revenuePrevMonthAgg[0]?.total || 0;
+    const momGrowth = totalRevenuePrevMonth > 0 
+      ? Math.round(((totalRevenueThisMonth - totalRevenuePrevMonth) / totalRevenuePrevMonth) * 100)
+      : 0;
+
+    // 3. Doanh thu cùng kỳ năm ngoái (YoY)
+    const lastYearStart = startOfMonth(new Date(y - 1, m - 1, 1));
+    const lastYearEnd = endOfMonth(new Date(y - 1, m - 1, 1));
+    const revenueLastYearAgg = await Transaction.aggregate([
+      {
+        $match: {
+          status: "success",
+          createdAt: { $gte: lastYearStart, $lte: lastYearEnd },
+          type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+    const totalRevenueLastYear = revenueLastYearAgg[0]?.total || 0;
+    const yoyGrowth = totalRevenueLastYear > 0
+      ? Math.round(((totalRevenueThisMonth - totalRevenueLastYear) / totalRevenueLastYear) * 100)
+      : 0;
+
+    // 4. Xuuyên 6 tháng gần nhất
+    const trendData = [];
+    for (let i = 5; i >= 0; i--) {
+      let dateTarget = new Date(y, m - 1 - i, 1);
+      const startT = startOfMonth(dateTarget);
+      const endT = endOfMonth(dateTarget);
+      const label = format(dateTarget, "MM/yyyy");
+
+      const monthlyRevAgg = await Transaction.aggregate([
+        {
+          $match: {
+            status: "success",
+            createdAt: { $gte: startT, $lte: endT },
+            type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" }
+          }
+        }
+      ]);
+
+      trendData.push({
+        month: label,
+        revenue: monthlyRevAgg[0]?.total || 0
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        month: m,
+        year: y,
+        sources: [
+          { name: "Gói tập", value: sources.package_purchase },
+          { name: "Cửa hàng (POS)", value: sources.pos_sale },
+          { name: "Buổi PT lẻ", value: sources.pt_session }
+        ],
+        totalRevenue: totalRevenueThisMonth,
+        compareLastMonth: {
+          value: totalRevenuePrevMonth,
+          growthPercent: momGrowth
+        },
+        compareLastYear: {
+          value: totalRevenueLastYear,
+          growthPercent: yoyGrowth
+        },
+        trend: trendData
+      }
+    });
+  } catch (error) {
+    console.error("Lỗi lấy báo cáo doanh thu nâng cao:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+  }
+};
+
+// @desc    Báo cáo nhân sự tổng hợp lương, KPI, hoa hồng
+// @route   GET /api/reports/hr-summary
+// @access  Private
+const getHRSummary = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const today = new Date();
+    const m = parseInt(month) || today.getMonth() + 1;
+    const y = parseInt(year) || today.getFullYear();
+
+    const start = startOfMonth(new Date(y, m - 1, 1));
+    const end = endOfMonth(new Date(y, m - 1, 1));
+
+    // Lấy danh sách nhân viên PT và Sale
+    const staffList = await User.find({
+      role: { $in: ["pt", "sale", "sm", "pm"] }
+    }).select("fullName username role").lean();
+
+    // Mặc định lương cơ bản: 5 triệu VND
+    const defaultBasicSalary = 5000000;
+
+    const hrData = await Promise.all(staffList.map(async (staff) => {
+      // 1. Tính tổng hoa hồng trong tháng của nhân viên này
+      const commissionAgg = await Commission.aggregate([
+        {
+          $match: {
+            staff: staff._id,
+            month: m,
+            year: y,
+            status: "active"
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" }
+          }
+        }
+      ]);
+      const totalCommission = commissionAgg[0]?.total || 0;
+
+      // 2. Tính hiệu suất KPI đạt được
+      const target = await KPITarget.findOne({ staff: staff._id, month: m, year: y });
+      const setting = await Setting.findOne();
+
+      let kpiPercentage = 0;
+      if (staff.role === "pt" || staff.role === "pm") {
+        const sessionTarget = target?.ptSessionTarget !== undefined
+          ? target.ptSessionTarget
+          : setting?.ptMonthlySessionTarget || 80;
+
+        const actualSessions = await WorkoutSession.countDocuments({
+          pt: staff._id,
+          status: "completed",
+          date: { $gte: start, $lte: end }
+        });
+        kpiPercentage = sessionTarget > 0 ? Math.round((actualSessions / sessionTarget) * 100) : 100;
+      } else {
+        // Sale/SM
+        const revenueTarget = target?.saleRevenueTarget !== undefined
+          ? target.saleRevenueTarget
+          : setting?.saleMonthlyRevenueTarget || 100000000;
+
+        // Doanh số thực đạt
+        const packagesSold = await CustomerPackage.find({
+          assignedStaff: staff._id,
+          createdAt: { $gte: start, $lte: end }
+        }).select("_id");
+        const packageIds = packagesSold.map(p => p._id);
+
+        const revenueAgg = await Transaction.aggregate([
+          {
+            $match: {
+              status: "success",
+              $or: [
+                { staff: staff._id },
+                { customerPackage: { $in: packageIds } }
+              ],
+              createdAt: { $gte: start, $lte: end }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$amount" }
+            }
+          }
+        ]);
+        const actualRevenue = revenueAgg[0]?.total || 0;
+        kpiPercentage = revenueTarget > 0 ? Math.round((actualRevenue / revenueTarget) * 100) : 100;
+      }
+
+      const totalSalary = defaultBasicSalary + totalCommission;
+
+      return {
+        _id: staff._id,
+        fullName: staff.fullName || staff.username,
+        role: staff.role,
+        basicSalary: defaultBasicSalary,
+        commission: totalCommission,
+        kpiProgress: kpiPercentage,
+        totalSalary
+      };
+    }));
+
+    res.json({
+      success: true,
+      data: hrData
+    });
+  } catch (error) {
+    console.error("Lỗi lấy báo cáo nhân sự:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+  }
+};
+
+// @desc    Báo cáo khách hàng chuyên sâu
+// @route   GET /api/reports/customer-analytics
+// @access  Private
+const getCustomerAnalytics = async (req, res) => {
+  try {
+    const today = new Date();
+
+    // 1. Phân bổ giới tính
+    const genderDist = await Customer.aggregate([
+      {
+        $group: {
+          _id: { $toLower: "$gender" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const genderData = [
+      { name: "Nam", value: 0 },
+      { name: "Nữ", value: 0 },
+      { name: "Khác", value: 0 }
+    ];
+    genderDist.forEach(item => {
+      const g = item._id ? item._id.trim() : "";
+      if (g === "nam" || g === "male") {
+        genderData[0].value += item.count;
+      } else if (g === "nữ" || g === "female") {
+        genderData[1].value += item.count;
+      } else {
+        genderData[2].value += item.count;
+      }
+    });
+
+    // 2. Phân bổ độ tuổi
+    const customers = await Customer.find({}).select("dob").lean();
+    const ageData = [
+      { name: "Dưới 18 tuổi", value: 0 },
+      { name: "18 - 35 tuổi", value: 0 },
+      { name: "36 - 50 tuổi", value: 0 },
+      { name: "Trên 50 tuổi", value: 0 }
+    ];
+
+    customers.forEach(c => {
+      if (c.dob) {
+        const age = today.getFullYear() - new Date(c.dob).getFullYear();
+        if (age < 18) ageData[0].value += 1;
+        else if (age <= 35) ageData[1].value += 1;
+        else if (age <= 50) ageData[2].value += 1;
+        else ageData[3].value += 1;
+      }
+    });
+
+    // 3. Khách hàng inactive (Không check-in và không tập PT trong 30 ngày gần đây)
+    const thirtyDaysAgo = subDays(today, 30);
+
+    const activeCheckIns = await CheckIn.distinct("customerId", {
+      time: { $gte: thirtyDaysAgo }
+    });
+
+    const activeWorkouts = await WorkoutSession.distinct("customer", {
+      date: { $gte: thirtyDaysAgo }
+    });
+
+    const activeIds = new Set([
+      ...activeCheckIns.map(id => id.toString()),
+      ...activeWorkouts.map(id => id.toString())
+    ]);
+
+    const inactiveCustomers = await Customer.find({
+      _id: { $nin: Array.from(activeIds) },
+      endDate: { $gte: today }
+    })
+      .select("name code phone endDate packageType remainingSessions")
+      .lean();
+
+    // 4. Phân bổ gói tập (Package Popularity)
+    const packageDist = await CustomerPackage.aggregate([
+      { $match: { status: "active" } },
+      { $group: { _id: "$packageName", count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    const packageData = packageDist.map(item => ({
+      name: item._id || "Khác",
+      value: item.count
+    }));
+
+    // 5. Phân bổ nguồn khách hàng (Acquisition Channels)
+    const sourceDist = await Customer.aggregate([
+      { $group: { _id: { $ifNull: ["$source", "other"] }, count: { $sum: 1 } } }
+    ]);
+    const sourceMap = {
+      facebook: "Facebook",
+      hotline: "Hotline",
+      referral: "Hội viên giới thiệu",
+      web: "Website",
+      other: "Khác/Trực tiếp"
+    };
+    const sourceData = sourceDist.map(item => ({
+      name: sourceMap[item._id] || item._id || "Khác/Trực tiếp",
+      value: item.count
+    }));
+
+    // 6. Phân khúc tần suất tập luyện (Workout Intensity last 30 days)
+    const intensityData = [
+      { name: "Tập luyện cao (>15 ngày)", value: 0 },
+      { name: "Tập vừa (5-15 ngày)", value: 0 },
+      { name: "Tập ít (1-4 ngày)", value: 0 },
+      { name: "Không đi tập (0 ngày)", value: 0 }
+    ];
+
+    const activeCustomers = await Customer.find({ endDate: { $gte: today } }).select("_id").lean();
+    const activeCustIds = activeCustomers.map(c => c._id.toString());
+
+    const checkinCounts = await CheckIn.aggregate([
+      { $match: { time: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: "$customerId", count: { $sum: 1 } } }
+    ]);
+
+    const checkinMap = new Map();
+    checkinCounts.forEach(c => {
+      if (c._id) checkinMap.set(c._id.toString(), c.count);
+    });
+
+    activeCustIds.forEach(id => {
+      const count = checkinMap.get(id) || 0;
+      if (count > 15) intensityData[0].value += 1;
+      else if (count >= 5) intensityData[1].value += 1;
+      else if (count >= 1) intensityData[2].value += 1;
+      else intensityData[3].value += 1;
+    });
+
+    // 7. Tỷ lệ có PT huấn luyện vs Tự tập
+    const withTrainerCount = await CustomerPackage.countDocuments({
+      status: "active",
+      trainer: { $ne: "" }
+    });
+    const soloCount = await CustomerPackage.countDocuments({
+      status: "active",
+      trainer: ""
+    });
+
+    // 8. Chi tiêu trung bình của mỗi hội viên (ARPU - Average Revenue Per User)
+    const totalPaymentsAgg = await Transaction.aggregate([
+      { $match: { status: "success", type: { $in: ["package_purchase", "pos_sale", "pt_session"] } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+    const totalPayments = totalPaymentsAgg[0]?.total || 0;
+    const totalCustCount = await Customer.countDocuments({});
+    const arpu = totalCustCount > 0 ? Math.round(totalPayments / totalCustCount) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        gender: genderData,
+        age: ageData,
+        inactive: inactiveCustomers,
+        packagePopularity: packageData,
+        sources: sourceData,
+        intensity: intensityData,
+        trainerRatio: {
+          withTrainer: withTrainerCount,
+          solo: soloCount
+        },
+        arpu
+      }
+    });
+  } catch (error) {
+    console.error("Lỗi lấy phân tích khách hàng:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+  }
+};
+
+// @desc    Báo cáo tổng hợp cảnh báo & thông báo vận hành
+// @route   GET /api/reports/notifications-summary
+// @access  Private
+const getNotificationsSummary = async (req, res) => {
+  try {
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+
+    // 1. Khách hàng sắp hết hạn (trong 14 ngày)
+    const fourteenDaysLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const expiringCustomers = await Customer.find({
+      endDate: { $gte: todayStart, $lte: fourteenDaysLater }
+    }).select("name phone code endDate packageType").sort({ endDate: 1 }).lean();
+
+    // 2. Sản phẩm sắp hết hàng (tồn kho <= minStockAlert)
+    const setting = await Setting.findOne() || {};
+    const minAlert = setting.minStockAlert || 5;
+    const lowStockProducts = await Product.find({
+      stockQuantity: { $lte: minAlert }
+    }).select("name stockQuantity minStockAlert").sort({ stockQuantity: 1 }).lean();
+
+    // 3. Công việc ca trực chưa hoàn thành hôm nay
+    const yearStr = now.getFullYear();
+    const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yearStr}-${monthStr}-${dayStr}`;
+
+    const pendingTasks = await TeamTask.find({
+      date: todayStr,
+      isCompleted: false
+    }).select("title timeSlot staffName").lean();
+
+    // 4. Kỳ lương hoa hồng chờ duyệt (pending)
+    const pendingCommissions = await CommissionPeriod.find({
+      status: "pending"
+    }).select("month year type status totalAmount").lean();
+
+    // 5. Nhân viên có KPI tháng đạt thấp (< 50% chỉ tiêu)
+    const m = now.getMonth() + 1;
+    const y = now.getFullYear();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
+
+    const staffList = await User.find({
+      role: { $in: ["pt", "sale", "sm", "pm"] }
+    }).select("fullName username role").lean();
+
+    const lowKPIStaff = [];
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const daysLeft = daysInMonth - now.getDate();
+
+    // Luôn quét chỉ tiêu, nhưng đánh dấu cảnh báo
+    for (const staff of staffList) {
+      const target = await KPITarget.findOne({ staff: staff._id, month: m, year: y });
+      let kpiPercentage = 0;
+      let targetVal = 0;
+      let actualVal = 0;
+
+      if (staff.role === "pt" || staff.role === "pm") {
+        targetVal = target?.ptSessionTarget !== undefined
+          ? target.ptSessionTarget
+          : setting?.ptMonthlySessionTarget || 80;
+
+        actualVal = await WorkoutSession.countDocuments({
+          pt: staff._id,
+          status: "completed",
+          date: { $gte: start, $lte: end }
+        });
+        kpiPercentage = targetVal > 0 ? Math.round((actualVal / targetVal) * 100) : 100;
+      } else {
+        targetVal = target?.saleRevenueTarget !== undefined
+          ? target.saleRevenueTarget
+          : setting?.saleMonthlyRevenueTarget || 100000000;
+
+        const packagesSold = await CustomerPackage.find({
+          assignedStaff: staff._id,
+          createdAt: { $gte: start, $lte: end }
+        }).select("_id");
+        const packageIds = packagesSold.map(p => p._id);
+
+        const revenueAgg = await Transaction.aggregate([
+          {
+            $match: {
+              status: "success",
+              $or: [
+                { staff: staff._id },
+                { customerPackage: { $in: packageIds } }
+              ],
+              createdAt: { $gte: start, $lte: end }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$amount" }
+            }
+          }
+        ]);
+        actualVal = revenueAgg[0]?.total || 0;
+        kpiPercentage = targetVal > 0 ? Math.round((actualVal / targetVal) * 100) : 100;
+      }
+
+      if (kpiPercentage < 50 && targetVal > 0) {
+        lowKPIStaff.push({
+          _id: staff._id,
+          fullName: staff.fullName || staff.username,
+          role: staff.role,
+          target: targetVal,
+          actual: actualVal,
+          percentage: kpiPercentage
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        expiringCustomers,
+        lowStockProducts,
+        pendingTasks,
+        pendingCommissions,
+        lowKPIStaff,
+        expiringCustomersCount: expiringCustomers.length,
+        lowStockProductsCount: lowStockProducts.length,
+        pendingTasksCount: pendingTasks.length,
+        pendingCommissionsCount: pendingCommissions.length,
+        lowKPIStaffCount: lowKPIStaff.length
+      }
+    });
+  } catch (error) {
+    console.error("Lỗi lấy báo cáo tổng hợp thông báo:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+  }
+};
 
 module.exports = {
   getSummary,
@@ -344,5 +946,9 @@ module.exports = {
   getExpiringMembers,
   getRevenueDetails,
   getInventoryReport,
-  getChurnPrediction
+  getChurnPrediction,
+  getRevenueAdvanced,
+  getHRSummary,
+  getCustomerAnalytics,
+  getNotificationsSummary
 };

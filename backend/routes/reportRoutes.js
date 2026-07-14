@@ -7,7 +7,11 @@ const {
   getExpiringMembers,
   getRevenueDetails,
   getInventoryReport,
-  getChurnPrediction
+  getChurnPrediction,
+  getRevenueAdvanced,
+  getHRSummary,
+  getCustomerAnalytics,
+  getNotificationsSummary
 } = require("../controllers/reportController");
 const { protect } = require("../middleware/authMiddleware"); 
 
@@ -18,5 +22,11 @@ router.get("/expiring", getExpiringMembers);
 router.get("/revenue-details", getRevenueDetails);
 router.get("/inventory", getInventoryReport);
 router.get("/churn-prediction", getChurnPrediction);
+
+// Advanced Reports
+router.get("/revenue-advanced", getRevenueAdvanced);
+router.get("/hr-summary", getHRSummary);
+router.get("/customer-analytics", getCustomerAnalytics);
+router.get("/notifications-summary", getNotificationsSummary);
 
 module.exports = router;

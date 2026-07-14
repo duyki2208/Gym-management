@@ -31,10 +31,16 @@ const protect = async (req, res, next) => {
 
       return next();
     } catch (error) {
-      console.error(error);
-      return res
-        .status(401)
-        .json({ message: "Không được phép truy cập, token không hợp lệ" });
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({
+          code: "TOKEN_EXPIRED",
+          message: "Access token đã hết hạn",
+        });
+      }
+      return res.status(401).json({
+        code: "INVALID_TOKEN",
+        message: "Không được phép truy cập, token không hợp lệ",
+      });
     }
   }
 
