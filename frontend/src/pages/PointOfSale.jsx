@@ -3,7 +3,7 @@ import { productService, posService } from '../services/productService';
 import { customerService } from '../services/customerService';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, User, Package, QrCode, CheckCircle } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, User, Package, QrCode, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 
 const PointOfSale = () => {
   const [products, setProducts] = useState([]);
@@ -18,7 +18,7 @@ const PointOfSale = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [orderStatus, setOrderStatus] = useState('');
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     const initFetch = async () => {
@@ -110,26 +110,29 @@ const PointOfSale = () => {
      }
   };
 
-  const handleConfirmPayment = async () => {
-     if (!lastOrder) return;
-     try {
-        setIsConfirming(true);
-        await posService.confirmPayment(lastOrder._id);
-        setOrderStatus('Đã thanh toán');
-        toast.success("Xác nhận thanh toán thành công!");
+  // Đóng hoá đơn: nếu đơn chưa thanh toán thì tự động hủy và hoàn lại tồn kho
+  const handleCloseInvoice = async () => {
+     if (lastOrder && orderStatus === 'Chờ thanh toán') {
         try {
-           const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav");
-           audio.play();
-        } catch (e) {
-           console.log("Không thể phát âm thanh thông báo", e);
+           setIsCancelling(true);
+           await posService.cancelOrder(lastOrder._id);
+           toast('Đã hủy đơn hàng và hoàn trả tồn kho.', { icon: '↩️' });
+           // Re-fetch stock
+           const prods = await productService.getAll('');
+           setProducts(prods);
+        } catch (err) {
+           console.error('Lỗi hủy đơn:', err);
+           toast.error('Không thể hủy đơn hàng.');
+        } finally {
+           setIsCancelling(false);
         }
-     } catch (err) {
-        toast.error(err.response?.data?.message || "Lỗi xác nhận thanh toán");
-     } finally {
-        setIsConfirming(false);
      }
+     setShowInvoice(false);
+     setLastOrder(null);
+     setOrderStatus('');
   };
 
+  // Polling tự động kiểm tra trạng thái thanh toán mỗi 3 giây
   useEffect(() => {
      let intervalId;
      if (showInvoice && lastOrder && orderStatus === 'Chờ thanh toán') {
@@ -138,23 +141,26 @@ const PointOfSale = () => {
               const res = await posService.getOrderStatus(lastOrder._id);
               if (res.status === 'Đã thanh toán') {
                  setOrderStatus('Đã thanh toán');
-                 toast.success("Hệ thống: Nhận thành công tiền chuyển khoản!");
+                 toast.success('✅ Hệ thống: Đã nhận được tiền chuyển khoản!', { duration: 5000 });
+                 // Re-fetch stock (không cần hoàn lại, đơn đã được xác nhận)
+                 const prods = await productService.getAll('');
+                 setProducts(prods);
                  try {
                    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav");
                    audio.play();
                  } catch (e) {
-                   console.log("Không thể phát âm thanh thông báo", e);
+                   console.log("Không thể phát âm thanh", e);
                  }
               }
            } catch (err) {
               console.error("Lỗi đối soát đơn hàng:", err);
            }
-        }, 2000);
+        }, 3000);
      }
      return () => {
         if (intervalId) clearInterval(intervalId);
      };
-   }, [showInvoice, lastOrder, orderStatus]);
+  }, [showInvoice, lastOrder, orderStatus]);
 
   return (
     <div className="flex flex-col gap-6 font-display bg-transparent h-full">
@@ -302,58 +308,57 @@ const PointOfSale = () => {
                            </div>
                         ))}
                      </div>
-                     <div className="flex justify-between items-center mb-6 text-lg">
+                     <div className="flex justify-between items-center mb-4 text-lg">
                         <span className="font-bold text-gray-500">Tổng cộng</span>
                         <span className="font-black text-gray-900">{lastOrder.totalAmount.toLocaleString()} đ</span>
                      </div>
-                     
-                     {/* Dynamic QR Code VietQR Demo */}
+
+                     {/* Dynamic QR Code VietQR - chỉ hiện mã QR thuần */}
                      {lastOrder.paymentMethod === 'Chuyển khoản QR' && (
                          orderStatus === 'Chờ thanh toán' ? (
-                            <div className="bg-white border-2 border-dashed border-gray-200 p-3 rounded-2xl flex flex-col items-center">
+                            <div className="flex flex-col items-center">
                                <img 
-                                  src={`https://img.vietqr.io/image/970436-1031934220-compact2.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
+                                  src={`https://img.vietqr.io/image/970436-1031934220-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
                                   alt="VietQR" 
-                                  className="w-56 h-56 rounded-xl object-contain"
+                                  className="w-64 h-64 rounded-xl object-contain"
                                />
-                               <p className="text-xs mt-2 text-center text-gray-500 font-semibold"> Vietcombank • LE HUNG DUY</p>
-                               
-                               <button
-                                  onClick={handleConfirmPayment}
-                                  disabled={isConfirming}
-                                  className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-sm"
-                               >
-                                  {isConfirming ? (
-                                     <>
-                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                        Đang xác nhận...
-                                     </>
-                                  ) : (
-                                     "Xác nhận đã nhận tiền"
-                                  )}
-                               </button>
-
-                               <div className="flex items-center gap-2 mt-3 text-amber-600 font-bold text-xs animate-pulse">
-                                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                                  Đang chờ quét mã chuyển tiền...
+                               {/* Trạng thái chờ - tự động xác nhận */}
+                               <div className="w-full mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                                  <Loader2 size={16} className="text-amber-500 animate-spin flex-shrink-0" />
+                                  <div>
+                                     <p className="text-amber-700 font-bold text-xs">Đang chờ thanh toán...</p>
+                                     <p className="text-amber-600 text-[10px] mt-0.5">Hệ thống tự động xác nhận khi nhận được tiền</p>
+                                  </div>
                                </div>
                             </div>
                          ) : (
                             <div className="bg-green-50 border border-green-200 p-4 rounded-2xl flex flex-col items-center justify-center">
                                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
                                   <CheckCircle className="text-green-600" size={24} />
-                                </div>
-                                <p className="text-sm font-bold text-green-800">Thanh toán hoàn tất!</p>
-                                <p className="text-xs text-green-600 mt-1 text-center font-medium">Hệ thống đã nhận được tiền chuyển khoản.</p>
+                               </div>
+                               <p className="text-sm font-bold text-green-800">Thanh toán hoàn tất!</p>
+                               <p className="text-xs text-green-600 mt-1 text-center font-medium">Hệ thống đã nhận được tiền chuyển khoản.</p>
                             </div>
                          )
                      )}
                      
+                     {/* Nút đóng: nếu chưa thanh toán sẽ tự hủy đơn và hoàn stock */}
                      <button 
-                        onClick={() => setShowInvoice(false)}
-                        className="w-full mt-6 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition-colors"
+                        onClick={handleCloseInvoice}
+                        disabled={isCancelling}
+                        className={`w-full mt-6 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                           orderStatus === 'Chờ thanh toán'
+                              ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                        }`}
                      >
-                         Đóng Hoá Đơn
+                        {isCancelling ? (
+                           <><Loader2 size={16} className="animate-spin" /> Đang hủy đơn...</>
+                        ) : orderStatus === 'Chờ thanh toán' ? (
+                           <><AlertTriangle size={16} /> Hủy & Đóng Hoá Đơn</>
+                        ) : (
+                           'Đóng Hoá Đơn'
+                        )}
                      </button>
                  </div>
              </div>

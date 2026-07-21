@@ -101,9 +101,10 @@ describe("Customer API Tests", () => {
     });
 
     it("Bảo lưu gói tập thành công và cộng thêm ngày vào endDate", async () => {
+      const nowMs = Date.now();
       const freezeData = {
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), // Bảo lưu 10 ngày
+        startDate: new Date(nowMs).toISOString(),
+        endDate: new Date(nowMs + 10 * 24 * 60 * 60 * 1000).toISOString(), // Bảo lưu 10 ngày
         reason: "Bận đi học quân sự"
       };
 
@@ -126,7 +127,7 @@ describe("Customer API Tests", () => {
       expect(updatedPkg.frozenPeriods[0].reason).toBe("Bận đi học quân sự");
 
       const newEndDate = new Date(updatedPkg.endDate).getTime();
-      const diffDays = Math.ceil((newEndDate - originalEndDate) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.round((newEndDate - originalEndDate) / (1000 * 60 * 60 * 24));
       expect(diffDays).toBe(10);
     });
   });
@@ -194,6 +195,102 @@ describe("Customer API Tests", () => {
       const endAfter = new Date(pkgAfter.endDate).getTime();
       const diffDays = Math.ceil((endBefore - endAfter) / (1000 * 60 * 60 * 24));
       expect(diffDays).toBe(13);
+    });
+  });
+
+  describe("DELETE /api/v1/customers/:id - Xóa hội viên mềm và thu hồi quà giới thiệu", () => {
+    let referrerId, referrerPkgId, customerId, packageId;
+
+    beforeEach(async () => {
+      // 1. Tạo người giới thiệu A
+      const referrer = new Customer({
+        name: "Người Giới Thiệu A",
+        code: "KH8881",
+        phone: "0888111111",
+        packageType: "Gói 3 Tháng",
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      });
+      await referrer.save();
+      referrerId = referrer._id;
+
+      const referrerPkg = new CustomerPackage({
+        customer: referrerId,
+        packageName: "Gói 3 Tháng",
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        price: 1500000,
+        status: "active",
+      });
+      await referrerPkg.save();
+      referrerPkgId = referrerPkg._id;
+
+      referrer.activePackage = referrerPkgId;
+      await referrer.save();
+
+      // 2. Tạo hội viên mới B được A giới thiệu
+      const customerData = {
+        name: "Hội Viên B",
+        phone: "0999222222",
+        dob: "1998-05-20",
+        gender: "female",
+        packageType: "Gói 1 Tháng",
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        price: 500000,
+        paidAmount: 500000,
+        paymentStatus: "paid",
+        contractType: "new",
+        contractCode: "HD0002",
+        referredBy: referrerId.toString(),
+        source: "referral",
+      };
+
+      const res = await request(app)
+        .post("/api/v1/customers")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(customerData);
+
+      expect(res.status).toBe(201);
+      customerId = res.body.customerId;
+      packageId = res.body._id;
+    });
+
+    it("Xóa mềm gói tập và hội viên, đồng thời thu hồi 30 ngày thưởng của người giới thiệu", async () => {
+      // Xác nhận người giới thiệu đã được cộng 30 ngày
+      const refPkgBefore = await CustomerPackage.findById(referrerPkgId);
+      const originalEndDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+      const addedEndDate = new Date(refPkgBefore.endDate);
+      const diffDaysBefore = Math.ceil((addedEndDate.getTime() - originalEndDate.getTime()) / (1000 * 60 * 60 * 24));
+      expect(diffDaysBefore).toBe(30);
+      const createdCustomer = await Customer.findById(customerId);
+      const customerCode = createdCustomer.code;
+      expect(refPkgBefore.packageNote).toContain(`+1T giới thiệu HV(${customerCode})`);
+
+      // Thực hiện xóa
+      const res = await request(app)
+        .delete(`/api/v1/customers/${packageId}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Đã xóa gói tập thành công");
+
+      // Kiểm tra gói tập của B đã bị xóa mềm
+      const pkgAfter = await CustomerPackage.findById(packageId);
+      expect(pkgAfter).toBeNull();
+
+      const rawPkg = await CustomerPackage.findOne({ _id: packageId }).setOptions({ withDeleted: true });
+      expect(rawPkg.isDeleted).toBe(true);
+
+      const rawCust = await Customer.findOne({ _id: customerId }).setOptions({ withDeleted: true });
+      expect(rawCust.isDeleted).toBe(true);
+
+      // Kiểm tra người giới thiệu đã bị thu hồi 30 ngày và xóa ghi chú
+      const refPkgAfter = await CustomerPackage.findById(referrerPkgId);
+      const endAfter = new Date(refPkgAfter.endDate);
+      const diffDaysAfter = Math.round((endAfter.getTime() - originalEndDate.getTime()) / (1000 * 60 * 60 * 24));
+      expect(Math.abs(diffDaysAfter)).toBe(0); // Trở về hạn ban đầu
+      expect(refPkgAfter.packageNote).not.toContain(`+1T giới thiệu HV(${customerCode})`);
     });
   });
 });

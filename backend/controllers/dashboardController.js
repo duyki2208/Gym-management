@@ -14,22 +14,36 @@ const {
 const getStats = async (req, res) => {
   try {
     const today = new Date();
-    const todayStart = startOfDay(today);
-    const todayEnd = endOfDay(today);
-    const yesterday = subDays(today, 1);
-    const yesterdayStart = startOfDay(yesterday);
-    const yesterdayEnd = endOfDay(yesterday);
-    const thisMonthStart = startOfMonth(today);
-    const thisMonthEnd = endOfMonth(today);
+    const utcTime = today.getTime() + (today.getTimezoneOffset() * 60000);
+    const vnTime = new Date(utcTime + (7 * 3600000));
     
-    // Tuần này (Thứ 2 -> Chủ Nhật)
-    const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 }); // 1 là thứ 2
-    const thisWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
+    const vnYear = vnTime.getFullYear();
+    const vnMonth = vnTime.getMonth();
+    const vnDay = vnTime.getDate();
 
-    // Format ngày hôm nay
-    const todayStr = format(today, "yyyy-MM-dd");
-    const currentMonth = today.getMonth() + 1;
-    const currentYear = today.getFullYear();
+    const todayStart = new Date(Date.UTC(vnYear, vnMonth, vnDay, -7, 0, 0, 0));
+    const todayEnd = new Date(Date.UTC(vnYear, vnMonth, vnDay, 16, 59, 59, 999));
+
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 3600000);
+    const yesterdayEnd = new Date(todayEnd.getTime() - 24 * 3600000);
+
+    const thisMonthStart = new Date(Date.UTC(vnYear, vnMonth, 1, -7, 0, 0, 0));
+    const lastDay = new Date(vnYear, vnMonth + 1, 0).getDate();
+    const thisMonthEnd = new Date(Date.UTC(vnYear, vnMonth, lastDay, 16, 59, 59, 999));
+
+    // Tuần này (Thứ 2 -> Chủ Nhật) theo GMT+7
+    const dayOfWeek = vnTime.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const mondayDate = new Date(vnTime.getTime() + diffToMonday * 24 * 3600000);
+    
+    const thisWeekStart = new Date(Date.UTC(mondayDate.getFullYear(), mondayDate.getMonth(), mondayDate.getDate(), -7, 0, 0, 0));
+    const thisWeekEnd = new Date(thisWeekStart.getTime() + 7 * 24 * 3600000 - 1);
+
+    const monthStr = String(vnMonth + 1).padStart(2, '0');
+    const dayStr = String(vnDay).padStart(2, '0');
+    const todayStr = `${vnYear}-${monthStr}-${dayStr}`;
+    const currentMonth = vnMonth + 1;
+    const currentYear = vnYear;
 
     // Lấy cấu hình hệ thống
     let setting = await Setting.findOne();
@@ -58,8 +72,6 @@ const getStats = async (req, res) => {
       return null;
     };
 
-    const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
-    const vnTime = new Date(utc + (3600000 * 7));
     const currentHour = vnTime.getHours();
     const currentMinute = vnTime.getMinutes();
     
@@ -295,7 +307,7 @@ const getStats = async (req, res) => {
           $match: {
             createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
             status: "success",
-            type: { $in: ["package_purchase", "pos_sale"] }
+            type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
           }
         },
         {
@@ -312,12 +324,12 @@ const getStats = async (req, res) => {
           $match: {
             createdAt: { $gte: thisWeekStart, $lte: thisWeekEnd },
             status: "success",
-            type: { $in: ["package_purchase", "pos_sale"] }
+            type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
           }
         },
         {
           $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } },
             revenue: { $sum: "$amount" }
           }
         }

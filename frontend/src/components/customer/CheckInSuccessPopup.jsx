@@ -73,7 +73,9 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
           {/* CỘT TRÁI: ẢNH HỘI VIÊN */}
           <div className="flex-shrink-0 w-44 bg-gray-50 dark:bg-gray-900/50 flex flex-col items-center justify-center p-4 border-r border-gray-100 dark:border-gray-700">
             <div className="w-32 h-32 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 shadow-md mb-3 flex-shrink-0">
-              {customer.avatar && customer.avatar !== "👤" ? (
+              {customer.avatarUrl ? (
+                <img src={customer.avatarUrl} alt={customer.name} className="w-full h-full object-cover" />
+              ) : customer.avatar && customer.avatar !== "👤" ? (
                 <img src={customer.avatar} alt={customer.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">

@@ -166,11 +166,35 @@ const CustomerList = () => {
   const handleSave = async (data) => {
     try {
       setContractTypeAlert(null); // Reset alert cũ
-      await customerService.save(data);
+      const result = await customerService.save(data);
       fetchData();
       setShowEditModal(false);
       setContractTypeAlert(null);
-      toast.success("Lưu thông tin hội viên thành công!");
+
+      // Kiểm tra cảnh báo giới thiệu: người giới thiệu không có gói active
+      if (result?.referralWarning) {
+        const w = result.referralWarning;
+        toast.success("Đã tạo hội viên mới thành công!", { duration: 3000 });
+        setTimeout(() => {
+          toast(
+            `⚠️ Chưa cộng thưởng giới thiệu!\n\n${w.message}`,
+            {
+              duration: 10000,
+              icon: "🔔",
+              style: {
+                background: "#fffbeb",
+                border: "1px solid #f59e0b",
+                color: "#92400e",
+                maxWidth: "420px",
+                fontSize: "13px",
+                whiteSpace: "pre-line",
+              },
+            }
+          );
+        }, 500);
+      } else {
+        toast.success("Lưu thông tin hội viên thành công!");
+      }
     } catch (error) {
       const errData = error.response?.data;
       // Lỗi 409: khách cũ chọn sai contractType — không đóng modal, hiển thị cảnh báo trên form
@@ -555,12 +579,14 @@ const CustomerList = () => {
                   >
                     <td className="p-4 pr-0">
                        <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden mx-auto md:mx-0">
-                          {c.avatar && c.avatar !== "👤" ? (
-                            <img src={c.avatar} alt="" className="w-full h-full object-cover" />
+                          {c.avatarUrl ? (
+                             <img src={c.avatarUrl} alt="" className="w-full h-full object-cover" />
+                          ) : c.avatar && c.avatar !== "👤" ? (
+                             <img src={c.avatar} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
-                               <span className="material-symbols-outlined text-sm">face</span>
-                            </div>
+                             <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <span className="material-symbols-outlined text-sm">face</span>
+                             </div>
                           )}
                        </div>
                     </td>

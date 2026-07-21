@@ -38,9 +38,28 @@ const customerPackageSchema = new mongoose.Schema(
         reason: { type: String, default: "" },
       },
     ],
+    // Xóa mềm
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+// Middleware query tự động lọc các bản ghi bị xóa mềm (trừ khi gọi populate hoặc có tùy chọn withDeleted)
+const queryMethods = ["find", "findOne", "findOneAndUpdate", "updateMany", "updateOne", "countDocuments"];
+queryMethods.forEach((method) => {
+  customerPackageSchema.pre(method, function () {
+    const options = this.getOptions();
+    if (options.withDeleted || options._populatePlanner) {
+      return;
+    }
+    this.where({ isDeleted: { $ne: true } });
+  });
+});
+
+// Middleware aggregation tự động lọc các bản ghi bị xóa mềm
+customerPackageSchema.pre("aggregate", function () {
+  this.pipeline().unshift({ $match: { isDeleted: { $ne: true } } });
+});
 
 customerPackageSchema.index({ customer: 1 });
 customerPackageSchema.index({ status: 1 });

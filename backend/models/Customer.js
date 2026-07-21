@@ -9,6 +9,7 @@ const customerSchema = mongoose.Schema(
     gender: { type: String },
     address: { type: String },
     avatar: { type: String, default: "👤" }, // Icon mặc định
+    avatarUrl: { type: String, default: "" }, // Đường dẫn ảnh Cloudinary mới
 
     // Thông tin gói tập
     packageType: { type: String, required: true }, // Tên gói (1 Tháng, 1 Năm...)
@@ -40,11 +41,31 @@ const customerSchema = mongoose.Schema(
 
     // Sinh trắc học — vector 512 chiều từ InsightFace (thay thế face-api.js 128 chiều)
     faceEmbedding: { type: [Number], default: [] },
+
+    // Xóa mềm
+    isDeleted: { type: Boolean, default: false },
   },
   {
     timestamps: true, // Tự động tạo createdAt, updatedAt
   }
 );
+
+// Middleware query tự động lọc các bản ghi bị xóa mềm (trừ khi gọi populate hoặc có tùy chọn withDeleted)
+const queryMethods = ["find", "findOne", "findOneAndUpdate", "updateMany", "updateOne", "countDocuments"];
+queryMethods.forEach((method) => {
+  customerSchema.pre(method, function () {
+    const options = this.getOptions();
+    if (options.withDeleted || options._populatePlanner) {
+      return;
+    }
+    this.where({ isDeleted: { $ne: true } });
+  });
+});
+
+// Middleware aggregation tự động lọc các bản ghi bị xóa mềm
+customerSchema.pre("aggregate", function () {
+  this.pipeline().unshift({ $match: { isDeleted: { $ne: true } } });
+});
 
 // Middleware: Tự động sinh mã code nếu chưa có khi tạo mới
 const Counter = require("./Counter");

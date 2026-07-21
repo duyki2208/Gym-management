@@ -15,6 +15,7 @@ const transactionSchema = new mongoose.Schema(
     customerName: { type: String, default: "Khách Lẻ" },
     saleOrder: { type: mongoose.Schema.Types.ObjectId, ref: "SaleOrder" },
     customerPackage: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage" },
+    workoutSession: { type: mongoose.Schema.Types.ObjectId, ref: "WorkoutSession" },
     status: { type: String, enum: ["success", "failed"], default: "success" },
     staff: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },

@@ -26,5 +26,6 @@ router.use('/kpi',           require('./kpiRoutes'));
 router.use('/team-tasks',    require('./teamTaskRoutes'));
 router.use('/audit-logs',    require('./auditRoutes'));
 router.use('/leads',         require('./leadRoutes'));
+router.use('/upload',        require('./uploadRoutes'));
 
 module.exports = router;

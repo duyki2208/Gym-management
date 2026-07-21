@@ -77,6 +77,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
     // 7. Referral
     source: "other",
     referredBy: "",
+    avatarUrl: "",
   });
 
   // Hàm helper để format date cho input type="date"
@@ -143,6 +144,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
         emergencyContactPhone: customer.emergencyContactPhone || "",
         source: customer.source || "other",
         referredBy: customer.referredBy?._id || customer.referredBy || "",
+        avatarUrl: customer.avatarUrl || "",
         // Giữ lại _id và các trường khác nhưng không ghi đè date fields đã format
         _id: customer._id,
         id: customer.id,
@@ -178,9 +180,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
         emergencyContactPhone: "",
         source: "other",
         referredBy: "",
+        avatarUrl: "",
       });
     }
   }, [customer]);
+
+
 
   // LOGIC QUAN TRỌNG: Tự động tính ngày và số buổi
   const handlePackageChange = (packageName) => {
@@ -201,8 +206,9 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
           ...prev,
           packageType: packageName,
           price: pkg.price,
+          paidAmount: prev.paymentStatus === "paid" ? pkg.price : prev.paidAmount,
           endDate: endDate.toISOString().split("T")[0],
-          remainingSessions: pkg.sessions || pkg.duration,
+          remainingSessions: pkg.sessions || 0,
         };
       });
     } else {
@@ -235,6 +241,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
     setFormData((prev) => {
       const newState = { ...prev, paymentStatus: status };
       const pkg = packages.find((p) => p && p.name === prev.packageType);
+      
+      if (status === "paid") {
+        newState.paidAmount = prev.price || (pkg ? pkg.price : 0);
+      } else if (status === "unpaid") {
+        newState.paidAmount = 0;
+      }
       
       if (pkg) {
         const start = new Date(prev.startDate);
@@ -286,6 +298,13 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
     if (existingCustomerAlert && formData.contractType === "new") {
       toast.error("Khách hàng đã có hồ sơ! Vui lòng chọn nguồn hợp đồng là \"Gia hạn\" hoặc \"Nâng cấp\".");
       return;
+    }
+    if (formData.paymentStatus === "deposit") {
+      const depositVal = Number(formData.paidAmount);
+      if (isNaN(depositVal) || depositVal <= 0 || depositVal >= Number(formData.price)) {
+        toast.error(`Số tiền đặt cọc phải lớn hơn 0 và nhỏ hơn giá gói (${Number(formData.price).toLocaleString()} đ).`);
+        return;
+      }
     }
     onSave(formData);
   };
@@ -428,8 +447,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
               1. Thông tin cơ bản
             </h3>
-            <div className="flex gap-6">
-              <div className="w-full grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Họ và tên <span className="text-red-500">*</span>
@@ -558,7 +576,6 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
               </div>
-            </div>
           </section>
 
           {/* 2. THÔNG TIN GÓI TẬP */}
@@ -681,7 +698,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               {/* Row 5: Nguồn hợp đồng & Mã hợp đồng */}
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nguồn hợp đồng
+                  Loại hợp đồng
                 </label>
                 <select
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
@@ -732,28 +749,32 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   Hội viên giới thiệu
                 </label>
                 {formData.referredBy ? (
-                  <div className="flex items-center justify-between p-2 border rounded bg-blue-50 border-blue-200">
-                    <span className="text-sm font-bold text-blue-700">
-                      {customerList.find(c => c._id === formData.referredBy)?.name || "Đã chọn hội viên"} (
-                      {customerList.find(c => c._id === formData.referredBy)?.code || ""}
-                      )
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({ ...formData, referredBy: "" });
-                        setReferralSearch("");
-                      }}
-                      className="text-xs text-red-500 hover:underline font-bold"
-                    >
-                      Thay đổi
-                    </button>
+                  <div>
+                    <div className="flex items-center justify-between p-2 border rounded bg-blue-50 border-blue-200">
+                      <span className="text-sm font-bold text-blue-700">
+                        {customerList.find(c => c.customerId === formData.referredBy)?.name || "Đã chọn hội viên"} (
+                        {customerList.find(c => c.customerId === formData.referredBy)?.code || ""}
+                        )
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, referredBy: "", source: "other" });
+                          setReferralSearch("");
+                        }}
+                        className="text-xs text-red-500 hover:underline font-bold"
+                      >
+                        Thay đổi
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-green-600 font-semibold flex items-center gap-1">
+                    
+                    </p>
                   </div>
                 ) : (
                   <div>
                     <input
                       type="text"
-                      
                       className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                       value={referralSearch}
                       onChange={(e) => setReferralSearch(e.target.value)}
@@ -768,7 +789,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                               key={c._id}
                               type="button"
                               onClick={() => {
-                                setFormData({ ...formData, referredBy: c._id });
+                                setFormData({ ...formData, referredBy: c.customerId, source: "referral" });
                                 setReferralSearch("");
                               }}
                               className="w-full text-left p-2 hover:bg-blue-50 hover:text-blue-700 text-xs font-semibold border-b border-gray-100 last:border-0 transition-colors"

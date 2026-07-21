@@ -116,6 +116,7 @@ exports.deductSession = async (req, res) => {
           paymentMethod: paymentMethod || "Tiền mặt",
           customer: customer._id,
           customerName: customer.name,
+          workoutSession: newSession._id,
           status: "success",
           staff: req.user ? req.user._id : undefined,
         });
@@ -223,6 +224,16 @@ exports.deleteSession = async (req, res) => {
       );
     } catch (commErr) {
       console.error("Lỗi thu hồi hoa hồng:", commErr);
+    }
+
+    // Hủy bỏ giao dịch liên quan (nếu có) để loại bỏ khỏi doanh thu
+    try {
+      await Transaction.updateMany(
+        { workoutSession: id },
+        { status: "failed" }
+      );
+    } catch (txnErr) {
+      console.error("Lỗi hủy giao dịch pt_session:", txnErr);
     }
 
     // Xóa session

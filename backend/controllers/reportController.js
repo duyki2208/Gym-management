@@ -23,15 +23,17 @@ const getSummary = async (req, res) => {
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
-    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
-    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
+    // Mốc thời gian theo GMT+7 (quy đổi về UTC để truy vấn)
+    const firstDayOfMonth = new Date(Date.UTC(y, m - 1, 1, -7, 0, 0, 0));
+    const lastDay = new Date(y, m, 0).getDate();
+    const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // Tính doanh thu từ Transaction (tiền thực thu) thay vì Customer.price (giá gói)
     const [revenueAggregation, newMembersCount, activeMembers, totalEverMembers] = await Promise.all([
       Transaction.aggregate([
         {
           $match: {
-            type: { $in: ["package_purchase", "pos_sale"] },
+            type: { $in: ["package_purchase", "pos_sale", "pt_session"] },
             status: "success",
             createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
           },
@@ -89,21 +91,23 @@ const getRevenueChart = async (req, res) => {
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
-    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
-    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
+    // Mốc thời gian theo GMT+7 (quy đổi về UTC để truy vấn)
+    const firstDayOfMonth = new Date(Date.UTC(y, m - 1, 1, -7, 0, 0, 0));
+    const lastDay = new Date(y, m, 0).getDate();
+    const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // Tính doanh thu từ Transaction (tiền thực thu) theo ngày
     const revenueByDay = await Transaction.aggregate([
       {
         $match: {
-          type: { $in: ["package_purchase", "pos_sale"] },
+          type: { $in: ["package_purchase", "pos_sale", "pt_session"] },
           status: "success",
           createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
         },
       },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } },
           revenue: { $sum: "$amount" },
         },
       },
@@ -185,17 +189,20 @@ const getRevenueDetails = async (req, res) => {
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
-    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
-    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
+    // Mốc thời gian theo GMT+7 (quy đổi về UTC để truy vấn)
+    const firstDayOfMonth = new Date(Date.UTC(y, m - 1, 1, -7, 0, 0, 0));
+    const lastDay = new Date(y, m, 0).getDate();
+    const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // Lấy chi tiết giao dịch từ Transaction (tiền thực thu)
     const transactions = await Transaction.find({
-      type: "package_purchase",
+      type: { $in: ["package_purchase", "pt_session"] },
       status: "success",
       createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
     })
-      .select("code customerName amount paymentMethod createdAt")
+      .select("code customerName amount paymentMethod createdAt customerPackage")
       .populate("customer", "name phone code")
+      .populate("customerPackage", "packageName endDate")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -208,6 +215,8 @@ const getRevenueDetails = async (req, res) => {
       price: t.amount, // Tiền thực thu
       paymentMethod: t.paymentMethod,
       startDate: t.createdAt,
+      packageType: t.customerPackage?.packageName || (t.type === "pt_session" ? "Buổi PT lẻ" : "Bán gói"),
+      endDate: t.customerPackage?.endDate || t.createdAt,
     }));
 
     res.json(details);
@@ -228,8 +237,9 @@ const getInventoryReport = async (req, res) => {
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
-    const firstDayOfMonth = startOfMonth(new Date(y, m - 1, 1));
-    const lastDayOfMonth = endOfMonth(new Date(y, m - 1, 1));
+    const firstDayOfMonth = new Date(Date.UTC(y, m - 1, 1, -7, 0, 0, 0));
+    const lastDay = new Date(y, m, 0).getDate();
+    const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     const [posRevenueAggregation, products] = await Promise.all([
       Transaction.aggregate([
@@ -372,8 +382,10 @@ const getRevenueAdvanced = async (req, res) => {
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
 
-    const start = startOfMonth(new Date(y, m - 1, 1));
-    const end = endOfMonth(new Date(y, m - 1, 1));
+    const firstDay = 1;
+    const lastDay = new Date(y, m, 0).getDate();
+    const start = new Date(Date.UTC(y, m - 1, firstDay, -7, 0, 0, 0));
+    const end = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // 1. Phân chia nguồn doanh thu trong tháng này
     const revenueBySource = await Transaction.aggregate([
@@ -412,8 +424,9 @@ const getRevenueAdvanced = async (req, res) => {
       prevM = 12;
       prevY = y - 1;
     }
-    const prevStart = startOfMonth(new Date(prevY, prevM - 1, 1));
-    const prevEnd = endOfMonth(new Date(prevY, prevM - 1, 1));
+    const prevLastDay = new Date(prevY, prevM, 0).getDate();
+    const prevStart = new Date(Date.UTC(prevY, prevM - 1, 1, -7, 0, 0, 0));
+    const prevEnd = new Date(Date.UTC(prevY, prevM - 1, prevLastDay, 16, 59, 59, 999));
 
     const revenuePrevMonthAgg = await Transaction.aggregate([
       {
@@ -436,8 +449,9 @@ const getRevenueAdvanced = async (req, res) => {
       : 0;
 
     // 3. Doanh thu cùng kỳ năm ngoái (YoY)
-    const lastYearStart = startOfMonth(new Date(y - 1, m - 1, 1));
-    const lastYearEnd = endOfMonth(new Date(y - 1, m - 1, 1));
+    const lyLastDay = new Date(y - 1, m, 0).getDate();
+    const lastYearStart = new Date(Date.UTC(y - 1, m - 1, 1, -7, 0, 0, 0));
+    const lastYearEnd = new Date(Date.UTC(y - 1, m - 1, lyLastDay, 16, 59, 59, 999));
     const revenueLastYearAgg = await Transaction.aggregate([
       {
         $match: {
@@ -462,8 +476,11 @@ const getRevenueAdvanced = async (req, res) => {
     const trendData = [];
     for (let i = 5; i >= 0; i--) {
       let dateTarget = new Date(y, m - 1 - i, 1);
-      const startT = startOfMonth(dateTarget);
-      const endT = endOfMonth(dateTarget);
+      const tY = dateTarget.getFullYear();
+      const tM = dateTarget.getMonth() + 1;
+      const tLastDay = new Date(tY, tM, 0).getDate();
+      const startT = new Date(Date.UTC(tY, tM - 1, 1, -7, 0, 0, 0));
+      const endT = new Date(Date.UTC(tY, tM - 1, tLastDay, 16, 59, 59, 999));
       const label = format(dateTarget, "MM/yyyy");
 
       const monthlyRevAgg = await Transaction.aggregate([

@@ -617,10 +617,12 @@ const Dashboard = () => {
                     <tr key={customer._id} className="hover:bg-gray-50 transition-colors text-sm">
                       <td className="p-3">
                         <div className="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center text-gray-400">
-                          {customer.avatar && customer.avatar !== "👤" ? (
-                            <img src={customer.avatar} alt="" className="w-full h-full object-cover" />
+                          {customer.avatarUrl ? (
+                             <img src={customer.avatarUrl} alt="" className="w-full h-full object-cover" />
+                          ) : customer.avatar && customer.avatar !== "👤" ? (
+                             <img src={customer.avatar} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-xs">KH</span>
+                             <span className="text-xs">KH</span>
                           )}
                         </div>
                       </td>

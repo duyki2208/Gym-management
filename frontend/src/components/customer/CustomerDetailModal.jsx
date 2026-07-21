@@ -177,10 +177,15 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
     }
   };
 
-  const handleFaceCapture = async (imageBase64) => {
+  const handleFaceCapture = async (avatarUrlOrBase64) => {
     // FaceCaptureModal mới tự gọi API enroll-face rồi mới gọi callback
     // ở đây chỉ cần cập nhật avatar local
-    customer.avatar = imageBase64;
+    if (avatarUrlOrBase64 && avatarUrlOrBase64.startsWith("http")) {
+      customer.avatarUrl = avatarUrlOrBase64;
+      customer.avatar = "";
+    } else {
+      customer.avatar = avatarUrlOrBase64;
+    }
     customer.faceEmbedding = true; // Đánh dấu đã có embedding
     if (onUpdate) onUpdate();
   };
@@ -356,7 +361,13 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
         {/* LEFT PANEL: Identity (Static) */}
         <div className="w-full md:w-[350px] bg-gray-50 dark:bg-gray-900/50 p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
             <div className="w-64 h-64 aspect-square rounded-3xl overflow-hidden shadow-xl border-4 border-white dark:border-gray-800 mb-6 bg-white flex-shrink-0">
-                {customer.avatar && customer.avatar !== "👤" ? (
+                {customer.avatarUrl ? (
+                   <img 
+                     src={customer.avatarUrl} 
+                     alt={customer.name} 
+                     className="w-full h-full object-cover"
+                   />
+                ) : customer.avatar && customer.avatar !== "👤" ? (
                    <img 
                      src={customer.avatar} 
                      alt={customer.name} 
@@ -471,7 +482,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          {/* 1. Basic Info */}
                          <section>
                              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
-                                 1. Thông tin cơ bản
+                                 1. Thông tin khách hàng
                              </h3>
                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                  <InfoRow label="Số điện thoại" value={customer.phone} boldValue />
@@ -506,7 +517,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          {/* 2. Package Info */}
                          <section>
                              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
-                                 2. Thông tin gói & Nhân sự Phụ trách
+                                 2. Thông tin gói tập 
                              </h3>
                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                  <div className="col-span-2 md:col-span-2">
@@ -536,6 +547,27 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                          value={customer.paymentStatus === 'deposit' ? `Đặt cọc (${Number(customer.paidAmount || 0).toLocaleString()} đ)` : customer.paymentStatus === 'unpaid' ? 'Chưa thanh toán' : 'Đã thanh toán đủ'} 
                                      />
                                  </div>
+                                 <div className="col-span-2 md:col-span-2">
+                                     <InfoRow 
+                                         label="Nguồn khách hàng" 
+                                         value={
+                                             customer.source === "facebook" ? "Facebook" :
+                                             customer.source === "hotline" ? "Hotline" :
+                                             customer.source === "referral" ? "Giới thiệu (Referral)" :
+                                             customer.source === "web" ? "Website" : "Khác"
+                                         } 
+                                     />
+                                 </div>
+                                 <div className="col-span-2 md:col-span-2">
+                                      <InfoRow 
+                                          label="Hội viên giới thiệu" 
+                                          value={
+                                              customer.referredBy 
+                                                  ? `${customer.referredBy.name} (${customer.referredBy.code || customer.referredBy.phone || ""})` 
+                                                  : "-"
+                                          } 
+                                      />
+                                  </div>
                              </div>
                          </section>
 
@@ -544,24 +576,20 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
                                  3. Ghi chú & Dịch vụ thêm
                              </h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 <div className="space-y-4">
-                                      <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 h-full">
-                                          <p className="text-sm font-bold text-blue-900 dark:text-blue-200 uppercase mb-2 font-display">
+                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                 <div className="md:col-span-3 space-y-4">
+                                      <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 h-full font-display">
+                                          <p className="text-sm font-bold text-blue-900 dark:text-blue-200 uppercase mb-2">
                                               Ghi chú gói tập
                                           </p>
-                                          <p className="font-medium text-lg text-gray-900 dark:text-gray-100 font-display break-all md:break-words">
+                                          <p className="font-medium text-lg text-gray-900 dark:text-gray-100 break-all md:break-words whitespace-pre-line">
                                               {customer.packageNote}
                                           </p>
                                       </div>
                                  </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                     <div className="col-span-2">
-                                         <InfoRow label="Thuê tủ đồ" value={customer.hasLocker} isBoolean />
-                                     </div>
-                                     <div className="col-span-2">
-                                         <InfoRow label="Gói nước uống" value={customer.hasWater} isBoolean />
-                                     </div>
+                                 <div className="md:col-span-1 flex flex-col gap-4">
+                                     <InfoRow label="Thuê tủ đồ" value={customer.hasLocker} isBoolean />
+                                     <InfoRow label="Gói nước uống" value={customer.hasWater} isBoolean />
                                  </div>
                              </div>
                          </section>
@@ -770,7 +798,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                 <td className="px-4 py-3 font-bold text-gray-950">
                                                     {pkg.price ? `${Number(pkg.price).toLocaleString()} đ` : "0 đ"}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600">
+                                                <td className="px-4 py-3 text-gray-600 whitespace-pre-line">
                                                     {pkg.packageNote || "-"}
                                                 </td>
                                                 <td className="px-4 py-3">

@@ -31,6 +31,8 @@ function flattenPackage(pkg) {
     identityCard: pkg.customer?.identityCard || "", // Thêm CCCD
     emergencyContactName: pkg.customer?.emergencyContactName || "", // Thêm người liên hệ khẩn cấp
     emergencyContactPhone: pkg.customer?.emergencyContactPhone || "", // Thêm SĐT khẩn cấp
+    source: pkg.customer?.source || "other",
+    referredBy: pkg.customer?.referredBy || null,
     
     packageType: pkg.packageName,
     startDate: pkg.startDate,
@@ -45,6 +47,7 @@ function flattenPackage(pkg) {
     paymentStatus: pkg.paymentStatus,
     paidAmount: pkg.paidAmount,
     contractCode: pkg.contractCode || "", // Thêm mã hợp đồng
+    packageNote: pkg.packageNote || "",
     status: pkg.status,
     frozenPeriods: pkg.frozenPeriods,
     
@@ -92,6 +95,7 @@ const createCustomer = async (req, res) => {
       emergencyContactPhone,
       referredBy,
       source,
+      avatarUrl,
     } = req.body;
 
     const normalizedName = name ? name.trim() : "";
@@ -130,6 +134,7 @@ const createCustomer = async (req, res) => {
         gender,
         address,
         avatar,
+        avatarUrl: avatarUrl || "",
         email,
         healthNote,
         packageType,
@@ -167,6 +172,7 @@ const createCustomer = async (req, res) => {
       if (email) customer.email = email;
       if (healthNote) customer.healthNote = healthNote;
       if (avatar) customer.avatar = avatar;
+      if (avatarUrl) customer.avatarUrl = avatarUrl;
       if (referredBy) customer.referredBy = referredBy;
       if (source) customer.source = source;
       await customer.save();
@@ -185,6 +191,19 @@ const createCustomer = async (req, res) => {
       return res.status(400).json({ message: "Kỳ thanh toán hoa hồng Sale tháng này đã được duyệt hoặc chi trả, dữ liệu đã bị khóa." });
     }
 
+    let finalPaidAmount = paidAmount || 0;
+    if (paymentStatus === "paid") {
+      finalPaidAmount = price || 0;
+    } else if (paymentStatus === "unpaid") {
+      finalPaidAmount = 0;
+    } else if (paymentStatus === "deposit") {
+      if (finalPaidAmount <= 0 || finalPaidAmount >= price) {
+        return res.status(400).json({ message: "Số tiền cọc không hợp lệ" });
+      }
+    }
+
+    const formattedNote = packageNote || "";
+
     const customerPackage = new CustomerPackage({
       customer: customer._id,
       packageName: packageType,
@@ -192,7 +211,7 @@ const createCustomer = async (req, res) => {
       endDate: new Date(endDate),
       price: price || 0,
       contractCode: contractCode || "HĐ-CŨ",
-      packageNote: packageNote || "",
+      packageNote: formattedNote,
       remainingSessions: remainingSessions || 0,
       trainer: trainer || "",
       assignedStaff: assignedStaff || undefined,
@@ -200,41 +219,49 @@ const createCustomer = async (req, res) => {
       hasWater: hasWater || false,
       contractType: contractType || "new",
       paymentStatus: paymentStatus || "paid",
-      paidAmount: paidAmount || 0,
+      paidAmount: finalPaidAmount,
       status: "active",
     });
 
     // Logic referral: tặng thêm 1 tháng cho người giới thiệu
-    if (referredBy) {
+    // Điều kiện: phải có referredBy VÀ source phải là "referral"
+    let referralWarning = null;
+    if (referredBy && source === "referral") {
       try {
         const referrerPackage = await CustomerPackage.findOne({
           customer: referredBy,
           status: "active"
         }).sort({ endDate: -1 });
 
-        const referrerCustomer = await Customer.findById(referredBy).select("name code");
+        const referrerCustomer = await Customer.findById(referredBy).select("name code phone");
 
-        if (referrerPackage && referrerCustomer) {
-          const oldEndDate = new Date(referrerPackage.endDate);
-          const newEndDate = new Date(oldEndDate);
+        if (!referrerPackage) {
+          // ⚠️ Người giới thiệu không có gói active → cảnh báo admin, KHÔNG cộng tháng
+          referralWarning = {
+            code: "REFERRER_NO_ACTIVE_PACKAGE",
+            message: `Hội viên giới thiệu "${referrerCustomer?.name || referredBy}" (${referrerCustomer?.code || ""}) không có gói tập đang hoạt động. Vui lòng tạo gói mới cho hội viên này để cộng thưởng giới thiệu.`,
+            referrerId: referredBy,
+            referrerName: referrerCustomer?.name || "",
+            referrerCode: referrerCustomer?.code || "",
+          };
+          console.warn(`[Referral Warning] Người giới thiệu ${referredBy} không có gói active`);
+        } else {
+          // ✅ Cộng thêm 30 ngày vào gói active của người giới thiệu
+          const newEndDate = new Date(referrerPackage.endDate);
           newEndDate.setDate(newEndDate.getDate() + 30);
           referrerPackage.endDate = newEndDate;
 
-          const rewardNote = `+1 tháng (Tặng từ việc giới thiệu hội viên mới: ${customer.name} - ${customer.code || customer.phone})`;
-          referrerPackage.packageNote = referrerPackage.packageNote 
-            ? `${referrerPackage.packageNote}\n${rewardNote}` 
+          const rewardNote = `+1T giới thiệu HV(${customer.code})`;
+          referrerPackage.packageNote = referrerPackage.packageNote
+            ? `${referrerPackage.packageNote}\n${rewardNote}`
             : rewardNote;
 
           await referrerPackage.save();
-          console.log(`Đã tặng thêm 1 tháng cho người giới thiệu: ${referrerCustomer.name} (${referrerPackage._id})`);
+          await syncCustomerFields(referredBy);
+          console.log(`Đã tặng thêm 30 ngày cho người giới thiệu: ${referrerCustomer?.name} (${referrerPackage._id})`);
         }
 
-        if (referrerCustomer) {
-          const introNote = `Được giới thiệu bởi hội viên: ${referrerCustomer.name} - ${referrerCustomer.code || referrerCustomer.phone}`;
-          customerPackage.packageNote = customerPackage.packageNote 
-            ? `${customerPackage.packageNote}\n${introNote}` 
-            : introNote;
-        }
+        // Ghi chú vào gói của khách mới: "Được giới thiệu bởi..." -> Không hiển thị thông tin này nữa
       } catch (refErr) {
         console.error("Lỗi cộng thưởng giới thiệu hội viên:", refErr);
       }
@@ -267,7 +294,7 @@ const createCustomer = async (req, res) => {
 
     await Transaction.create({
       type: "package_purchase",
-      amount: paidAmount || 0,
+      amount: customerPackage.paidAmount || 0,
       paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
       customer: customer._id,
       customerName: customer.name,
@@ -317,9 +344,15 @@ const createCustomer = async (req, res) => {
       }
     }
 
-    const populatedPackage = await CustomerPackage.findById(customerPackage._id).populate("customer");
+    const populatedPackage = await CustomerPackage.findById(customerPackage._id).populate({
+      path: "customer",
+      populate: {
+        path: "referredBy",
+        select: "name code phone"
+      }
+    });
     const responseData = flattenPackage(populatedPackage);
-    res.status(201).json({ ...responseData, isNewCustomer });
+    res.status(201).json({ ...responseData, isNewCustomer, referralWarning });
   } catch (error) {
     console.error("Error creating customer:", error);
     res.status(400).json({ message: error.message || "Lỗi tạo khách hàng" });
@@ -402,7 +435,13 @@ const getAllCustomers = async (req, res) => {
     const totalPackages = await CustomerPackage.countDocuments(query);
 
     const packages = await CustomerPackage.find(query)
-      .populate("customer")
+      .populate({
+        path: "customer",
+        populate: {
+          path: "referredBy",
+          select: "name code phone"
+        }
+      })
       .populate("assignedStaff", "fullName role")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -444,6 +483,7 @@ const updateCustomer = async (req, res) => {
       "gender",
       "address",
       "avatar",
+      "avatarUrl",
       "email",
       "healthNote",
       "faceEmbedding",
@@ -493,6 +533,21 @@ const updateCustomer = async (req, res) => {
     });
     await customer.save();
 
+    const currentStatus = updateData.paymentStatus !== undefined ? updateData.paymentStatus : customerPackage.paymentStatus;
+    const currentPrice = updateData.price !== undefined ? updateData.price : customerPackage.price;
+    let currentPaidAmount = updateData.paidAmount !== undefined ? updateData.paidAmount : customerPackage.paidAmount;
+
+    if (currentStatus === "paid") {
+      currentPaidAmount = currentPrice;
+    } else if (currentStatus === "unpaid") {
+      currentPaidAmount = 0;
+    } else if (currentStatus === "deposit") {
+      if (currentPaidAmount <= 0 || currentPaidAmount >= currentPrice) {
+        return res.status(400).json({ message: "Số tiền cọc không hợp lệ" });
+      }
+    }
+    updateData.paidAmount = currentPaidAmount;
+
     packageFields.forEach((field) => {
       if (updateData[field] !== undefined) {
         if (field === "packageType") {
@@ -506,10 +561,74 @@ const updateCustomer = async (req, res) => {
     });
     await customerPackage.save();
 
+    // Đồng bộ giao dịch (Transaction) liên quan
+    let transaction = await Transaction.findOne({ customerPackage: customerPackage._id });
+    if (transaction) {
+      transaction.amount = customerPackage.paidAmount || 0;
+      transaction.paymentMethod = customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR";
+      transaction.customerName = customer.name;
+      await transaction.save();
+    } else {
+      await Transaction.create({
+        type: "package_purchase",
+        amount: customerPackage.paidAmount || 0,
+        paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
+        customer: customer._id,
+        customerName: customer.name,
+        customerPackage: customerPackage._id,
+        status: "success",
+        staff: req.user ? req.user._id : undefined,
+      });
+    }
+
+    // Đồng bộ hóa đơn (Invoice) liên quan
+    let invoice = await Invoice.findOne({ referenceId: customerPackage._id });
+    if (invoice) {
+      invoice.customerName = customer.name;
+      invoice.customerPhone = customer.phone;
+      invoice.paymentStatus = customerPackage.paymentStatus;
+      invoice.paymentMethod = customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR";
+      invoice.subtotal = customerPackage.price || 0;
+      invoice.total = customerPackage.price || 0;
+      if (invoice.items && invoice.items.length > 0) {
+        invoice.items[0].name = customerPackage.packageName;
+        invoice.items[0].price = customerPackage.price || 0;
+        invoice.items[0].total = customerPackage.price || 0;
+      }
+      await invoice.save();
+    } else {
+      await Invoice.create({
+        customer: customer._id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        type: "package",
+        referenceId: customerPackage._id,
+        items: [
+          {
+            name: customerPackage.packageName,
+            quantity: 1,
+            price: customerPackage.price || 0,
+            total: customerPackage.price || 0,
+          },
+        ],
+        subtotal: customerPackage.price || 0,
+        total: customerPackage.price || 0,
+        paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
+        paymentStatus: customerPackage.paymentStatus,
+        staff: req.user ? req.user._id : undefined,
+      });
+    }
+
     await syncCustomerFields(customer._id);
 
     const updatedPopulated = await CustomerPackage.findById(customerPackage._id)
-      .populate("customer")
+      .populate({
+        path: "customer",
+        populate: {
+          path: "referredBy",
+          select: "name code phone"
+        }
+      })
       .populate("assignedStaff", "fullName role");
 
     res.json(flattenPackage(updatedPopulated));
@@ -554,14 +673,98 @@ const deleteCustomer = async (req, res) => {
       }
     );
 
-    await customerPackage.deleteOne();
+    // Lấy thông tin khách hàng gốc trước khi đánh dấu xóa mềm
+    const customer = await Customer.findById(customerId);
 
-    // Kiểm tra xem khách hàng này còn gói tập nào khác không
-    const remainingPackagesCount = await CustomerPackage.countDocuments({ customer: customerId });
+    // Thu hồi ngày thưởng giới thiệu cho người giới thiệu nếu hợp lệ
+    // Điều kiện: Gói bị xóa là gói "new", khách hàng này có referredBy và nguồn là "referral"
+    if (customer && customer.referredBy && customer.source === "referral" && customerPackage.contractType === "new") {
+      try {
+        const rewardNote = `+1T giới thiệu HV(${customer.code})`;
+        // Tìm gói tập của người giới thiệu có ghi chú tặng thưởng của hội viên bị xóa này
+        const referrerPackage = await CustomerPackage.findOne({
+          customer: customer.referredBy,
+          packageNote: { $regex: new RegExp(rewardNote.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i') }
+        });
+
+        if (referrerPackage) {
+          // Trừ đi 30 ngày thưởng
+          const newEndDate = new Date(referrerPackage.endDate);
+          newEndDate.setDate(newEndDate.getDate() - 30);
+          referrerPackage.endDate = newEndDate;
+
+          // Xóa dòng ghi chú thưởng tương ứng
+          if (referrerPackage.packageNote) {
+            referrerPackage.packageNote = referrerPackage.packageNote
+              .split("\n")
+              .filter(line => !line.toLowerCase().includes(rewardNote.toLowerCase()))
+              .join("\n")
+              .trim();
+          }
+
+          await referrerPackage.save();
+          await syncCustomerFields(customer.referredBy);
+          console.log(`Đã thu hồi 30 ngày thưởng giới thiệu từ người giới thiệu: ${customer.referredBy} (${referrerPackage._id})`);
+        }
+      } catch (refErr) {
+        console.error("Lỗi khi thu hồi ngày thưởng giới thiệu:", refErr);
+      }
+    }
+
+    // Sao lưu dữ liệu bị xóa vào req để ghi vào Audit Log
+    req.deletedCustomerDetails = {
+      package: {
+        _id: customerPackage._id,
+        packageName: customerPackage.packageName,
+        startDate: customerPackage.startDate,
+        endDate: customerPackage.endDate,
+        price: customerPackage.price,
+        contractCode: customerPackage.contractCode,
+        packageNote: customerPackage.packageNote,
+        contractType: customerPackage.contractType,
+        paymentStatus: customerPackage.paymentStatus,
+        paidAmount: customerPackage.paidAmount,
+      }
+    };
+
+    if (customer) {
+      req.deletedCustomerDetails.customer = {
+        _id: customer._id,
+        name: customer.name,
+        code: customer.code,
+        phone: customer.phone,
+        email: customer.email,
+        dob: customer.dob,
+        gender: customer.gender,
+        address: customer.address,
+        identityCard: customer.identityCard,
+        referredBy: customer.referredBy,
+        source: customer.source,
+      };
+    }
+
+    // Thực hiện xóa mềm gói tập
+    customerPackage.isDeleted = true;
+    await customerPackage.save();
+
+    // Hủy bỏ giao dịch liên quan để không tính vào doanh thu
+    await Transaction.updateMany(
+      { customerPackage: customerPackage._id },
+      { status: "failed" }
+    );
+
+    // Kiểm tra xem khách hàng này còn gói tập nào khác hoạt động không
+    const remainingPackagesCount = await CustomerPackage.countDocuments({
+      customer: customerId,
+      isDeleted: { $ne: true }
+    });
+
     if (remainingPackagesCount === 0) {
-      const customer = await Customer.findById(customerId);
-      if (customer) await customer.deleteOne();
-      console.log(`Đã xóa hồ sơ khách hàng gốc ${customerId} vì không còn gói tập nào`);
+      if (customer) {
+        customer.isDeleted = true;
+        await customer.save();
+        console.log(`Đã xóa mềm hồ sơ khách hàng gốc ${customerId} vì không còn gói tập nào hoạt động`);
+      }
     } else {
       await syncCustomerFields(customerId);
     }
@@ -621,7 +824,13 @@ const freezeCustomer = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Tạm dừng gói tập thành công, hạn gói đã được cộng thêm thời gian bảo lưu dự kiến.",
-      data: flattenPackage(await CustomerPackage.findById(customerPackage._id).populate("customer")),
+      data: flattenPackage(await CustomerPackage.findById(customerPackage._id).populate({
+        path: "customer",
+        populate: {
+          path: "referredBy",
+          select: "name code phone"
+        }
+      })),
     });
   } catch (error) {
     console.error("Lỗi đóng băng gói tập:", error);
@@ -673,7 +882,13 @@ const unfreezeCustomer = async (req, res) => {
     res.status(200).json({
       success: true,
       message: `Kích hoạt lại gói tập thành công. Hạn gói tập đã được điều chỉnh theo thời gian bảo lưu thực tế.`,
-      data: flattenPackage(await CustomerPackage.findById(customerPackage._id).populate("customer")),
+      data: flattenPackage(await CustomerPackage.findById(customerPackage._id).populate({
+        path: "customer",
+        populate: {
+          path: "referredBy",
+          select: "name code phone"
+        }
+      })),
     });
   } catch (error) {
     console.error("Lỗi kích hoạt lại gói tập:", error);
@@ -717,16 +932,40 @@ const enrollFace = async (req, res) => {
 
     // Lưu embedding vào DB
     customer.faceEmbedding = result.embedding;
-    // Lưu ảnh avatar dưới dạng base64 (giống logic cũ)
-    if (req.body.imageBase64) {
-      customer.avatar = req.body.imageBase64;
+    
+    // Upload ảnh lên Cloudinary
+    try {
+      const { uploadBuffer, extractPublicId, cloudinary: cloudinaryClient } = require("../config/cloudinary");
+      
+      // Xóa ảnh cũ trên Cloudinary nếu có
+      if (customer.avatarUrl) {
+        const oldPublicId = extractPublicId(customer.avatarUrl);
+        if (oldPublicId) {
+          await cloudinaryClient.uploader.destroy(oldPublicId).catch(err => {
+            console.error("Lỗi xóa ảnh cũ trên Cloudinary:", err.message);
+          });
+        }
+      }
+      
+      const uploadResult = await uploadBuffer(req.file.buffer);
+      customer.avatarUrl = uploadResult.secure_url;
+      customer.avatar = ""; // Reset base64 cũ để giải phóng dung lượng
+    } catch (uploadErr) {
+      console.error("Lỗi upload avatar lên Cloudinary:", uploadErr);
+      // Vẫn tiếp tục dùng base64 dự phòng nếu upload thất bại
+      if (req.body.imageBase64) {
+        customer.avatar = req.body.imageBase64;
+      }
     }
     await customer.save();
 
     res.json({
       success: true,
       message: "Cập nhật khuôn mặt thành công!",
-      data: { embeddingSize: result.embedding.length },
+      data: { 
+        embeddingSize: result.embedding.length,
+        avatarUrl: customer.avatarUrl
+      },
     });
   } catch (error) {
     // Xử lý lỗi khi Python service down

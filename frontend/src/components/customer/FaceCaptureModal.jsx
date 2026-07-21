@@ -88,7 +88,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
 
       if (res.data.success) {
         toast.success('Đăng ký khuôn mặt thành công!');
-        if (onSuccess) onSuccess(preview); // Trả ảnh về để cập nhật avatar
+        if (onSuccess) onSuccess(res.data.data?.avatarUrl || preview); // Trả ảnh về để cập nhật avatar
         onClose();
       } else {
         toast.error(res.data.message || 'Lỗi đăng ký khuôn mặt');
