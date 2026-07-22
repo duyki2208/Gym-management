@@ -677,6 +677,51 @@ const Reports = () => {
                 </div>
               </div>
 
+              {/* Bảng thống kê PT phụ trách */}
+              {customerAnalytics.trainerStats && customerAnalytics.trainerStats.length > 0 && (
+                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-gray-800 mb-1 text-base">Thống kê khách hàng theo PT phụ trách</h3>
+                  <p className="text-xs text-gray-400 mb-4">Số lượng hội viên đang có gói tập active được phụ trách bởi từng PT</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr className="border-b bg-gray-50 uppercase text-xs font-bold text-gray-500">
+                          <th className="p-3">PT phụ trách</th>
+                          <th className="p-3">Chức vụ</th>
+                          <th className="p-3 text-right">Số hội viên</th>
+                          <th className="p-3">Tỷ trọng</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {customerAnalytics.trainerStats.map((pt) => {
+                          const total = customerAnalytics.trainerRatio?.withTrainer || 1;
+                          const pct = Math.round((pt.count / total) * 100);
+                          return (
+                            <tr key={String(pt._id)} className="hover:bg-gray-50">
+                              <td className="p-3 font-bold text-gray-800">{pt.name}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold uppercase">
+                                  {pt.role}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right font-black text-indigo-600">{pt.count} KH</td>
+                              <td className="p-3 w-48">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                    <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-xs text-gray-600 font-semibold w-8 shrink-0">{pct}%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Hàng biểu đồ 1: Giới tính & Độ tuổi */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-xl border border-gray-155 shadow-sm">

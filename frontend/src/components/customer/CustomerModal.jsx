@@ -57,7 +57,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
     healthNote: "",
 
     // 4. Dịch vụ thêm
-    trainer: "",
+    trainer: "",  // ObjectId hoặc ""
     assignedStaff: "",
     hasLocker: false,
     hasWater: false,
@@ -130,7 +130,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
         price: customer.price || 0,
         remainingSessions: customer.remainingSessions || 0,
         healthNote: customer.healthNote || "",
-        trainer: customer.trainer || "",
+        trainer: customer.trainer?._id || customer.trainer || "",
         assignedStaff: customer.assignedStaff?._id || customer.assignedStaff || "",
         hasLocker: customer.hasLocker || false,
         hasWater: customer.hasWater || false,
@@ -166,7 +166,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
         price: 0,
         remainingSessions: 0,
         healthNote: "",
-        trainer: "",
+        trainer: "",  // ObjectId hoặc ""
         assignedStaff: "",
         hasLocker: false,
         hasWater: false,
@@ -202,6 +202,28 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
           endDate.setDate(endDate.getDate() + pkg.duration);
         }
 
+        // Kiểm tra xem nhân viên tư vấn đã chọn có hợp lệ với gói mới không
+        let updatedAssignedStaff = prev.assignedStaff;
+        let updatedTrainer = prev.trainer;
+        if (prev.assignedStaff) {
+          const currentStaff = staffList.find(s => (s._id || s.id) === prev.assignedStaff);
+          if (currentStaff) {
+            if (pkg.type === "session") {
+              if (!["pt", "pm"].includes(currentStaff.role)) {
+                updatedAssignedStaff = "";
+                updatedTrainer = "";
+                toast.error("Gói theo buổi yêu cầu nhân viên tư vấn có chức vụ PT hoặc PM. Vui lòng chọn lại nhân viên.");
+              }
+            } else { // monthly
+              if (!["sm", "sale"].includes(currentStaff.role)) {
+                updatedAssignedStaff = "";
+                updatedTrainer = "";
+                toast.error("Gói theo ngày yêu cầu nhân viên tư vấn có chức vụ SM hoặc Sale. Vui lòng chọn lại nhân viên.");
+              }
+            }
+          }
+        }
+
         return {
           ...prev,
           packageType: packageName,
@@ -209,6 +231,8 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
           paidAmount: prev.paymentStatus === "paid" ? pkg.price : prev.paidAmount,
           endDate: endDate.toISOString().split("T")[0],
           remainingSessions: pkg.sessions || 0,
+          assignedStaff: updatedAssignedStaff,
+          trainer: updatedTrainer,
         };
       });
     } else {
@@ -294,6 +318,23 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc: Gói tập, giá gói, trạng thái thanh toán và nhân viên tư vấn.");
       return;
     }
+    
+    // Kiểm tra quy luật chức vụ nhân viên tư vấn
+    if (Array.isArray(packages)) {
+      const pkg = packages.find(p => p.name === formData.packageType);
+      const staff = staffList.find(s => (s._id || s.id) === formData.assignedStaff);
+      if (pkg && staff) {
+        if (pkg.type === "session" && !["pt", "pm"].includes(staff.role)) {
+          toast.error("Gói theo buổi bắt buộc chọn nhân viên tư vấn có chức vụ PT hoặc PM!");
+          return;
+        }
+        if (pkg.type === "monthly" && !["sm", "sale"].includes(staff.role)) {
+          toast.error("Gói theo ngày bắt buộc chọn nhân viên tư vấn có chức vụ SM hoặc Sale!");
+          return;
+        }
+      }
+    }
+
     // Chặn submit nếu khách cũ vẫn chọn contractType "new"
     if (existingCustomerAlert && formData.contractType === "new") {
       toast.error("Khách hàng đã có hồ sơ! Vui lòng chọn nguồn hợp đồng là \"Gia hạn\" hoặc \"Nâng cấp\".");
@@ -318,8 +359,26 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
     return 5;
   };
 
+  const selectedPkg = Array.isArray(packages) ? packages.find(p => p.name === formData.packageType) : null;
+
   const filteredAndSortedStaff = [...staffList]
-    .filter((s) => ["manager", "pt", "sale", "sm", "pm", "om", "accountant"].includes(s.role))
+    .filter((s) => {
+      // 1. Phải là vai trò nhân viên hợp lệ có quyền tư vấn
+      const hasConsultantRole = ["manager", "pt", "sale", "sm", "pm", "om", "accountant"].includes(s.role);
+      if (!hasConsultantRole) return false;
+      
+      // Nếu chưa chọn gói, hiện tất cả nhân viên tư vấn
+      if (!selectedPkg) return true;
+
+      // 2. Áp dụng quy luật lọc theo loại gói
+      if (selectedPkg.type === "session") {
+        // Gói theo buổi -> bắt buộc chọn PT hoặc PM
+        return ["pt", "pm"].includes(s.role);
+      } else {
+        // Gói theo ngày -> bắt buộc chọn SM hoặc Sale
+        return ["sm", "sale"].includes(s.role);
+      }
+    })
     .sort((a, b) => {
       const priA = getRolePriority(a.role);
       const priB = getRolePriority(b.role);
@@ -328,6 +387,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
       const nameB = (b.name || b.fullName || "").toLowerCase();
       return nameA.localeCompare(nameB, "vi");
     });
+
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -644,7 +704,16 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.assignedStaff}
-                  onChange={(e) => setFormData({ ...formData, assignedStaff: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const staff = staffList.find(s => (s._id || s.id) === val);
+                    const isPT = staff && ["pt", "pm"].includes(staff.role);
+                    setFormData(prev => ({
+                      ...prev,
+                      assignedStaff: val,
+                      trainer: isPT ? val : ""
+                    }));
+                  }}
                 >
                   <option value="">-- Chọn nhân viên --</option>
                   {filteredAndSortedStaff.map((s) => (
@@ -825,6 +894,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               3. Dịch vụ thêm
             </h3>
             <div className="grid grid-cols-2 gap-4">
+
               <div
                 className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer col-span-2 md:col-span-1"
                 onClick={() =>

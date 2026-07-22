@@ -16,7 +16,7 @@ const customerPackageSchema = new mongoose.Schema(
       enum: ["active", "expired", "frozen", "pending"],
       default: "active",
     },
-    trainer: { type: String, default: "" }, // Tên PT riêng (nếu có)
+    trainer: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // PT phụ trách (ObjectId)
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Nhân viên bán gói
     hasLocker: { type: Boolean, default: false },
     hasWater: { type: Boolean, default: false },

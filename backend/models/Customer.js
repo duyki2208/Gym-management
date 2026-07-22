@@ -18,7 +18,7 @@ const customerSchema = mongoose.Schema(
     activePackage: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerPackage' },
 
     // Các dịch vụ đi kèm
-    trainer: { type: String, default: "" }, // Tên PT riêng
+    trainer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // PT phụ trách
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Nhân viên tư vấn bán gói
     hasLocker: { type: Boolean, default: false },
     hasWater: { type: Boolean, default: false },

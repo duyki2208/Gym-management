@@ -14,6 +14,11 @@ const { sendZaloNotification } = require("../utils/zaloService");
 
 function flattenPackage(pkg) {
   if (!pkg) return null;
+  // trainer đã là ObjectId được populate → trả về object { _id, fullName }
+  // Nếu chưa populate (lean query), vẫn là ObjectId string → giữ nguyên
+  const trainerObj = pkg.trainer
+    ? (pkg.trainer.fullName ? { _id: pkg.trainer._id, fullName: pkg.trainer.fullName } : pkg.trainer)
+    : null;
   return {
     _id: pkg._id,
     customerId: pkg.customer?._id,
@@ -28,9 +33,9 @@ function flattenPackage(pkg) {
     healthNote: pkg.customer?.healthNote || "",
     faceDescriptor: pkg.customer?.faceDescriptor || [],
     faceEmbedding: pkg.customer?.faceEmbedding || [],
-    identityCard: pkg.customer?.identityCard || "", // Thêm CCCD
-    emergencyContactName: pkg.customer?.emergencyContactName || "", // Thêm người liên hệ khẩn cấp
-    emergencyContactPhone: pkg.customer?.emergencyContactPhone || "", // Thêm SĐT khẩn cấp
+    identityCard: pkg.customer?.identityCard || "",
+    emergencyContactName: pkg.customer?.emergencyContactName || "",
+    emergencyContactPhone: pkg.customer?.emergencyContactPhone || "",
     source: pkg.customer?.source || "other",
     referredBy: pkg.customer?.referredBy || null,
     
@@ -39,14 +44,14 @@ function flattenPackage(pkg) {
     endDate: pkg.endDate,
     price: pkg.price,
     remainingSessions: pkg.remainingSessions,
-    trainer: pkg.trainer,
+    trainer: trainerObj,
     assignedStaff: pkg.assignedStaff,
     hasLocker: pkg.hasLocker,
     hasWater: pkg.hasWater,
     contractType: pkg.contractType,
     paymentStatus: pkg.paymentStatus,
     paidAmount: pkg.paidAmount,
-    contractCode: pkg.contractCode || "", // Thêm mã hợp đồng
+    contractCode: pkg.contractCode || "",
     packageNote: pkg.packageNote || "",
     status: pkg.status,
     frozenPeriods: pkg.frozenPeriods,
@@ -191,6 +196,22 @@ const createCustomer = async (req, res) => {
       return res.status(400).json({ message: "Kỳ thanh toán hoa hồng Sale tháng này đã được duyệt hoặc chi trả, dữ liệu đã bị khóa." });
     }
 
+    // Kiểm tra quy luật vai trò nhân viên tư vấn
+    if (assignedStaff) {
+      const User = require("../models/User");
+      const Package = require("../models/Package");
+      const staffUser = await User.findById(assignedStaff);
+      const pkgInfo = await Package.findOne({ name: packageType });
+      if (staffUser && pkgInfo) {
+        if (pkgInfo.type === "session" && !["pt", "pm"].includes(staffUser.role)) {
+          return res.status(400).json({ message: "Gói theo buổi bắt buộc chọn nhân viên tư vấn có chức vụ PT hoặc PM!" });
+        }
+        if (pkgInfo.type === "monthly" && !["sm", "sale"].includes(staffUser.role)) {
+          return res.status(400).json({ message: "Gói theo ngày bắt buộc chọn nhân viên tư vấn có chức vụ SM hoặc Sale!" });
+        }
+      }
+    }
+
     let finalPaidAmount = paidAmount || 0;
     if (paymentStatus === "paid") {
       finalPaidAmount = price || 0;
@@ -213,7 +234,7 @@ const createCustomer = async (req, res) => {
       contractCode: contractCode || "HĐ-CŨ",
       packageNote: formattedNote,
       remainingSessions: remainingSessions || 0,
-      trainer: trainer || "",
+      trainer: trainer || null, // ObjectId ref User hoặc null
       assignedStaff: assignedStaff || undefined,
       hasLocker: hasLocker || false,
       hasWater: hasWater || false,
@@ -344,13 +365,15 @@ const createCustomer = async (req, res) => {
       }
     }
 
-    const populatedPackage = await CustomerPackage.findById(customerPackage._id).populate({
-      path: "customer",
-      populate: {
-        path: "referredBy",
-        select: "name code phone"
-      }
-    });
+    const populatedPackage = await CustomerPackage.findById(customerPackage._id)
+      .populate({
+        path: "customer",
+        populate: {
+          path: "referredBy",
+          select: "name code phone"
+        }
+      })
+      .populate("trainer", "fullName username role");
     const responseData = flattenPackage(populatedPackage);
     res.status(201).json({ ...responseData, isNewCustomer, referralWarning });
   } catch (error) {
@@ -443,6 +466,7 @@ const getAllCustomers = async (req, res) => {
         }
       })
       .populate("assignedStaff", "fullName role")
+      .populate("trainer", "fullName username role")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
@@ -475,6 +499,25 @@ const updateCustomer = async (req, res) => {
     }
 
     const updateData = { ...req.body };
+
+    // Kiểm tra quy luật vai trò nhân viên tư vấn khi cập nhật thông tin
+    const checkStaffId = updateData.assignedStaff !== undefined ? updateData.assignedStaff : customerPackage.assignedStaff;
+    const checkPackageName = updateData.packageType !== undefined ? updateData.packageType : customerPackage.packageName;
+    
+    if (checkStaffId) {
+      const User = require("../models/User");
+      const Package = require("../models/Package");
+      const staffUser = await User.findById(checkStaffId);
+      const pkgInfo = await Package.findOne({ name: checkPackageName });
+      if (staffUser && pkgInfo) {
+        if (pkgInfo.type === "session" && !["pt", "pm"].includes(staffUser.role)) {
+          return res.status(400).json({ message: "Gói theo buổi bắt buộc chọn nhân viên tư vấn có chức vụ PT hoặc PM!" });
+        }
+        if (pkgInfo.type === "monthly" && !["sm", "sale"].includes(staffUser.role)) {
+          return res.status(400).json({ message: "Gói theo ngày bắt buộc chọn nhân viên tư vấn có chức vụ SM hoặc Sale!" });
+        }
+      }
+    }
 
     const customerFields = [
       "name",
@@ -526,6 +569,8 @@ const updateCustomer = async (req, res) => {
               customer[field] = parsedDate;
             }
           }
+        } else if (field === "referredBy" && updateData[field] === "") {
+          customer[field] = null;
         } else {
           customer[field] = updateData[field];
         }
@@ -554,6 +599,8 @@ const updateCustomer = async (req, res) => {
           customerPackage.packageName = updateData[field];
         } else if ((field === "startDate" || field === "endDate") && typeof updateData[field] === "string") {
           customerPackage[field] = new Date(updateData[field]);
+        } else if ((field === "trainer" || field === "assignedStaff") && updateData[field] === "") {
+          customerPackage[field] = null;
         } else {
           customerPackage[field] = updateData[field];
         }
@@ -578,7 +625,44 @@ const updateCustomer = async (req, res) => {
         customerPackage: customerPackage._id,
         status: "success",
         staff: req.user ? req.user._id : undefined,
+        createdAt: customerPackage.createdAt || new Date(), // Giữ nguyên ngày tạo gốc của gói tập để không làm sai lệch doanh thu tháng này
       });
+    }
+
+    // Đồng bộ hoa hồng (Commission) liên quan khi sửa thông tin
+    const Commission = require("../models/Commission");
+    
+    // 1. Nếu thay đổi nhân viên tư vấn -> cập nhật người hưởng hoa hồng hoặc thu hồi nếu xóa
+    if (updateData.assignedStaff !== undefined) {
+      if (customerPackage.assignedStaff) {
+        await Commission.updateMany(
+          { customerPackage: customerPackage._id },
+          { staff: customerPackage.assignedStaff }
+        );
+      } else {
+        await Commission.updateMany(
+          { customerPackage: customerPackage._id, status: "active" },
+          {
+            status: "revoked",
+            revokedReason: "Thay đổi nhân viên tư vấn thành trống",
+            revokedAt: new Date(),
+            revokedBy: req.user ? req.user._id : undefined,
+          }
+        );
+      }
+    }
+
+    // 2. Nếu thay đổi giá gói tập hoặc loại hợp đồng -> tính lại hoa hồng của các bản ghi active liên quan
+    if (updateData.price !== undefined || updateData.contractType !== undefined) {
+      const commissions = await Commission.find({ customerPackage: customerPackage._id, status: "active" });
+      for (const comm of commissions) {
+        comm.baseAmount = customerPackage.price || 0;
+        comm.amount = comm.baseAmount * (comm.rate / 100);
+        if (updateData.contractType !== undefined) {
+          comm.contractType = customerPackage.contractType;
+        }
+        await comm.save();
+      }
     }
 
     // Đồng bộ hóa đơn (Invoice) liên quan
@@ -629,7 +713,8 @@ const updateCustomer = async (req, res) => {
           select: "name code phone"
         }
       })
-      .populate("assignedStaff", "fullName role");
+      .populate("assignedStaff", "fullName role")
+      .populate("trainer", "fullName username role");
 
     res.json(flattenPackage(updatedPopulated));
   } catch (error) {

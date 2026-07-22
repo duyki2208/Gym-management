@@ -383,7 +383,7 @@ const CustomerList = () => {
                 {[
                   { value: 'all',     label: 'Tất cả'          },
                   { value: 'new',     label: 'Khách mới'  },
-                  { value: 'renew',   label: 'Gia hạn (Renew)'  },
+                  { value: 'renew',   label: 'Gia hạn'  },
                   { value: 'upgrade', label: 'Nâng cấp'     },
                 ].map(opt => (
                   <button

@@ -16,8 +16,9 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const [showFaceModal, setShowFaceModal] = useState(false);
   const isSavingFace = false;
   
-  const defaultPt = customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff._id : '';
-  const defaultPtName = customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff.fullName : (customer?.trainer || "");
+  // trainer bây giờ là object { _id, fullName } sau khi migrate sang ObjectId ref User
+  const defaultPt = customer?.trainer?._id || (customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff._id : '');
+  const defaultPtName = customer?.trainer?.fullName || (customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff.fullName : "");
   const [ptId, setPtId] = useState(defaultPt);
   const [ptName, setPtName] = useState(defaultPtName);
   const [ptList, setPtList] = useState([]);

@@ -779,15 +779,34 @@ const getCustomerAnalytics = async (req, res) => {
       else intensityData[3].value += 1;
     });
 
-    // 7. Tỷ lệ có PT huấn luyện vs Tự tập
+    // 7. Tỷ lệ có PT huấn luyện vs Tự tập (tính trên toàn bộ các gói tập active)
     const withTrainerCount = await CustomerPackage.countDocuments({
       status: "active",
-      trainer: { $ne: "" }
+      trainer: { $ne: null }
     });
     const soloCount = await CustomerPackage.countDocuments({
       status: "active",
-      trainer: ""
+      trainer: null
     });
+
+    // 8. Thống kê số khách theo từng PT (trainer breakdown) (chỉ tính trên các gói theo buổi)
+    const trainerStatsAgg = await CustomerPackage.aggregate([
+      { $match: { status: "active", trainer: { $ne: null } } },
+      { $lookup: { from: "packages", localField: "packageName", foreignField: "name", as: "pkgInfo" } },
+      { $unwind: { path: "$pkgInfo", preserveNullAndEmptyArrays: true } },
+      { $match: { "pkgInfo.type": "session" } },
+      { $group: { _id: "$trainer", count: { $sum: 1 } } },
+      { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "ptInfo" } },
+      { $unwind: "$ptInfo" },
+      { $project: { _id: 1, name: "$ptInfo.fullName", role: "$ptInfo.role", count: 1 } },
+      { $sort: { count: -1 } }
+    ]);
+    const trainerStats = trainerStatsAgg.map(item => ({
+      _id: item._id,
+      name: item.name,
+      role: item.role,
+      count: item.count
+    }));
 
     // 8. Chi tiêu trung bình của mỗi hội viên (ARPU - Average Revenue Per User)
     const totalPaymentsAgg = await Transaction.aggregate([
@@ -811,6 +830,7 @@ const getCustomerAnalytics = async (req, res) => {
           withTrainer: withTrainerCount,
           solo: soloCount
         },
+        trainerStats,
         arpu
       }
     });
