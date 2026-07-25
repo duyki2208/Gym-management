@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ChurnPrediction from '../components/report/ChurnPrediction';
+import PTSessionReportModal from '../components/reports/PTSessionReportModal';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#ef4444'];
 
@@ -36,8 +37,12 @@ const Reports = () => {
   const [revenueAdvanced, setRevenueAdvanced] = useState(null);
   const [hrSummary, setHrSummary] = useState([]);
   const [customerAnalytics, setCustomerAnalytics] = useState(null);
+  // States cho Báo cáo Nâng cao & PT Sessions & Leads & Contracts
   const [notificationsSummary, setNotificationsSummary] = useState(null);
   const [loadingAdvanced, setLoadingAdvanced] = useState(false);
+  const [isPTModalOpen, setIsPTModalOpen] = useState(false);
+  const [leadReportData, setLeadReportData] = useState(null);
+  const [contractBreakdownData, setContractBreakdownData] = useState(null);
 
   // States cho Audit Log
   const [auditLogs, setAuditLogs] = useState([]);
@@ -71,8 +76,30 @@ const Reports = () => {
       fetchCustomerAnalytics();
     } else if (activeTab === "notifications-report") {
       fetchNotificationsSummary();
+    } else if (activeTab === "leads-funnel") {
+      fetchLeadReport();
+    } else if (activeTab === "contract-status") {
+      fetchContractBreakdown();
     }
   }, [activeTab, auditPage, auditSearch, selectedMonth, selectedYear]);
+
+  const fetchLeadReport = async () => {
+    try {
+      const res = await reportService.getLeadConversionReport();
+      if (res.success) setLeadReportData(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchContractBreakdown = async () => {
+    try {
+      const res = await reportService.getContractStatusBreakdown();
+      if (res.success) setContractBreakdownData(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchData = async () => {
     setRefreshing(true);
@@ -213,12 +240,14 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-200 dark:border-gray-800 no-scrollbar">
         {[
           { id: "business", label: "Doanh thu cơ bản" },
           { id: "revenue-advanced", label: "Doanh thu nâng cao" },
           { id: "hr-summary", label: "Lương & Thưởng" },
           { id: "customer-analytics", label: "Phân tích khách hàng" },
+          { id: "leads-funnel", label: "Lead & Chuyển đổi" },
+          { id: "contract-status", label: "Tỷ lệ Hợp đồng" },
           { id: "churn", label: "Dự đoán Rời bỏ" },
           { id: "inventory", label: "Kho Hàng & Bán Lẻ"},
           { id: "notifications-report", label: "Cảnh báo & Vận hành" },
@@ -226,10 +255,10 @@ const Reports = () => {
         ].map((t) => (
           <button
             key={t.id}
-            className={`py-3 px-4 font-bold border-b-2 transition-all flex items-center gap-1.5 ${
+            className={`py-2 px-4 text-xs font-bold rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
               activeTab === t.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'bg-primary text-background-dark shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
             }`}
             onClick={() => setActiveTab(t.id)}
           >
@@ -239,31 +268,41 @@ const Reports = () => {
         ))}
       </div>
 
-      {/* Kỳ báo cáo */}
-      {!["audit", "customer-analytics", "notifications-report"].includes(activeTab) && (
-        <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-fit">
-          <span className="text-sm font-bold text-gray-700">Kỳ báo cáo:</span>
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
-          >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-              <option key={m} value={m}>Tháng {m}</option>
-            ))}
-          </select>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
-          >
-            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          {refreshing && <span className="text-xs text-gray-400 animate-pulse">Đang cập nhật...</span>}
-        </div>
-      )}
+      {/* Header controls: Kỳ báo cáo + Nút Nút Đối Soát Buổi Tập PT */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {!["audit", "customer-analytics", "notifications-report", "leads-funnel", "contract-status"].includes(activeTab) && (
+          <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-fit">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Kỳ báo cáo:</span>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={m}>Tháng {m}</option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            {refreshing && <span className="text-xs text-gray-400 animate-pulse">Đang cập nhật...</span>}
+          </div>
+        )}
+
+        {/* Nút bật Modal Đối Soát Buổi Tập PT */}
+        <button
+          onClick={() => setIsPTModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-background-dark font-bold rounded-xl hover:bg-primary/90 transition-all shadow-sm text-xs shrink-0"
+        >
+          📋 Đối Soát Buổi Tập PT (Tháng {selectedMonth})
+        </button>
+      </div>
 
       {/* Doanh thu cơ bản Tab */}
       {activeTab === 'business' && (
@@ -271,9 +310,9 @@ const Reports = () => {
           <div className="flex justify-end">
             <button 
               onClick={exportToExcel}
-              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
+              className="flex items-center gap-2 bg-primary text-background-dark font-bold px-4 py-2 rounded-xl hover:bg-primary/90 transition text-xs shadow-sm"
             >
-              <Download size={18} /> Xuất Excel Doanh Thu
+              <Download size={16} /> Xuất Excel Doanh Thu
             </button>
           </div>
 
@@ -413,45 +452,66 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="text-orange-500" />
-              <h2 className="text-xl font-bold text-gray-800">Sắp Hết Hạn (Trong 14 ngày tới)</h2>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Sắp Hết Hạn (Trong 14 ngày tới)</h2>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="p-3 font-medium text-gray-600">Khách Hàng</th>
-                    <th className="p-3 font-medium text-gray-600">Số Điện Thoại</th>
-                    <th className="p-3 font-medium text-gray-600">Gói Tập</th>
-                    <th className="p-3 font-medium text-gray-600">Ngày Hết Hạn</th>
-                    <th className="p-3 font-medium text-gray-600">Buổi Còn Lại</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
+                    <th className="p-3">Khách Hàng</th>
+                    <th className="p-3">Số Điện Thoại</th>
+                    <th className="p-3">Gói Tập</th>
+                    <th className="p-3">Ngày Hết Hạn</th>
+                    <th className="p-3">Buổi Còn Lại</th>
+                    <th className="p-3 text-right">Hành động</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
                   {expiringMembers.length > 0 ? (
                     expiringMembers.map((member) => (
-                      <tr key={member._id} className="border-b hover:bg-gray-50">
+                      <tr key={member._id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                         <td className="p-3">
-                          <div className="font-medium text-gray-800">{member.name}</div>
+                          <div className="font-bold text-gray-800 dark:text-gray-100">{member.name}</div>
                         </td>
-                        <td className="p-3">{member.phone}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{member.phone}</td>
                         <td className="p-3">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          <span className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
                             {member.packageType}
                           </span>
                         </td>
-                        <td className="p-3 text-red-600 font-bold">
+                        <td className="p-3 text-red-600 dark:text-red-400 font-bold">
                           {new Date(member.endDate).toLocaleDateString("vi-VN")}
                         </td>
                         <td className="p-3 font-semibold">{member.remainingSessions}</td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={`tel:${member.phone}`}
+                              className="px-2.5 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                              title="Gọi nhắc gia hạn"
+                            >
+                              📞 Gọi
+                            </a>
+                            <a
+                              href={`https://zalo.me/${member.phone}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2.5 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                              title="Gửi tin Zalo"
+                            >
+                              💬 Zalo
+                            </a>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="p-4 text-center text-gray-500">
+                      <td colSpan="6" className="p-4 text-center text-gray-500">
                         Không có thành viên nào sắp hết hạn trong 14 ngày tới.
                       </td>
                     </tr>
@@ -1250,6 +1310,163 @@ const Reports = () => {
           </div>
         </div>
       )}
+
+      {/* Lead Conversion Funnel Tab */}
+      {activeTab === 'leads-funnel' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Tổng Lead Tiềm Năng</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{leadReportData?.totalLeads || 0}</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Tỷ lệ Chuyển đổi Khách Chốt</p>
+              <p className="text-3xl font-bold text-emerald-600 mt-2">{leadReportData?.conversionRateOverall || 0}%</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Đã Chốt Hợp Đồng (Won)</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{leadReportData?.statusCounts?.converted || 0}</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Hủy / Từ chối (Lost)</p>
+              <p className="text-3xl font-bold text-rose-500 mt-2">{leadReportData?.statusCounts?.lost || 0}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Phễu trạng thái Lead */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <h3 className="text-base font-bold text-gray-900 mb-4">Phễu Chuyển Đổi Khách Tiềm Năng</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[
+                    { name: 'Mới (New)', count: leadReportData?.statusCounts?.new || 0 },
+                    { name: 'Đã liên hệ', count: leadReportData?.statusCounts?.contacted || 0 },
+                    { name: 'Hẹn Demo/Trial', count: leadReportData?.statusCounts?.trial || 0 },
+                    { name: 'Chốt HĐ (Converted)', count: leadReportData?.statusCounts?.converted || 0 },
+                    { name: 'Từ chối (Lost)', count: leadReportData?.statusCounts?.lost || 0 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Hiệu suất Chuyển đổi theo Sale */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+              <h3 className="text-base font-bold text-gray-900 mb-4">Hiệu Suất Chuyển Đổi Theo Sale</h3>
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                  <tr>
+                    <th className="p-2.5">Nhân viên Sale</th>
+                    <th className="p-2.5 text-center">Tổng Lead</th>
+                    <th className="p-2.5 text-center">Chốt (Won)</th>
+                    <th className="p-2.5 text-center">Từ chối</th>
+                    <th className="p-2.5 text-right">Tỷ lệ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {leadReportData?.salePerformance?.map((sp, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="p-2.5 font-bold text-gray-800">{sp.saleName}</td>
+                      <td className="p-2.5 text-center font-semibold">{sp.total}</td>
+                      <td className="p-2.5 text-center font-bold text-emerald-600">{sp.converted}</td>
+                      <td className="p-2.5 text-center text-rose-500">{sp.lost}</td>
+                      <td className="p-2.5 text-right font-black text-blue-600">{sp.conversionRate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contract Status Breakdown Tab */}
+      {activeTab === 'contract-status' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Tổng Hợp Đồng</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{contractBreakdownData?.totalContracts || 0} hợp đồng</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Tổng Giá Trị Dòng Tiền Hợp Đồng</p>
+              <p className="text-3xl font-bold text-emerald-600 mt-2">{formatCurrency(contractBreakdownData?.grandTotalValue)}</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 text-xs font-medium">Đang Hoạt Động (Active)</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{contractBreakdownData?.breakdown?.active?.count || 0} HĐ</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Pie Chart Tỷ lệ trạng thái */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <h3 className="text-base font-bold text-gray-900 mb-4">Biểu Đồ Phân Bổ Trạng Thái Hợp Đồng</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={contractBreakdownData?.statusChartData || []}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    >
+                      {(contractBreakdownData?.statusChartData || []).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name, item) => [`${value} HĐ (${formatCurrency(item.payload.value)})`, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Bảng chi tiết trạng thái hợp đồng */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+              <h3 className="text-base font-bold text-gray-900 mb-4">Bảng Thống Kê Chi Tiết Loại Hợp Đồng</h3>
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                  <tr>
+                    <th className="p-3">Trạng thái Hợp đồng</th>
+                    <th className="p-3 text-center">Số lượng</th>
+                    <th className="p-3 text-center">Tỷ lệ</th>
+                    <th className="p-3 text-right">Tổng giá trị (VNĐ)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {(contractBreakdownData?.statusChartData || []).map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="p-3 font-bold flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: row.color }} />
+                        {row.name}
+                      </td>
+                      <td className="p-3 text-center font-semibold">{row.count}</td>
+                      <td className="p-3 text-center font-bold text-gray-700">{row.percentage}%</td>
+                      <td className="p-3 text-right font-bold text-emerald-600">{formatCurrency(row.value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Đối Soát Buổi Tập PT */}
+      <PTSessionReportModal
+        isOpen={isPTModalOpen}
+        onClose={() => setIsPTModalOpen(false)}
+      />
     </div>
   );
 };

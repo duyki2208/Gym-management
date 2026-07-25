@@ -1,5 +1,6 @@
 const Package = require("../models/Package");
 const asyncHandler = require("../middleware/asyncHandler");
+const cacheService = require("../utils/cacheService");
 
 // Lấy tất cả gói tập
 exports.getAllPackages = asyncHandler(async (req, res) => {
@@ -11,6 +12,7 @@ exports.getAllPackages = asyncHandler(async (req, res) => {
 exports.createPackage = asyncHandler(async (req, res) => {
   const { name, duration, price, type, sessions } = req.body;
   const pkg = await Package.create({ name, duration, price, type, sessions });
+  await cacheService.delPattern("api:packages");
   res.status(201).json(pkg);
 });
 
@@ -19,6 +21,7 @@ exports.deletePackage = asyncHandler(async (req, res) => {
   const pkg = await Package.findById(req.params.id);
   if (pkg) {
     await pkg.deleteOne();
+    await cacheService.delPattern("api:packages");
     res.json({ message: "Đã xóa gói tập" });
   } else {
     res.status(404);
@@ -38,6 +41,7 @@ exports.updatePackage = asyncHandler(async (req, res) => {
       pkg.sessions = req.body.sessions;
     }
     await pkg.save();
+    await cacheService.delPattern("api:packages");
     res.json(pkg);
   } else {
     res.status(404);

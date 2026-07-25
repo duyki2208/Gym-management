@@ -11,6 +11,8 @@ const WorkoutSession = require("../models/WorkoutSession");
 const Product = require("../models/Product");
 const TeamTask = require("../models/TeamTask");
 const CommissionPeriod = require("../models/CommissionPeriod");
+const Lead = require("../models/Lead");
+const ExcelJS = require("exceljs");
 const { startOfMonth, endOfMonth, subDays, subMonths, addDays, startOfDay, endOfDay, eachDayOfInterval, format } = require("date-fns");
 
 
@@ -976,6 +978,439 @@ const getNotificationsSummary = async (req, res) => {
   }
 };
 
+// @desc    Báo cáo chi tiết buổi tập của PT trong tháng (kèm trạng thái đối soát & khiếu nại)
+// @route   GET /api/reports/pt-sessions
+const getPTSessionsReport = async (req, res) => {
+  try {
+    const { month, year, ptId } = req.query;
+    const m = month ? parseInt(month) : new Date().getMonth() + 1;
+    const y = year ? parseInt(year) : new Date().getFullYear();
+
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 0, 23, 59, 59, 999);
+
+    const query = {
+      date: { $gte: startDate, $lte: endDate },
+      status: "completed",
+    };
+    if (ptId && ptId !== "all") {
+      query.pt = ptId;
+    }
+
+    const sessions = await WorkoutSession.find(query)
+      .populate("customer", "name code phone")
+      .populate("confirmedBy", "fullName role")
+      .populate("pt", "fullName username role")
+      .sort({ date: -1 })
+      .lean();
+
+    const settings = await Setting.findOne().lean();
+    const defaultRate = settings?.ptCommissionRate || 10;
+    const sessionRate = 500000;
+
+    const period = await CommissionPeriod.findOne({ month: m, year: y, type: "pt" }).lean();
+
+    const totalSessions = sessions.length;
+    const estimatedCommission = totalSessions * sessionRate * (defaultRate / 100);
+
+    res.json({
+      success: true,
+      data: {
+        month: m,
+        year: y,
+        sessions,
+        totalSessions,
+        sessionRate,
+        commissionRate: defaultRate,
+        estimatedCommission,
+        periodStatus: period?.status || "draft",
+        periodId: period?._id || null,
+        disputes: period?.disputes || [],
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi lấy báo cáo buổi tập PT:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi lấy báo cáo buổi tập" });
+  }
+};
+
+// @desc    Xuất file Excel đối soát buổi tập PT
+// @route   GET /api/reports/pt-sessions/export-excel
+const exportPTSessionsExcel = async (req, res) => {
+  try {
+    const { month, year, ptId } = req.query;
+    const m = month ? parseInt(month) : new Date().getMonth() + 1;
+    const y = year ? parseInt(year) : new Date().getFullYear();
+
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 0, 23, 59, 59, 999);
+
+    const query = {
+      date: { $gte: startDate, $lte: endDate },
+      status: "completed",
+    };
+
+    let ptUser = null;
+    if (ptId && ptId !== "all") {
+      query.pt = ptId;
+      ptUser = await User.findById(ptId).select("fullName username").lean();
+    }
+
+    const sessions = await WorkoutSession.find(query)
+      .populate("customer", "name code phone")
+      .populate("confirmedBy", "fullName role")
+      .populate("pt", "fullName username role")
+      .sort({ date: 1 })
+      .lean();
+
+    const settings = await Setting.findOne().lean();
+    const defaultRate = settings?.ptCommissionRate || 10;
+    const sessionRate = 500000;
+    const totalSessions = sessions.length;
+    const estimatedCommission = totalSessions * sessionRate * (defaultRate / 100);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`PT_DoiSoat_${m}_${y}`);
+
+    worksheet.mergeCells("A1:G1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = `BÁO CÁO BUỔI TẬP CHI TIẾT PT — THÁNG ${m}/${y}`;
+    titleCell.font = { name: "Calibri", size: 16, bold: true, color: { argb: "FFFFFF" } };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "047857" } };
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(1).height = 40;
+
+    worksheet.mergeCells("A2:G2");
+    const subCell = worksheet.getCell("A2");
+    subCell.value = `PT: ${ptUser ? ptUser.fullName : "Tất cả PT"} | Thời gian xuất: ${new Date().toLocaleString("vi-VN")}`;
+    subCell.font = { name: "Calibri", size: 11, italic: true, color: { argb: "374151" } };
+    subCell.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(2).height = 22;
+
+    worksheet.addRow([]);
+
+    const headers = ["STT", "Ngày", "Giờ", "Khách hàng", "Mã KH", "Xác nhận bởi", "Trạng thái"];
+    const headerRow = worksheet.addRow(headers);
+    headerRow.height = 28;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "059669" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = {
+        top: { style: "thin", color: { argb: "D1D5DB" } },
+        bottom: { style: "medium", color: { argb: "065F46" } },
+        left: { style: "thin", color: { argb: "D1D5DB" } },
+        right: { style: "thin", color: { argb: "D1D5DB" } },
+      };
+    });
+
+    sessions.forEach((s, index) => {
+      const dt = new Date(s.date);
+      const rowData = [
+        index + 1,
+        dt.toLocaleDateString("vi-VN"),
+        dt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+        s.customer?.name || "N/A",
+        s.customer?.code || "N/A",
+        s.confirmedBy?.fullName || "Lễ tân",
+        "Confirmed",
+      ];
+      const row = worksheet.addRow(rowData);
+      row.height = 22;
+      row.eachCell((cell, col) => {
+        cell.font = { name: "Calibri", size: 11 };
+        cell.border = {
+          top: { style: "thin", color: { argb: "E5E7EB" } },
+          bottom: { style: "thin", color: { argb: "E5E7EB" } },
+          left: { style: "thin", color: { argb: "E5E7EB" } },
+          right: { style: "thin", color: { argb: "E5E7EB" } },
+        };
+        if ([1, 2, 3, 5, 7].includes(col)) {
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+        } else {
+          cell.alignment = { horizontal: "left", vertical: "middle" };
+        }
+      });
+    });
+
+    worksheet.addRow([]);
+
+    const summaryRow1 = worksheet.addRow(["", "", "", "", "Tổng số buổi:", totalSessions, ""]);
+    summaryRow1.getCell(5).font = { bold: true };
+    summaryRow1.getCell(6).font = { bold: true, color: { argb: "047857" } };
+
+    const summaryRow2 = worksheet.addRow(["", "", "", "", "Đơn giá trung bình:", `${sessionRate.toLocaleString("vi-VN")}đ`, ""]);
+    summaryRow2.getCell(5).font = { bold: true };
+
+    const summaryRow3 = worksheet.addRow(["", "", "", "", "Hoa hồng dự kiến:", `${estimatedCommission.toLocaleString("vi-VN")}đ`, ""]);
+    summaryRow3.getCell(5).font = { bold: true, size: 12 };
+    summaryRow3.getCell(6).font = { bold: true, size: 12, color: { argb: "DC2626" } };
+
+    worksheet.columns.forEach((column) => {
+      let maxLen = 12;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const len = cell.value ? String(cell.value).length : 0;
+        if (len > maxLen) maxLen = len;
+      });
+      column.width = Math.min(maxLen + 4, 30);
+    });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="GymPro_PT_Sessions_${m}_${y}.xlsx"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Lỗi xuất Excel buổi tập PT:", error);
+    res.status(500).json({ success: false, message: "Lỗi xuất file đối soát buổi tập PT" });
+  }
+};
+
+// @desc    PT gửi khiếu nại đối soát buổi tập
+// @route   POST /api/reports/pt-sessions/dispute
+const submitPTDispute = async (req, res) => {
+  try {
+    const { month, year, workoutLogId, reason } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập lý do khiếu nại" });
+    }
+
+    const m = parseInt(month);
+    const y = parseInt(year);
+
+    let period = await CommissionPeriod.findOne({ month: m, year: y, type: "pt" });
+    if (!period) {
+      period = new CommissionPeriod({
+        month: m,
+        year: y,
+        type: "pt",
+        status: "disputed",
+      });
+    } else {
+      period.status = "disputed";
+    }
+
+    period.disputes.push({
+      workoutLogId: workoutLogId || null,
+      ptUser: req.user?._id,
+      reason: reason.trim(),
+      status: "pending",
+    });
+
+    await period.save();
+
+    res.json({
+      success: true,
+      message: "Đã gửi khiếu nại buổi tập thành công. Admin sẽ xem xét đối soát.",
+      data: period,
+    });
+  } catch (error) {
+    console.error("Lỗi khiếu nại đối soát PT:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi gửi khiếu nại" });
+  }
+};
+
+// @desc    Admin cập nhật trạng thái kỳ đối soát hoa hồng
+// @route   PUT /api/reports/commission-period/status
+const updatePeriodStatus = async (req, res) => {
+  try {
+    const { periodId, month, year, type = "pt", status, note } = req.body;
+
+    let period;
+    if (periodId) {
+      period = await CommissionPeriod.findById(periodId);
+    } else if (month && year) {
+      period = await CommissionPeriod.findOne({ month: parseInt(month), year: parseInt(year), type });
+    }
+
+    if (!period) {
+      period = new CommissionPeriod({
+        month: parseInt(month),
+        year: parseInt(year),
+        type,
+        status: status || "draft",
+      });
+    }
+
+    period.status = status;
+    if (note !== undefined) period.note = note;
+
+    if (status === "approved") {
+      period.approvedBy = req.user?._id;
+      period.approvedAt = new Date();
+    } else if (status === "paid") {
+      period.paidBy = req.user?._id;
+      period.paidAt = new Date();
+    }
+
+    await period.save();
+
+    res.json({
+      success: true,
+      message: `Đã cập nhật trạng thái kỳ đối soát thành ${status}`,
+      data: period,
+    });
+  } catch (error) {
+    console.error("Lỗi cập nhật trạng thái kỳ đối soát:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi cập nhật kỳ đối soát" });
+  }
+};
+
+// @desc    Báo cáo tỷ lệ chuyển đổi Lead theo Sale & Nguồn
+// @route   GET /api/reports/leads-conversion
+const getLeadConversionReport = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query = {};
+
+    if (startDate || endDate) {
+      const createdAtCond = {};
+      if (startDate) createdAtCond.$gte = new Date(startDate);
+      if (endDate) createdAtCond.$lte = new Date(endDate);
+      query.createdAt = createdAtCond;
+    }
+
+    const leads = await Lead.find(query).populate("assignedSale", "fullName role").lean();
+
+    const totalLeads = leads.length;
+    const statusCounts = {
+      new: 0,
+      contacted: 0,
+      trial: 0,
+      converted: 0,
+      lost: 0,
+    };
+
+    const sourceCounts = {
+      facebook: 0,
+      hotline: 0,
+      referral: 0,
+      web: 0,
+      other: 0,
+    };
+
+    const saleMap = {};
+
+    leads.forEach((l) => {
+      if (statusCounts[l.status] !== undefined) {
+        statusCounts[l.status]++;
+      }
+      if (sourceCounts[l.source] !== undefined) {
+        sourceCounts[l.source]++;
+      }
+
+      const saleId = l.assignedSale?._id?.toString() || "unassigned";
+      const saleName = l.assignedSale?.fullName || "Chưa phân công";
+
+      if (!saleMap[saleId]) {
+        saleMap[saleId] = {
+          saleName,
+          total: 0,
+          contacted: 0,
+          trial: 0,
+          converted: 0,
+          lost: 0,
+        };
+      }
+
+      saleMap[saleId].total++;
+      if (l.status === "contacted") saleMap[saleId].contacted++;
+      if (l.status === "trial") saleMap[saleId].trial++;
+      if (l.status === "converted") saleMap[saleId].converted++;
+      if (l.status === "lost") saleMap[saleId].lost++;
+    });
+
+    const salePerformance = Object.values(saleMap).map((item) => ({
+      ...item,
+      conversionRate: item.total > 0 ? Math.round((item.converted / item.total) * 100) : 0,
+    }));
+
+    const conversionRateOverall = totalLeads > 0 ? Math.round((statusCounts.converted / totalLeads) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalLeads,
+        statusCounts,
+        sourceCounts,
+        salePerformance,
+        conversionRateOverall,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi lấy báo cáo chuyển đổi Lead:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi lấy báo cáo Lead" });
+  }
+};
+
+// @desc    Báo cáo tỷ lệ loại hợp đồng & dòng tiền hợp đồng
+// @route   GET /api/reports/contract-status-breakdown
+const getContractStatusBreakdown = async (req, res) => {
+  try {
+    const packages = await CustomerPackage.find({ isDeleted: { $ne: true } }).lean();
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const breakdown = {
+      active: { count: 0, totalValue: 0 },
+      frozen: { count: 0, totalValue: 0 },
+      pending: { count: 0, totalValue: 0 },
+      expiringSoon: { count: 0, totalValue: 0 },
+      expired: { count: 0, totalValue: 0 },
+    };
+
+    let totalContracts = packages.length;
+    let grandTotalValue = 0;
+
+    packages.forEach((pkg) => {
+      const price = pkg.price || 0;
+      grandTotalValue += price;
+      const endDate = pkg.endDate ? new Date(pkg.endDate) : null;
+
+      if (pkg.status === "frozen") {
+        breakdown.frozen.count++;
+        breakdown.frozen.totalValue += price;
+      } else if (pkg.status === "pending" || (pkg.startDate && new Date(pkg.startDate) > now)) {
+        breakdown.pending.count++;
+        breakdown.pending.totalValue += price;
+      } else if (endDate && endDate < now) {
+        breakdown.expired.count++;
+        breakdown.expired.totalValue += price;
+      } else if (endDate && endDate >= now && endDate <= sevenDaysLater) {
+        breakdown.expiringSoon.count++;
+        breakdown.expiringSoon.totalValue += price;
+      } else {
+        breakdown.active.count++;
+        breakdown.active.totalValue += price;
+      }
+    });
+
+    const statusChartData = [
+      { name: "Đang hoạt động", key: "active", count: breakdown.active.count, value: breakdown.active.totalValue, color: "#10B981" },
+      { name: "Bảo lưu (Frozen)", key: "frozen", count: breakdown.frozen.count, value: breakdown.frozen.totalValue, color: "#3B82F6" },
+      { name: "Chưa kích hoạt", key: "pending", count: breakdown.pending.count, value: breakdown.pending.totalValue, color: "#F59E0B" },
+      { name: "Sắp hết hạn (<7d)", key: "expiringSoon", count: breakdown.expiringSoon.count, value: breakdown.expiringSoon.totalValue, color: "#EF4444" },
+      { name: "Đã hết hạn", key: "expired", count: breakdown.expired.count, value: breakdown.expired.totalValue, color: "#6B7280" },
+    ].map((item) => ({
+      ...item,
+      percentage: totalContracts > 0 ? Math.round((item.count / totalContracts) * 100) : 0,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        totalContracts,
+        grandTotalValue,
+        breakdown,
+        statusChartData,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi lấy báo cáo trạng thái hợp đồng:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi lấy báo cáo hợp đồng" });
+  }
+};
+
 module.exports = {
   getSummary,
   getRevenueChart,
@@ -987,5 +1422,11 @@ module.exports = {
   getRevenueAdvanced,
   getHRSummary,
   getCustomerAnalytics,
-  getNotificationsSummary
+  getNotificationsSummary,
+  getPTSessionsReport,
+  exportPTSessionsExcel,
+  submitPTDispute,
+  updatePeriodStatus,
+  getLeadConversionReport,
+  getContractStatusBreakdown,
 };

@@ -67,8 +67,8 @@ const Packages = () => {
             search
           </span>
           <input
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Tìm kiếm gói..."
+            className="w-full pl-10 pr-4 h-10 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white dark:bg-gray-800 dark:text-gray-100 transition-colors"
+            placeholder="Tìm tên gói tập..."
           />
         </div>
 

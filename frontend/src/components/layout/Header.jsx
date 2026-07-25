@@ -4,8 +4,9 @@ import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Menu, Search, Bell, ChevronRight, X,
-  Settings, LogOut, Clock, AlertCircle, ChevronDown,
+  Settings, LogOut, Clock, AlertCircle, ChevronDown, Sun, Moon,
 } from 'lucide-react';
+import useDarkMode from '../../hooks/useDarkMode';
 import { notificationService } from '../../services/notificationService';
 import { productService } from '../../services/productService';
 import { customerService } from '../../services/customerService';
@@ -452,6 +453,7 @@ const Header = () => {
   const { toggle } = useSidebar();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isDark, toggleDark] = useDarkMode();
 
   return (
     <header className="sticky top-0 z-30 h-16 flex items-center shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 gap-3">
@@ -476,6 +478,19 @@ const Header = () => {
 
       {/* ── RIGHT ── */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleDark}
+          aria-label={isDark ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
+          title={isDark ? 'Light Mode' : 'Dark Mode'}
+          className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-all"
+        >
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
         {/* Notification bell */}
         <NotificationBell />
 

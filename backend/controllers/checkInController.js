@@ -3,6 +3,7 @@ const Customer = require("../models/Customer");
 const CustomerPackage = require("../models/CustomerPackage");
 const faceClient = require("../utils/faceServiceClient");
 const { sendZaloNotification } = require("../utils/zaloService");
+const queueService = require("../utils/queueService");
 
 // Cache embeddings trong memory, refresh mỗi 5 phút
 // Tránh query MongoDB mỗi lần có người đứng trước camera
@@ -138,9 +139,9 @@ const create = async (req, res) => {
     });
     await checkin.save();
 
-    // Gửi tin nhắn Zalo OA giả lập
+    // Gửi tin nhắn Zalo OA bất đồng bộ qua Queue ngầm (Non-blocking response)
     if (customer.phone) {
-      await sendZaloNotification({
+      queueService.enqueue("ZALO_NOTIFICATION", {
         phone: customer.phone,
         message: `Kính chào ${customer.name}, quý khách đã check-in thành công tại phòng tập lúc ${new Date().toLocaleTimeString("vi-VN")}. Chúc quý khách tập luyện vui vẻ!`,
         type: "checkin"
@@ -210,10 +211,10 @@ const recognizeFace = async (req, res) => {
     });
     await checkin.save();
 
-    // Gửi tin nhắn Zalo OA giả lập
+    // Gửi tin nhắn Zalo OA bất đồng bộ qua Queue ngầm (Non-blocking response)
     const matchedCustomer = await Customer.findById(result.member_id).select("phone name");
     if (matchedCustomer && matchedCustomer.phone) {
-      await sendZaloNotification({
+      queueService.enqueue("ZALO_NOTIFICATION", {
         phone: matchedCustomer.phone,
         message: `Kính chào ${matchedCustomer.name}, quý khách đã check-in thành công bằng nhận diện khuôn mặt lúc ${new Date().toLocaleTimeString("vi-VN")}. Chúc quý khách tập luyện vui vẻ!`,
         type: "checkin"

@@ -2,9 +2,10 @@ const express = require("express");
 const router = express.Router();
 const packageController = require("../controllers/packageController");
 const { protect, authorize } = require("../middleware/authMiddleware");
+const cacheMiddleware = require("../middleware/cacheMiddleware");
 
-// Lấy tất cả gói tập (Mọi nhân viên đã đăng nhập đều xem được)
-router.get("/", protect, packageController.getAllPackages);
+// Lấy tất cả gói tập (Mọi nhân viên đã đăng nhập đều xem được - Cache 5 phút)
+router.get("/", protect, cacheMiddleware(300, "packages"), packageController.getAllPackages);
 
 // Thêm mới gói tập (Chỉ Admin/Manager)
 router.post("/", protect, authorize("admin", "manager"), packageController.createPackage);

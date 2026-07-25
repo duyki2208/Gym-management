@@ -68,12 +68,6 @@ const authorize = (...allowedRoles) => {
       ? [...allowedRoles[0]]
       : [...allowedRoles];
 
-    // 3. Tự động ánh xạ quyền cho các vai trò mới
-    // Kế toán (accountant) có quyền ngang Admin
-    if (roles.includes("admin") && !roles.includes("accountant")) {
-      roles.push("accountant");
-    }
-
     // Các quản lý mới (sm, pm, om) có quyền ngang quản lý chung (manager)
     if (roles.includes("manager")) {
       ["sm", "pm", "om"].forEach((r) => {

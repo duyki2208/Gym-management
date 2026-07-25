@@ -60,6 +60,45 @@ const getNotificationsSummary = async (params = {}) => {
   return response.data;
 };
 
+const getPTSessionsReport = async (params = {}) => {
+  const response = await api.get('/reports/pt-sessions', { params });
+  return response.data;
+};
+
+const exportPTSessionsExcel = async (params = {}) => {
+  const response = await api.get('/reports/pt-sessions/export-excel', {
+    params,
+    responseType: 'blob',
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `GymPro_PT_Sessions_${Date.now()}.xlsx`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+const submitPTDispute = async (data) => {
+  const response = await api.post('/reports/pt-sessions/dispute', data);
+  return response.data;
+};
+
+const updatePeriodStatus = async (data) => {
+  const response = await api.put('/reports/commission-period/status', data);
+  return response.data;
+};
+
+const getLeadConversionReport = async (params = {}) => {
+  const response = await api.get('/reports/leads-conversion', { params });
+  return response.data;
+};
+
+const getContractStatusBreakdown = async (params = {}) => {
+  const response = await api.get('/reports/contract-status-breakdown', { params });
+  return response.data;
+};
+
 export default {
   getSummary,
   getRevenueChart,
@@ -72,6 +111,12 @@ export default {
   getRevenueAdvanced,
   getHRSummary,
   getCustomerAnalytics,
-  getNotificationsSummary
+  getNotificationsSummary,
+  getPTSessionsReport,
+  exportPTSessionsExcel,
+  submitPTDispute,
+  updatePeriodStatus,
+  getLeadConversionReport,
+  getContractStatusBreakdown,
 };
 

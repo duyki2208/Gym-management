@@ -138,6 +138,19 @@ export const customerService = {
   unfreeze: async (id, actualUnfreezeDate) => {
     const response = await api.post(`/customers/${id}/unfreeze`, { actualUnfreezeDate });
     return response.data;
+  },
+  exportExcel: async (params = {}) => {
+    const response = await api.get('/customers/export-excel', {
+      params,
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `GymPro_Customers_${Date.now()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 };
 

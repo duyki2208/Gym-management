@@ -225,7 +225,36 @@ const CustomerList = () => {
     }
   };
 
-  // No longer need client-side filtering: filteredCustomers is just customers
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportExcel = async (preset = null) => {
+    try {
+      setIsExporting(true);
+      toast.loading("Đang khởi tạo file Excel...", { id: "export-excel" });
+      const params = {
+        search: debouncedSearch,
+        paymentStatus: filterPayment,
+        contractType: filterContract,
+        packageName: filterPackage,
+        assignedStaffId: filterAssignedStaff,
+        startDateFrom: filterStartDateFrom,
+        startDateTo: filterStartDateTo,
+      };
+      if (preset === 'today_call') {
+        params.preset = 'today_call';
+      } else if (filterStatus === 'expiring') {
+        params.expiringDays = 7;
+      }
+      await customerService.exportExcel(params);
+      toast.success("Xuất file Excel thành công!", { id: "export-excel" });
+    } catch (error) {
+      console.error("Export excel error:", error);
+      toast.error("Lỗi khi xuất file Excel", { id: "export-excel" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const displayCustomers = customers;
 
   if (loading && customers.length === 0)
@@ -237,13 +266,13 @@ const CustomerList = () => {
       {/* ── Card bao quanh: Search + Add + Filter ── */}
       <div className="flex flex-col gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
 
-        {/* Row 1: Search + Add */}
-        <div className="flex items-center gap-3">
+        {/* Row 1: Search + Quick Actions + Add */}
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 max-w-2xl">
+          <div className="relative flex-1 min-w-[240px] max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-500 text-xl">search</span>
             <input
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-gray-100"
+              className="w-full pl-10 pr-4 h-10 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white dark:bg-gray-800 dark:text-gray-100 transition-colors"
               placeholder="Tìm tên, SĐT..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -252,14 +281,35 @@ const CustomerList = () => {
 
           <div className="flex-1" />
 
-          {/* Nút Thêm Khách — giống nút Thêm gói (Packages) */}
+          {/* Quick Template Button */}
+          <button
+            onClick={() => handleExportExcel('today_call')}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 h-10 px-3.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold hover:bg-amber-500/20 transition-all shrink-0"
+            title="Xuất file danh sách cần chăm sóc gấp: Sắp hết hạn 7 ngày + Nợ tiền cọc"
+          >
+            <span className="material-symbols-outlined text-base">call</span>
+            Danh sách gọi hôm nay
+          </button>
+
+          {/* Export Excel Button */}
+          <button
+            onClick={() => handleExportExcel()}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 h-10 px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shrink-0 shadow-sm disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-base">download</span>
+            {isExporting ? "Đang xuất..." : "Xuất Excel"}
+          </button>
+
+          {/* Nút Thêm Khách */}
           {isAdmin && (
             <button
               onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
-              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl font-bold hover:opacity-90 shrink-0"
+              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs font-bold hover:opacity-90 shrink-0 shadow-sm"
             >
               <span
-                className="material-symbols-outlined"
+                className="material-symbols-outlined text-base"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 add_circle

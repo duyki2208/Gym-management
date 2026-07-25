@@ -4,7 +4,7 @@ const staffController = require("../controllers/staffController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 router.get("/schedules", protect, staffController.getSchedules);
-router.post("/:id/schedule", protect, authorize("admin", "manager", "pm", "om", "sm", "sale", "pt", "reception"), staffController.updateSchedule);
+router.post("/:id/schedule", protect, authorize("admin", "manager", "pm", "om", "sm", "sale", "pt", "reception", "accountant"), staffController.updateSchedule);
 
 router.get("/", protect, staffController.getAll);
 router.post("/", protect, authorize("admin"), staffController.create);

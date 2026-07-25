@@ -47,7 +47,7 @@ export const ConfirmProvider = ({ children }) => {
       case "danger":
         return "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white";
       case "info":
-        return "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white";
+        return "bg-primary text-background-dark hover:bg-primary/90 focus:ring-primary font-bold";
       default:
         return "bg-amber-500 hover:bg-amber-600 focus:ring-amber-400 text-white";
     }

@@ -70,6 +70,9 @@ const updateSettings = async (req, res) => {
     
     await setting.save();
     
+    const cacheService = require("../utils/cacheService");
+    await cacheService.delPattern("api:settings");
+
     res.json({
       success: true,
       data: setting,

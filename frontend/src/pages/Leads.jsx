@@ -453,7 +453,7 @@ const Leads = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 text-sm shadow-md"
+                className="px-4 py-2 bg-primary text-background-dark rounded-xl font-bold hover:bg-primary/90 text-sm shadow-md transition-all"
               >
                 Lưu lại
               </button>
@@ -555,7 +555,7 @@ const Leads = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 text-sm shadow-md"
+                className="px-4 py-2 bg-primary text-background-dark rounded-xl font-bold hover:bg-primary/90 text-sm shadow-md transition-all"
               >
                 Cập nhật
               </button>
@@ -613,7 +613,7 @@ const Leads = () => {
                 <button
                   type="submit"
                   disabled={!newNote.trim()}
-                  className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 text-sm shadow-md transition-all disabled:opacity-50"
+                  className="px-4 py-2.5 bg-primary text-background-dark rounded-xl font-bold hover:bg-primary/90 text-sm shadow-md transition-all disabled:opacity-50"
                 >
                   Gửi
                 </button>

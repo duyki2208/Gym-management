@@ -2,6 +2,7 @@ const Customer = require("../models/Customer");
 const CustomerPackage = require("../models/CustomerPackage");
 const Transaction = require("../models/Transaction");
 const Invoice = require("../models/Invoice");
+const ExcelJS = require("exceljs");
 const { CUSTOMER_STATUS } = require("../utils/constants");
 const { sendRegistrationEmail } = require("../utils/emailService");
 const syncCustomerFields = require("../utils/syncCustomer");
@@ -9,6 +10,7 @@ const faceClient = require("../utils/faceServiceClient");
 const { createSaleCommission } = require("./commissionController");
 const mongoose = require("mongoose");
 const { sendZaloNotification } = require("../utils/zaloService");
+const queueService = require("../utils/queueService");
 
 
 
@@ -61,13 +63,33 @@ function flattenPackage(pkg) {
   };
 }
 
+function isReplicaSetConnected() {
+  try {
+    const conn = mongoose.connection;
+    if (!conn || !conn.client || !conn.client.topology) return false;
+    const type = conn.client.topology.description?.type;
+    return type === "ReplicaSetWithPrimary" || type === "Sharded" || type === "ReplicaSetNoPrimary";
+  } catch (err) {
+    return false;
+  }
+}
+
 const createCustomer = async (req, res) => {
   console.log("--- Executing: createCustomer controller ---");
+  let session = null;
+  let isTransactionStarted = false;
+  let createdCustomerObj = null;
+  let isNewCustomerCreated = false;
+
   try {
-    const requiredFields = ["name", "phone", "packageType", "endDate"];
-    const missing = requiredFields.filter((f) => !req.body[f]);
-    if (missing.length > 0) {
-      return res.status(400).json({ message: `Thiếu trường: ${missing.join(", ")}` });
+    if (isReplicaSetConnected()) {
+      try {
+        session = await mongoose.startSession();
+        session.startTransaction();
+        isTransactionStarted = true;
+      } catch (sessErr) {
+        isTransactionStarted = false;
+      }
     }
 
     const {
@@ -77,14 +99,15 @@ const createCustomer = async (req, res) => {
       gender,
       address,
       avatar,
+      avatarUrl,
       email,
       healthNote,
-      faceEmbedding,
-
       packageType,
       startDate,
       endDate,
       price,
+      contractCode,
+      packageNote,
       remainingSessions,
       trainer,
       assignedStaff,
@@ -93,43 +116,38 @@ const createCustomer = async (req, res) => {
       contractType,
       paymentStatus,
       paidAmount,
-      contractCode,
-      packageNote,
+      referredBy,
+      source,
       identityCard,
       emergencyContactName,
       emergencyContactPhone,
-      referredBy,
-      source,
-      avatarUrl,
+      faceEmbedding,
     } = req.body;
 
-    const normalizedName = name ? name.trim() : "";
-    const normalizedPhone = phone ? phone.trim() : "";
-    
-    const checkQuery = { 
-      name: { $regex: new RegExp(`^${normalizedName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }, 
-      phone: normalizedPhone 
-    };
+    if (!name || !phone || !packageType || !endDate) {
+      if (isTransactionStarted && session) await session.abortTransaction();
+      if (session) session.endSession();
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc (Tên, SĐT, Gói tập, Ngày kết thúc)" });
+    }
 
     let parsedDob = null;
-    if (dob && dob !== "Invalid Date") {
+    if (dob) {
       const d = new Date(dob);
       if (!isNaN(d.getTime())) {
         parsedDob = d;
       }
     }
 
+    const checkQuery = { name, phone };
     if (parsedDob) {
       checkQuery.dob = parsedDob;
     } else {
-      checkQuery.$or = [
-        { dob: { $exists: false } },
-        { dob: null }
-      ];
+      checkQuery.$or = [{ dob: { $exists: false } }, { dob: null }];
     }
-    
-    let customer = await Customer.findOne(checkQuery);
-    const isNewCustomer = !customer; // Đánh dấu trước khi tạo mới
+
+    let customer = await Customer.findOne(checkQuery).session(isTransactionStarted ? session : null);
+    const isNewCustomer = !customer;
+    isNewCustomerCreated = isNewCustomer;
 
     if (!customer) {
       customer = new Customer({
@@ -143,7 +161,6 @@ const createCustomer = async (req, res) => {
         email,
         healthNote,
         packageType,
-
         packageNote: packageNote || "",
         endDate: new Date(endDate),
         identityCard: identityCard || "",
@@ -152,13 +169,16 @@ const createCustomer = async (req, res) => {
         referredBy: referredBy || undefined,
         source: source || "other",
       });
-      await customer.save();
+      await customer.save({ session: isTransactionStarted ? session : undefined });
+      createdCustomerObj = customer;
       console.log(`Đã tạo hồ sơ khách hàng mới: ${customer.code}`);
     } else {
+      createdCustomerObj = customer;
       console.log(`Tìm thấy hồ sơ khách hàng cũ. Sử dụng lại mã: ${customer.code}`);
 
-      // ⚠️ Chặn sớm: khách cũ không được dùng contractType "new"
       if (!contractType || contractType === "new") {
+        if (isTransactionStarted && session) await session.abortTransaction();
+        if (session) session.endSession();
         return res.status(409).json({
           code: "CONTRACT_TYPE_MISMATCH",
           message: `Khách hàng "${customer.name}" (${customer.code}) đã có hồ sơ trong hệ thống. Vui lòng chọn lại nguồn hợp đồng cho phù hợp.`,
@@ -180,10 +200,9 @@ const createCustomer = async (req, res) => {
       if (avatarUrl) customer.avatarUrl = avatarUrl;
       if (referredBy) customer.referredBy = referredBy;
       if (source) customer.source = source;
-      await customer.save();
+      await customer.save({ session: isTransactionStarted ? session : undefined });
     }
 
-    // Kiểm tra kỳ hoa hồng Sale đã bị khóa (approved hoặc paid) chưa
     const CommissionPeriod = require("../models/CommissionPeriod");
     const now = new Date();
     const lockedPeriod = await CommissionPeriod.findOne({
@@ -191,12 +210,14 @@ const createCustomer = async (req, res) => {
       year: now.getFullYear(),
       type: "sale",
       status: { $in: ["approved", "paid"] }
-    });
+    }).session(isTransactionStarted ? session : null);
+
     if (lockedPeriod) {
+      if (isTransactionStarted && session) await session.abortTransaction();
+      if (session) session.endSession();
       return res.status(400).json({ message: "Kỳ thanh toán hoa hồng Sale tháng này đã được duyệt hoặc chi trả, dữ liệu đã bị khóa." });
     }
 
-    // Kiểm tra quy luật vai trò nhân viên tư vấn
     if (assignedStaff) {
       const User = require("../models/User");
       const Package = require("../models/Package");
@@ -204,9 +225,13 @@ const createCustomer = async (req, res) => {
       const pkgInfo = await Package.findOne({ name: packageType });
       if (staffUser && pkgInfo) {
         if (pkgInfo.type === "session" && !["pt", "pm"].includes(staffUser.role)) {
+          if (isTransactionStarted && session) await session.abortTransaction();
+          if (session) session.endSession();
           return res.status(400).json({ message: "Gói theo buổi bắt buộc chọn nhân viên tư vấn có chức vụ PT hoặc PM!" });
         }
         if (pkgInfo.type === "monthly" && !["sm", "sale"].includes(staffUser.role)) {
+          if (isTransactionStarted && session) await session.abortTransaction();
+          if (session) session.endSession();
           return res.status(400).json({ message: "Gói theo ngày bắt buộc chọn nhân viên tư vấn có chức vụ SM hoặc Sale!" });
         }
       }
@@ -219,6 +244,8 @@ const createCustomer = async (req, res) => {
       finalPaidAmount = 0;
     } else if (paymentStatus === "deposit") {
       if (finalPaidAmount <= 0 || finalPaidAmount >= price) {
+        if (isTransactionStarted && session) await session.abortTransaction();
+        if (session) session.endSession();
         return res.status(400).json({ message: "Số tiền cọc không hợp lệ" });
       }
     }
@@ -234,7 +261,7 @@ const createCustomer = async (req, res) => {
       contractCode: contractCode || "HĐ-CŨ",
       packageNote: formattedNote,
       remainingSessions: remainingSessions || 0,
-      trainer: trainer || null, // ObjectId ref User hoặc null
+      trainer: trainer || null,
       assignedStaff: assignedStaff || undefined,
       hasLocker: hasLocker || false,
       hasWater: hasWater || false,
@@ -244,17 +271,15 @@ const createCustomer = async (req, res) => {
       status: "active",
     });
 
-    // Logic referral: tặng thêm 1 tháng cho người giới thiệu
-    // Điều kiện: phải có referredBy VÀ source phải là "referral"
     let referralWarning = null;
     if (referredBy && source === "referral") {
       try {
         const referrerPackage = await CustomerPackage.findOne({
           customer: referredBy,
           status: "active"
-        }).sort({ endDate: -1 });
+        }).sort({ endDate: -1 }).session(isTransactionStarted ? session : null);
 
-        const referrerCustomer = await Customer.findById(referredBy).select("name code phone");
+        const referrerCustomer = await Customer.findById(referredBy).select("name code phone").session(isTransactionStarted ? session : null);
 
         if (!referrerPackage) {
           // ⚠️ Người giới thiệu không có gói active → cảnh báo admin, KHÔNG cộng tháng
@@ -352,17 +377,13 @@ const createCustomer = async (req, res) => {
       );
     }
 
-    // Gửi tin nhắn Zalo OA giả lập
+    // Gửi tin nhắn Zalo OA bất đồng bộ qua Queue ngầm (Non-blocking response)
     if (customer.phone) {
-      try {
-        await sendZaloNotification({
-          phone: customer.phone,
-          message: `Chúc mừng ${customer.name} đã đăng ký thành công gói tập ${customerPackage.packageName}. Thời hạn gói: từ ${new Date(customerPackage.startDate).toLocaleDateString("vi-VN")} đến ${new Date(customerPackage.endDate).toLocaleDateString("vi-VN")}. Hân hạnh được phục vụ quý khách!`,
-          type: "package_purchase"
-        });
-      } catch (zErr) {
-        console.error("Lỗi gửi tin nhắn Zalo OA khi mua gói tập:", zErr);
-      }
+      queueService.enqueue("ZALO_NOTIFICATION", {
+        phone: customer.phone,
+        message: `Chúc mừng ${customer.name} đã đăng ký thành công gói tập ${customerPackage.packageName}. Thời hạn gói: từ ${new Date(customerPackage.startDate).toLocaleDateString("vi-VN")} đến ${new Date(customerPackage.endDate).toLocaleDateString("vi-VN")}. Hân hạnh được phục vụ quý khách!`,
+        type: "package_purchase"
+      });
     }
 
     const populatedPackage = await CustomerPackage.findById(customerPackage._id)
@@ -1123,6 +1144,218 @@ const checkExistingCustomer = async (req, res) => {
   }
 };
 
+const exportCustomersExcel = async (req, res) => {
+  try {
+    const {
+      expiringDays,
+      paymentStatus,
+      hasNoPT,
+      trainerId,
+      assignedStaffId,
+      packageName,
+      startDateFrom,
+      startDateTo,
+      preset,
+      search,
+    } = req.query;
+
+    const andConditions = [];
+    const now = new Date();
+
+    if (search) {
+      const customers = await Customer.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { phone: { $regex: search, $options: "i" } },
+          { code: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+      const customerIds = customers.map((c) => c._id);
+      andConditions.push({ customer: { $in: customerIds } });
+    }
+
+    if (preset === "today_call") {
+      const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      andConditions.push({
+        $or: [
+          { endDate: { $gte: now, $lte: sevenDaysLater }, status: "active" },
+          { paymentStatus: "deposit" },
+        ],
+      });
+    } else {
+      if (expiringDays) {
+        const days = parseInt(expiringDays);
+        const futureDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+        andConditions.push({ endDate: { $gte: now, $lte: futureDate }, status: "active" });
+      }
+      if (paymentStatus && paymentStatus !== "all") {
+        andConditions.push({ paymentStatus });
+      }
+      if (hasNoPT === "true" || hasNoPT === true) {
+        andConditions.push({ $or: [{ trainer: null }, { trainer: { $exists: false } }] });
+      }
+      if (trainerId && trainerId !== "all") {
+        andConditions.push({ trainer: trainerId });
+      }
+      if (assignedStaffId && assignedStaffId !== "all") {
+        andConditions.push({ assignedStaff: assignedStaffId });
+      }
+      if (packageName && packageName !== "all") {
+        andConditions.push({ packageName });
+      }
+      if (startDateFrom || startDateTo) {
+        const startCond = {};
+        if (startDateFrom) startCond.$gte = new Date(startDateFrom);
+        if (startDateTo) startCond.$lte = new Date(startDateTo);
+        andConditions.push({ startDate: startCond });
+      }
+    }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
+
+    const packages = await CustomerPackage.find(query)
+      .populate("customer")
+      .populate("assignedStaff", "fullName role")
+      .populate("trainer", "fullName username role")
+      .sort({ endDate: 1 })
+      .lean();
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "GymPro Management System";
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet("Danh Sách Khách Hàng");
+
+    worksheet.mergeCells("A1:K1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = "DANH SÁCH KHÁCH HÀNG / HỘI VIÊN GYMPRO";
+    titleCell.font = { name: "Calibri", size: 16, bold: true, color: { argb: "FFFFFF" } };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "1E3A8A" } };
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(1).height = 40;
+
+    worksheet.mergeCells("A2:K2");
+    const subCell = worksheet.getCell("A2");
+    subCell.value = `Thời gian xuất: ${new Date().toLocaleString("vi-VN")} | Tổng số bản ghi: ${packages.length}`;
+    subCell.font = { name: "Calibri", size: 10, italic: true, color: { argb: "475569" } };
+    subCell.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(2).height = 20;
+
+    worksheet.addRow([]);
+
+    const headers = [
+      "STT",
+      "Mã KH",
+      "Họ và Tên",
+      "Số Điện Thoại",
+      "Gói Tập",
+      "Ngày Hết Hạn",
+      "Còn (Ngày)",
+      "PT Phụ Trách",
+      "Sale Phụ Trách",
+      "Trạng Thái TT",
+      "Ghi Chú Gói",
+    ];
+
+    const headerRow = worksheet.addRow(headers);
+    headerRow.height = 28;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "2563EB" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = {
+        top: { style: "thin", color: { argb: "CBD5E1" } },
+        bottom: { style: "medium", color: { argb: "1E40AF" } },
+        left: { style: "thin", color: { argb: "CBD5E1" } },
+        right: { style: "thin", color: { argb: "CBD5E1" } },
+      };
+    });
+
+    packages.forEach((pkg, index) => {
+      const customer = pkg.customer || {};
+      const endDate = pkg.endDate ? new Date(pkg.endDate) : null;
+      let remainingDays = 0;
+      if (endDate) {
+        const diffMs = endDate.getTime() - now.getTime();
+        remainingDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      }
+
+      let paymentText = "Đã TT";
+      if (pkg.paymentStatus === "deposit") paymentText = "Đặt cọc (Nợ)";
+      else if (pkg.paymentStatus === "unpaid") paymentText = "Chưa TT";
+
+      const rowData = [
+        index + 1,
+        customer.code || "N/A",
+        customer.name || "N/A",
+        customer.phone || "N/A",
+        pkg.packageName || "N/A",
+        endDate ? endDate.toLocaleDateString("vi-VN") : "N/A",
+        remainingDays,
+        pkg.trainer?.fullName || "Chưa gán",
+        pkg.assignedStaff?.fullName || "Chưa gán",
+        paymentText,
+        pkg.packageNote || "",
+      ];
+
+      const row = worksheet.addRow(rowData);
+      row.height = 22;
+
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: "Calibri", size: 11 };
+        cell.border = {
+          top: { style: "thin", color: { argb: "E2E8F0" } },
+          bottom: { style: "thin", color: { argb: "E2E8F0" } },
+          left: { style: "thin", color: { argb: "E2E8F0" } },
+          right: { style: "thin", color: { argb: "E2E8F0" } },
+        };
+        if ([1, 2, 4, 6, 7, 10].includes(colNumber)) {
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+        } else {
+          cell.alignment = { horizontal: "left", vertical: "middle" };
+        }
+      });
+
+      if (remainingDays >= 0 && remainingDays <= 7 && pkg.status === "active") {
+        row.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FEE2E2" } };
+        row.getCell(7).font = { color: { argb: "991B1B" }, bold: true };
+      } else if (remainingDays < 0) {
+        row.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "F3F4F6" } };
+        row.getCell(7).font = { color: { argb: "6B7280" } };
+      }
+
+      if (pkg.paymentStatus === "deposit") {
+        row.getCell(10).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FEF3C7" } };
+        row.getCell(10).font = { color: { argb: "92400E" }, bold: true };
+      }
+    });
+
+    worksheet.columns.forEach((column) => {
+      let maxLen = 12;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const len = cell.value ? String(cell.value).length : 0;
+        if (len > maxLen) maxLen = len;
+      });
+      column.width = Math.min(maxLen + 4, 35);
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="GymPro_Customers_${Date.now()}.xlsx"`
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Lỗi xuất Excel khách hàng:", error);
+    res.status(500).json({ message: "Lỗi hệ thống khi xuất Excel khách hàng" });
+  }
+};
+
 module.exports = {
   getAll: getAllCustomers,
   create: createCustomer,
@@ -1132,4 +1365,5 @@ module.exports = {
   unfreeze: unfreezeCustomer,
   enrollFace,
   checkExisting: checkExistingCustomer,
+  exportExcel: exportCustomersExcel,
 };

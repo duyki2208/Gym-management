@@ -7,6 +7,7 @@ const Setting = require("../models/Setting");
 const Transaction = require("../models/Transaction");
 const syncCustomerFields = require("../utils/syncCustomer");
 const { sendZaloNotification } = require("../utils/zaloService");
+const queueService = require("../utils/queueService");
 
 // Get workout history for a specific customer
 exports.getWorkoutsByCustomer = async (req, res) => {
@@ -98,9 +99,9 @@ exports.deductSession = async (req, res) => {
 
     await newSession.save();
 
-    // Gửi tin nhắn Zalo OA giả lập
+    // Gửi tin nhắn Zalo OA bất đồng bộ qua Queue ngầm (Non-blocking response)
     if (customer.phone) {
-      await sendZaloNotification({
+      queueService.enqueue("ZALO_NOTIFICATION", {
         phone: customer.phone,
         message: `Kính chào ${customer.name}, buổi tập của quý khách với PT ${resolvedPtName} đã được ghi nhận thành công lúc ${new Date().toLocaleTimeString("vi-VN")}. Số buổi còn lại: ${isPayPerSession ? 'Thanh toán trực tiếp' : (customer.remainingSessions > 0 ? customer.remainingSessions - 1 : 0)}. Cảm ơn quý khách!`,
         type: "workout_deduction"

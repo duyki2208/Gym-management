@@ -103,7 +103,7 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
             <button type="button" onClick={onClose} className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors">
               Hủy bỏ
             </button>
-            <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30 transition-colors">
+            <button type="submit" className="px-5 py-2.5 bg-primary text-background-dark rounded-lg hover:bg-primary/90 font-bold shadow-lg shadow-primary/25 transition-colors">
               Lưu Gói Tập
             </button>
           </div>

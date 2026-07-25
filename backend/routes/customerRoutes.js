@@ -30,6 +30,13 @@ router.get('/check-existing',
   customerController.checkExisting
 );
 
+// GET  /api/v1/customers/export-excel — Xuất file Excel danh sách khách hàng
+router.get('/export-excel',
+  protect,
+  authorize('admin', 'manager', 'staff', 'pt', 'sale', 'reception', 'accountant'),
+  customerController.exportExcel
+);
+
 // POST /api/v1/customers — Thêm khách hàng mới (chỉ Admin)
 router.post('/',
   protect,

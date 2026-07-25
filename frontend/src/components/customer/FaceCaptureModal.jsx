@@ -198,7 +198,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
                   type="button"
                   onClick={handleEnroll}
                   disabled={isProcessing}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl font-bold bg-primary text-background-dark hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isProcessing ? (
                     <>
@@ -218,7 +218,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
                 type="button"
                 onClick={capturePhoto}
                 disabled={!cameraReady || isProcessing}
-                className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl font-bold bg-primary text-background-dark hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">camera</span>
                 Chụp ảnh

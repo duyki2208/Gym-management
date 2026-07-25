@@ -693,7 +693,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                     <button 
                                         onClick={handleDeductSession}
                                         disabled={isDeducting}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                        className="bg-primary hover:bg-primary/90 text-background-dark px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
                                         <span className="material-symbols-outlined text-sm">check_circle</span>
                                         {isDeducting ? "Đang xử lý..." : "Trừ buổi"}

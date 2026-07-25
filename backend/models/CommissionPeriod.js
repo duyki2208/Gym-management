@@ -20,13 +20,25 @@ const commissionPeriodSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["draft", "pending", "approved", "paid"],
+      enum: ["draft", "sent_for_review", "pt_confirmed", "disputed", "pending", "approved", "paid"],
       default: "draft",
     },
 
     // Tổng hợp
     totalAmount: { type: Number, default: 0 },    // Tổng hoa hồng phải trả trong kỳ
     totalRecords: { type: Number, default: 0 },    // Tổng số bản ghi hoa hồng
+
+    // Danh sách khiếu nại đối soát của PT
+    disputes: [
+      {
+        workoutLogId: { type: mongoose.Schema.Types.ObjectId, ref: "WorkoutLog" },
+        ptUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        reason: { type: String, required: true },
+        status: { type: String, enum: ["pending", "resolved", "rejected"], default: "pending" },
+        resolutionNote: { type: String, default: "" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
 
     // Duyệt
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

@@ -438,7 +438,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                         setFormData((prev) => ({ ...prev, contractType: "renew" }));
                         onDismissAlert?.();
                       }}
-                      className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                      className="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-background-dark hover:bg-primary/90 transition-colors"
                     >
                       Gia hạn (Renew)
                     </button>
@@ -486,7 +486,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                     <button
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, contractType: "renew" }))}
-                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-background-dark hover:bg-primary/90 transition-colors shadow-sm"
                     >
                       ✅ Gia hạn (Renew)
                     </button>
@@ -957,7 +957,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30 transition-colors"
+              className="px-6 py-2.5 bg-primary text-background-dark rounded-lg hover:bg-primary/90 font-bold shadow-lg shadow-primary/25 transition-colors"
             >
               {customer ? "Lưu thay đổi" : "Tạo khách hàng mới"}
             </button>
