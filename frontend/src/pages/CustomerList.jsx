@@ -240,9 +240,7 @@ const CustomerList = () => {
         startDateFrom: filterStartDateFrom,
         startDateTo: filterStartDateTo,
       };
-      if (preset === 'today_call') {
-        params.preset = 'today_call';
-      } else if (filterStatus === 'expiring') {
+      if (filterStatus === 'expiring') {
         params.expiringDays = 7;
       }
       await customerService.exportExcel(params);
@@ -280,17 +278,6 @@ const CustomerList = () => {
           </div>
 
           <div className="flex-1" />
-
-          {/* Quick Template Button */}
-          <button
-            onClick={() => handleExportExcel('today_call')}
-            disabled={isExporting}
-            className="flex items-center gap-1.5 h-10 px-3.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold hover:bg-amber-500/20 transition-all shrink-0"
-            title="Xuất file danh sách cần chăm sóc gấp: Sắp hết hạn 7 ngày + Nợ tiền cọc"
-          >
-            <span className="material-symbols-outlined text-base">call</span>
-            Danh sách gọi hôm nay
-          </button>
 
           {/* Export Excel Button */}
           <button

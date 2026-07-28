@@ -50,6 +50,7 @@ const Settings = () => {
   // === Vận hành ===
   const [gymCapacity, setGymCapacity] = useState(50);
   const [minStockAlert, setMinStockAlert] = useState(5);
+  const [transferFee, setTransferFee] = useState(1000000);
 
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -84,6 +85,7 @@ const Settings = () => {
           // Vận hành
           setGymCapacity(d.gymCapacity ?? 50);
           setMinStockAlert(d.minStockAlert ?? 5);
+          setTransferFee(d.transferFee ?? 1000000);
         }
       } catch (error) {
         console.error("Lỗi tải cấu hình:", error);
@@ -119,6 +121,7 @@ const Settings = () => {
         saleMonthlyRenewTarget: Number(saleMonthlyRenewTarget),
         gymCapacity: Number(gymCapacity),
         minStockAlert: Number(minStockAlert),
+        transferFee: Number(transferFee),
       });
       if (res && res.success) {
         toast.success("Đã lưu thay đổi cài đặt thành công!");
@@ -218,11 +221,13 @@ const Settings = () => {
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Vận hành</h2>
         </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <NumberField label="Sức chứa phòng tập (người)" value={gymCapacity} onChange={setGymCapacity} disabled={!isAdmin}
             hint="Dùng để tính công suất sử dụng trong báo cáo vận hành" />
           <NumberField label="Ngưỡng cảnh báo tồn kho" value={minStockAlert} onChange={setMinStockAlert} disabled={!isAdmin}
             hint="Sản phẩm có số lượng dưới mức này sẽ được cảnh báo" suffix="SP" />
+          <NumberField label="Phí chuyển nhượng hợp đồng (VNĐ)" value={transferFee} onChange={setTransferFee} disabled={!isAdmin}
+            hint="Mức phí thu khi khách hàng chuyển nhượng gói tập sang người khác" />
         </div>
       </div>
 

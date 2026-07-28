@@ -1011,9 +1011,8 @@ const upgradeCustomerPackage = async (req, res) => {
       });
     }
 
-    // Tính ngày hết hạn mới theo thời lượng duration (số ngày) của gói mới B
-    const newDurationDays = newPkgInfo.duration || 30;
-    const newEndDate = new Date(oldPackage.startDate.getTime() + newDurationDays * 24 * 60 * 60 * 1000);
+    // Giữ nguyên ngày hết hạn của gói cũ theo thống nhất nghiệp vụ
+    const newEndDate = oldPackage.endDate;
 
     const newContractCode = oldPackage.contractCode ? `${oldPackage.contractCode}-UP` : `HĐ-UPGRADE`;
     const newCustomerPackage = new CustomerPackage({
@@ -1037,8 +1036,10 @@ const upgradeCustomerPackage = async (req, res) => {
     });
     await newCustomerPackage.save();
 
-    // Xóa bỏ gói A cũ khỏi DB để không bị trùng lặp gói
-    await oldPackage.deleteOne();
+    // Soft-delete gói A cũ và đổi status thành upgraded để bảo toàn liên kết tham chiếu
+    oldPackage.isDeleted = true;
+    oldPackage.status = "upgraded";
+    await oldPackage.save();
 
     const customerObj = await Customer.findById(oldPackage.customer);
     await Transaction.create({
@@ -1134,22 +1135,26 @@ const transferCustomerPackage = async (req, res) => {
       return res.status(400).json({ success: false, message: "Vui lòng chọn hội viên có sẵn hoặc nhập thông tin người nhận hợp đồng mới." });
     }
 
+    const Setting = require("../models/Setting");
+    const setting = await Setting.findOne();
+    const transferFee = setting?.transferFee ?? 1000000;
+
     const originalCustomerId = customerPackage.originalCustomer || customerPackage.customer;
 
     customerPackage.originalCustomer = originalCustomerId;
     customerPackage.customer = targetCustomer._id;
-    customerPackage.transferFee = 1000000;
+    customerPackage.transferFee = transferFee;
     customerPackage.contractType = "transfer";
     if (note) {
       customerPackage.packageNote = customerPackage.packageNote
-        ? `${customerPackage.packageNote}\n[Chuyển nhượng] Phí 1.000.000đ - Ghi chú: ${note}`
-        : `[Chuyển nhượng] Phí 1.000.000đ - Ghi chú: ${note}`;
+        ? `${customerPackage.packageNote}\n[Chuyển nhượng] Phí ${transferFee.toLocaleString("vi-VN")}đ - Ghi chú: ${note}`
+        : `[Chuyển nhượng] Phí ${transferFee.toLocaleString("vi-VN")}đ - Ghi chú: ${note}`;
     }
     await customerPackage.save();
 
     await Transaction.create({
       type: "service_fee",
-      amount: 1000000,
+      amount: transferFee,
       paymentMethod: paymentMethod || "Tiền mặt",
       customer: targetCustomer._id,
       customerName: targetCustomer.name,
@@ -1161,26 +1166,15 @@ const transferCustomerPackage = async (req, res) => {
     // Đồng bộ thông tin Khách B (người nhận)
     await syncCustomerFields(targetCustomer._id);
 
-    // Kiểm tra Khách A (người chuyển nhượng): Nếu không còn gói tập active nào khác -> Xóa mềm Khách A
+    // Đồng bộ thông tin Khách A (người chuyển nhượng): Bảo toàn hồ sơ Khách A (không soft-delete)
     const originalCustomerObj = await Customer.findById(originalCustomerId);
     if (originalCustomerObj) {
-      const remainingCount = await CustomerPackage.countDocuments({
-        customer: originalCustomerId,
-        _id: { $ne: customerPackage._id },
-        status: "active",
-      });
-      if (remainingCount === 0) {
-        originalCustomerObj.isDeleted = true;
-        await originalCustomerObj.save();
-        console.log(`[Transfer Cleanup] Đã ẩn hồ sơ Khách A (${originalCustomerObj.name} - ${originalCustomerObj.code}) do đã sang tay toàn bộ hợp đồng.`);
-      } else {
-        await syncCustomerFields(originalCustomerId);
-      }
+      await syncCustomerFields(originalCustomerId);
     }
 
     res.status(200).json({
       success: true,
-      message: `Chuyển nhượng hợp đồng [${customerPackage.contractCode}] sang hội viên [${targetCustomer.name}] thành công! Phí dịch vụ: 1.000.000 VNĐ.`,
+      message: `Chuyển nhượng hợp đồng [${customerPackage.contractCode}] sang hội viên [${targetCustomer.name}] thành công! Phí dịch vụ: ${transferFee.toLocaleString("vi-VN")} VNĐ.`,
       data: customerPackage,
     });
   } catch (error) {

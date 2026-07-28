@@ -40,7 +40,7 @@ const updateSettings = async (req, res) => {
       ptMonthlySessionTarget,
       saleMonthlyRevenueTarget, saleMonthlyContractTarget, saleMonthlyRenewTarget,
       // Vận hành
-      gymCapacity, minStockAlert,
+      gymCapacity, minStockAlert, transferFee,
     } = req.body;
 
     let setting = await Setting.findOne();
@@ -55,7 +55,7 @@ const updateSettings = async (req, res) => {
       saleNewContractRate, saleRenewRate, saleUpsellRate,
       ptMonthlySessionTarget,
       saleMonthlyRevenueTarget, saleMonthlyContractTarget, saleMonthlyRenewTarget,
-      gymCapacity, minStockAlert,
+      gymCapacity, minStockAlert, transferFee,
     };
 
     if (gymName !== undefined) setting.gymName = gymName;

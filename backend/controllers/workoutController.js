@@ -49,32 +49,44 @@ exports.deductSession = async (req, res) => {
       if (!ptUser) {
         return res.status(400).json({ message: "Không tìm thấy PT với ID này" });
       }
-      if (ptUser.role !== "pt") {
-        return res.status(400).json({ message: "Nhân viên được chọn không phải PT" });
+      if (ptUser.role !== "pt" && ptUser.role !== "pm") {
+        return res.status(400).json({ message: "Nhân viên được chọn không phải PT hoặc PM" });
       }
       resolvedPtName = ptUser.fullName || ptUser.username;
     } else if (!ptName) {
       return res.status(400).json({ message: "Vui lòng chọn Huấn luyện viên (PT)" });
     }
 
+    let targetPkg = null;
     let customer = await Customer.findById(id);
     if (!customer) {
-      const pkg = await CustomerPackage.findById(id);
-      if (pkg) {
-        customer = await Customer.findById(pkg.customer);
+      targetPkg = await CustomerPackage.findById(id);
+      if (targetPkg) {
+        customer = await Customer.findById(targetPkg.customer);
       }
     }
     if (!customer) {
       return res.status(404).json({ message: "Không tìm thấy khách hàng" });
     }
 
+    // Đồng bộ thông tin khách hàng từ gói active trước khi kiểm tra
+    await syncCustomerFields(customer._id);
+    customer = await Customer.findById(customer._id);
+
+    if (!targetPkg && customer.activePackage) {
+      targetPkg = await CustomerPackage.findById(customer.activePackage);
+    }
+
     const setting = await Setting.findOne();
     const sessionPrice = setting?.ptSessionPrice || 500000;
     const isPayPerSession = payPerSession === true;
 
-    // Check if customer has remaining sessions if not payPerSession
-    if (!isPayPerSession && customer.remainingSessions <= 0) {
-      return res.status(400).json({ message: "Khách hàng đã hết số buổi tập trong hệ thống" });
+    // Kiểm tra số buổi còn lại nếu không phải thanh toán trực tiếp từng buổi
+    if (!isPayPerSession) {
+      const availableSessions = targetPkg ? (targetPkg.remainingSessions || 0) : (customer.remainingSessions || 0);
+      if (availableSessions <= 0) {
+        return res.status(400).json({ message: "Khách hàng đã hết số buổi tập trong hệ thống" });
+      }
     }
 
     // Create session record
@@ -92,7 +104,7 @@ exports.deductSession = async (req, res) => {
     if (customer.phone) {
       queueService.enqueue("ZALO_NOTIFICATION", {
         phone: customer.phone,
-        message: `Kính chào ${customer.name}, buổi tập của quý khách với PT ${resolvedPtName} đã được ghi nhận thành công lúc ${new Date().toLocaleTimeString("vi-VN")}. Số buổi còn lại: ${isPayPerSession ? 'Thanh toán trực tiếp' : (customer.remainingSessions > 0 ? customer.remainingSessions - 1 : 0)}. Cảm ơn quý khách!`,
+        message: `Kính chào ${customer.name}, buổi tập của quý khách với PT ${resolvedPtName} đã được ghi nhận thành công lúc ${new Date().toLocaleTimeString("vi-VN")}. Số buổi còn lại: ${isPayPerSession ? 'Thanh toán trực tiếp' : (targetPkg ? Math.max(0, targetPkg.remainingSessions - 1) : Math.max(0, customer.remainingSessions - 1))}. Cảm ơn quý khách!`,
         type: "workout_deduction"
       });
     }
@@ -118,6 +130,7 @@ exports.deductSession = async (req, res) => {
     // Tự động tạo bản ghi hoa hồng PT nếu có ptId
     if (resolvedPtId) {
       try {
+        const now = new Date();
         const commissionRate = setting?.ptCommissionRate || 10;
         const commissionAmount = sessionPrice * (commissionRate / 100);
 
@@ -138,23 +151,17 @@ exports.deductSession = async (req, res) => {
       }
     }
 
-    // Deduct from active package if available, else fallback to customer directly (only if NOT payPerSession)
+    // Deduct from target package or customer
     if (!isPayPerSession) {
-      if (customer.activePackage) {
-        const activePkg = await CustomerPackage.findById(customer.activePackage);
-        if (activePkg) {
-          activePkg.remainingSessions = Math.max(0, activePkg.remainingSessions - 1);
-          await activePkg.save();
-          await syncCustomerFields(customer._id);
-          customer.remainingSessions = activePkg.remainingSessions;
-        } else {
-          customer.remainingSessions = Math.max(0, customer.remainingSessions - 1);
-          await customer.save();
-        }
+      if (targetPkg) {
+        targetPkg.remainingSessions = Math.max(0, targetPkg.remainingSessions - 1);
+        await targetPkg.save();
       } else {
         customer.remainingSessions = Math.max(0, customer.remainingSessions - 1);
         await customer.save();
       }
+      await syncCustomerFields(customer._id);
+      customer = await Customer.findById(customer._id);
     }
 
     // Populate PT info trước khi trả response

@@ -20,8 +20,8 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const isSavingFace = false;
   
   // trainer bây giờ là object { _id, fullName } sau khi migrate sang ObjectId ref User
-  const defaultPt = customer?.trainer?._id || (customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff._id : '');
-  const defaultPtName = customer?.trainer?.fullName || (customer?.assignedStaff?.role === 'pt' ? customer.assignedStaff.fullName : "");
+  const defaultPt = customer?.trainer?._id || (['pt', 'pm'].includes(customer?.assignedStaff?.role) ? customer.assignedStaff._id : '');
+  const defaultPtName = customer?.trainer?.fullName || (['pt', 'pm'].includes(customer?.assignedStaff?.role) ? customer.assignedStaff.fullName : "");
   const [ptId, setPtId] = useState(defaultPt);
   const [ptName, setPtName] = useState(defaultPtName);
   const [ptList, setPtList] = useState([]);
@@ -54,12 +54,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const currentUser = JSON.parse(localStorage.getItem("gym_user") || "{}");
   const canDeduct = ["admin", "manager", "reception"].includes(currentUser.role);
 
-  // Fetch danh sách PT khi mở tab workout
+  // Fetch danh sách PT (gồm role 'pt' và 'pm') khi mở tab workout
   useEffect(() => {
     const fetchPTs = async () => {
       try {
         const allStaff = await staffService.getAll();
-        const pts = (Array.isArray(allStaff) ? allStaff : []).filter(s => s.role === 'pt');
+        const pts = (Array.isArray(allStaff) ? allStaff : []).filter(s => s.role === 'pt' || s.role === 'pm');
         setPtList(pts);
       } catch (err) {
         console.error('Lỗi lấy danh sách PT:', err);
@@ -534,7 +534,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                  </div>
                                  <div className="col-span-2 md:col-span-2">
                                      <InfoRow 
-                                         label={customer.assignedStaff?.role === 'pt' ? 'Huấn luyện viên (PT)' : 'Nhân viên Phụ trách'} 
+                                         label={['pt', 'pm'].includes(customer.assignedStaff?.role) ? 'Huấn luyện viên (PT)' : 'Nhân viên Phụ trách'} 
                                          value={customer.assignedStaff?.fullName || customer.assignedStaff?.name || "-"} 
                                      />
                                  </div>

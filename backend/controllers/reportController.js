@@ -437,7 +437,7 @@ const getRevenueAdvanced = async (req, res) => {
         $match: {
           status: "success",
           createdAt: { $gte: start, $lte: end },
-          type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+          type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] }
         }
       },
       {
@@ -451,7 +451,8 @@ const getRevenueAdvanced = async (req, res) => {
     const sources = {
       package_purchase: 0,
       pos_sale: 0,
-      pt_session: 0
+      pt_session: 0,
+      service_fee: 0
     };
     revenueBySource.forEach(item => {
       if (sources[item._id] !== undefined) {
@@ -459,7 +460,7 @@ const getRevenueAdvanced = async (req, res) => {
       }
     });
 
-    const totalRevenueThisMonth = sources.package_purchase + sources.pos_sale + sources.pt_session;
+    const totalRevenueThisMonth = sources.package_purchase + sources.pos_sale + sources.pt_session + sources.service_fee;
 
     // 2. Doanh thu tháng trước (MoM)
     let prevM = m - 1;
@@ -477,7 +478,7 @@ const getRevenueAdvanced = async (req, res) => {
         $match: {
           status: "success",
           createdAt: { $gte: prevStart, $lte: prevEnd },
-          type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+          type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] }
         }
       },
       {
@@ -501,7 +502,7 @@ const getRevenueAdvanced = async (req, res) => {
         $match: {
           status: "success",
           createdAt: { $gte: lastYearStart, $lte: lastYearEnd },
-          type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+          type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] }
         }
       },
       {
@@ -532,7 +533,7 @@ const getRevenueAdvanced = async (req, res) => {
           $match: {
             status: "success",
             createdAt: { $gte: startT, $lte: endT },
-            type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+            type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] }
           }
         },
         {
@@ -854,7 +855,7 @@ const getCustomerAnalytics = async (req, res) => {
 
     // 8. Chi tiêu trung bình của mỗi hội viên (ARPU - Average Revenue Per User)
     const totalPaymentsAgg = await Transaction.aggregate([
-      { $match: { status: "success", type: { $in: ["package_purchase", "pos_sale", "pt_session"] } } },
+      { $match: { status: "success", type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] } } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
     const totalPayments = totalPaymentsAgg[0]?.total || 0;

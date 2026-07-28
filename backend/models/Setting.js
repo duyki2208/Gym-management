@@ -25,6 +25,7 @@ const settingSchema = new mongoose.Schema(
     // === Vận hành ===
     gymCapacity: { type: Number, default: 50 },            // Sức chứa tối đa phòng tập
     minStockAlert: { type: Number, default: 5 },           // Ngưỡng cảnh báo tồn kho thấp
+    transferFee: { type: Number, default: 1000000 },       // Phí chuyển nhượng hợp đồng (VNĐ)
   },
   { timestamps: true }
 );
