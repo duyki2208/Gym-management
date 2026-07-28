@@ -338,6 +338,35 @@ const markPeriodPaid = async (req, res) => {
   }
 };
 
+// @desc    Mở lại kỳ hoa hồng (chuyển từ approved/paid về pending) khi lỡ tay chốt sớm hoặc cần điều chỉnh
+// @route   PUT /api/v1/commissions/period/:id/reopen
+// @access  Private (Admin/Accountant/Manager)
+const reopenPeriod = async (req, res) => {
+  try {
+    const period = await CommissionPeriod.findById(req.params.id);
+    if (!period) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy kỳ hoa hồng" });
+    }
+
+    period.status = "pending";
+    period.approvedBy = undefined;
+    period.approvedAt = undefined;
+    period.paidBy = undefined;
+    period.paidAt = undefined;
+    if (req.body.note) period.note = `[Mở lại kỳ] ${req.body.note}`;
+    await period.save();
+
+    res.json({
+      success: true,
+      data: period,
+      message: `Đã mở lại kỳ hoa hồng Tháng ${period.month}/${period.year} thành công. Bạn hiện có thể điều chỉnh dữ liệu.`,
+    });
+  } catch (error) {
+    console.error("Lỗi mở lại kỳ hoa hồng:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+  }
+};
+
 // @desc    Lấy danh sách kỳ hoa hồng
 // @route   GET /api/v1/commissions/periods?year=
 // @access  Private
@@ -434,6 +463,130 @@ const createSaleCommission = async ({ staffId, customerPackageId, customerId, pa
   }
 };
 
+/**
+ * Xử lý hoa hồng khi Nâng cấp Hợp đồng:
+ * - Cùng Sale: Recalculate 100% gói mới (Kỳ mở: thu hồi cũ & tạo mới; Kỳ đóng: giữ cũ + tạo âm điều chỉnh + tạo mới gói VIP)
+ * - Khác Sale: Sale cũ giữ nguyên, Sale mới nhận hoa hồng trên phần chênh lệch (priceDiff)
+ */
+const handleUpgradeCommission = async ({
+  oldPackage,
+  newPackageId,
+  newPackagePrice,
+  newCustomerPackageId,
+  customerId,
+  upgradeSaleStaffId,
+  priceDiff,
+}) => {
+  try {
+    const setting = await Setting.findOne();
+    const rate = setting?.saleUpsellRate || 4;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    const oldSaleStaffId = oldPackage.assignedStaff ? oldPackage.assignedStaff.toString() : null;
+    const newSaleStaffId = upgradeSaleStaffId ? upgradeSaleStaffId.toString() : null;
+
+    // Tìm bản ghi hoa hồng của gói cũ
+    const oldCommission = await Commission.findOne({
+      customerPackage: oldPackage._id,
+      type: "sale",
+      status: "active",
+    });
+
+    const isSameSale = oldSaleStaffId && newSaleStaffId && oldSaleStaffId === newSaleStaffId;
+
+    if (isSameSale) {
+      // Kiếm tra kỳ hoa hồng của gói cũ có bị chốt/đã chi trả không
+      let isPeriodClosed = false;
+      if (oldCommission) {
+        const period = await CommissionPeriod.findOne({
+          month: oldCommission.month,
+          year: oldCommission.year,
+          type: "sale",
+        });
+        if (period && (period.status === "approved" || period.status === "paid")) {
+          isPeriodClosed = true;
+        }
+      }
+
+      if (!isPeriodClosed && oldCommission) {
+        // KỲ CHƯA ĐÓNG: Thu hồi bản ghi cũ, tạo bản ghi mới recalculate trên 100% giá gói mới
+        oldCommission.status = "revoked";
+        oldCommission.revokedReason = "Nâng cấp gói (Cùng Sale recalculate)";
+        oldCommission.revokedAt = now;
+        await oldCommission.save();
+
+        const amount = newPackagePrice * (rate / 100);
+        return await Commission.create({
+          type: "sale",
+          staff: newSaleStaffId,
+          amount,
+          rate,
+          baseAmount: newPackagePrice,
+          customerPackage: newCustomerPackageId,
+          customer: customerId,
+          contractType: "upgrade_full_recalc",
+          month: currentMonth,
+          year: currentYear,
+        });
+      } else {
+        // KỲ ĐÃ ĐÓNG (Hoặc không có oldCommission): Tạo bút toán điều chỉnh âm + tạo mới full recalc
+        if (oldCommission) {
+          await Commission.create({
+            type: "sale",
+            staff: oldSaleStaffId,
+            amount: -oldCommission.amount,
+            rate: oldCommission.rate,
+            baseAmount: -oldCommission.baseAmount,
+            customerPackage: newCustomerPackageId,
+            customer: customerId,
+            contractType: "upgrade_adjustment_minus",
+            originalCommission: oldCommission._id,
+            month: currentMonth,
+            year: currentYear,
+          });
+        }
+
+        const newAmount = newPackagePrice * (rate / 100);
+        return await Commission.create({
+          type: "sale",
+          staff: newSaleStaffId,
+          amount: newAmount,
+          rate,
+          baseAmount: newPackagePrice,
+          customerPackage: newCustomerPackageId,
+          customer: customerId,
+          contractType: "upgrade_full_recalc",
+          originalCommission: oldCommission ? oldCommission._id : undefined,
+          month: currentMonth,
+          year: currentYear,
+        });
+      }
+    } else {
+      // KHÁC SALE: Sale cũ giữ nguyên hoa hồng gói 4tr. Sale mới nhận hoa hồng trên phần chênh lệch priceDiff
+      if (newSaleStaffId) {
+        const amount = priceDiff * (rate / 100);
+        return await Commission.create({
+          type: "sale",
+          staff: newSaleStaffId,
+          amount,
+          rate,
+          baseAmount: priceDiff,
+          customerPackage: newCustomerPackageId,
+          customer: customerId,
+          contractType: "upgrade_delta",
+          month: currentMonth,
+          year: currentYear,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Lỗi xử lý hoa hồng nâng cấp:", error);
+    return null;
+  }
+};
+
 module.exports = {
   getPTCommissions,
   getSaleCommissions,
@@ -441,7 +594,9 @@ module.exports = {
   createOrGetPeriod,
   approvePeriod,
   markPeriodPaid,
+  reopenPeriod,
   getPeriods,
   revokeByPackage,
   createSaleCommission,
+  handleUpgradeCommission,
 };

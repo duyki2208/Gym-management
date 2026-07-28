@@ -60,6 +60,11 @@ const commissionService = {
     return response.data;
   },
 
+  reopenPeriod: async (id, note = "") => {
+    const response = await api.put(`/commissions/period/${id}/reopen`, { note });
+    return response.data;
+  },
+
   // === Thu hồi ===
   revokeByPackage: async (customerPackageId, reason = "") => {
     const response = await api.put(`/commissions/revoke/${customerPackageId}`, { reason });

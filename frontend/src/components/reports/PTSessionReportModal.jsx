@@ -258,15 +258,15 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
           {/* Table of Workout Sessions */}
           <div className="border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-left text-xs">
-              <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border-b border-border-light dark:border-border-dark">
+              <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white uppercase font-bold border-b border-gray-300 dark:border-gray-700">
                 <tr>
                   <th className="p-3 text-center w-12">STT</th>
-                  <th className="p-3">Ngày & Giờ</th>
-                  <th className="p-3">Khách hàng</th>
-                  <th className="p-3">PT Phụ Trách</th>
-                  <th className="p-3">Xác nhận bởi</th>
-                  <th className="p-3 text-center">Trạng thái</th>
-                  <th className="p-3 text-right">Thao tác</th>
+                  <th className="p-3">NGÀY & GIỜ</th>
+                  <th className="p-3">KHÁCH HÀNG</th>
+                  <th className="p-3">PT PHỤ TRÁCH</th>
+                  <th className="p-3">XÁC NHẬN BỞI</th>
+                  <th className="p-3 text-center">TRẠNG THÁI</th>
+                  <th className="p-3 text-right">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark bg-white dark:bg-gray-900">

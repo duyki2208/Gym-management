@@ -446,12 +446,12 @@ const History = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800 text-black dark:text-white uppercase font-bold">
+            <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white uppercase font-bold text-xs border-b border-gray-300 dark:border-gray-700">
               <tr>
-                <th className="p-4">Khách hàng</th>
-                <th className="p-4">Thời gian</th>
-                <th className="p-4">Gói tập</th>
-                <th className="p-4 text-right">Trạng thái</th>
+                <th className="p-4">KHÁCH HÀNG</th>
+                <th className="p-4">THỜI GIAN</th>
+                <th className="p-4">GÓI TẬP</th>
+                <th className="p-4 text-right">TRẠNG THÁI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

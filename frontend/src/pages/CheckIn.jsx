@@ -149,13 +149,13 @@ const CheckIn = () => {
         <div className="bg-white dark:bg-surface-dark rounded-xl border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-100 dark:bg-gray-800 uppercase text-sm font-bold">
+              <thead className="bg-gray-200/80 dark:bg-gray-800 uppercase text-sm font-bold text-black dark:text-white border-b border-gray-300 dark:border-gray-700">
                 <tr>
-                  <th className="p-4">Tên khách hàng</th>
-                  <th className="p-4">Số điện thoại</th>
-                  <th className="p-4">Gói tập</th>
-                  <th className="p-4">Trạng thái</th>
-                  {isAdmin && <th className="p-4 text-right">Hành động</th>}
+                  <th className="p-4">TÊN KHÁCH HÀNG</th>
+                  <th className="p-4">SỐ ĐIỆN THOẠI</th>
+                  <th className="p-4">GÓI TẬP</th>
+                  <th className="p-4">TRẠNG THÁI</th>
+                  {isAdmin && <th className="p-4 text-right">HÀNH ĐỘNG</th>}
                 </tr>
               </thead>
               <tbody>

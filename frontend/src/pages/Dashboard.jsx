@@ -563,10 +563,10 @@ const Dashboard = () => {
             <div className="overflow-hidden rounded-xl border border-gray-200">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b bg-gray-50 text-xs font-bold text-gray-500 uppercase">
-                    <th className="p-4">Ngày Trong Tuần</th>
-                    <th className="p-4">Ngày Tháng</th>
-                    <th className="p-4 text-right">Doanh Thu</th>
+                  <tr className="border-b border-gray-300 dark:border-gray-700 bg-gray-200/80 dark:bg-gray-800 text-xs font-bold text-black dark:text-white uppercase">
+                    <th className="p-4">NGÀY TRONG TUẦN</th>
+                    <th className="p-4">NGÀY THÁNG</th>
+                    <th className="p-4 text-right">DOANH THU</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -604,12 +604,12 @@ const Dashboard = () => {
             {stats.newCustomersList.length > 0 ? (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b bg-gray-50 text-xs font-bold text-gray-500 uppercase">
-                    <th className="p-3 w-[10%]">Avatar</th>
-                    <th className="p-3 w-[30%]">Họ Tên</th>
-                    <th className="p-3 w-[20%]">Số điện thoại</th>
-                    <th className="p-3 w-[25%]">Gói tập</th>
-                    <th className="p-3 w-[15%]">Học phí</th>
+                  <tr className="border-b border-gray-300 dark:border-gray-700 bg-gray-200/80 dark:bg-gray-800 text-xs font-bold text-black dark:text-white uppercase">
+                    <th className="p-3 w-[10%]">AVATAR</th>
+                    <th className="p-3 w-[30%]">HỌ TÊN</th>
+                    <th className="p-3 w-[20%]">SỐ ĐIỆN THOẠI</th>
+                    <th className="p-3 w-[25%]">GÓI TẬP</th>
+                    <th className="p-3 w-[15%]">HỌC PHÍ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1025,13 +1025,13 @@ const StatCard = ({ label, value, change, type, icon: Icon, colorClass, onClick 
       <div className={`p-2 rounded-lg shrink-0 ${colorClass || 'bg-gray-100 text-gray-600'}`}>
         <Icon size={20} />
       </div>
-      <p className="text-text-muted-light dark:text-text-muted-dark text-xs font-bold uppercase tracking-wider break-words flex-1">
+      <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider break-words flex-1">
         {label}
       </p>
     </div>
 
     <div className="flex flex-col z-10 min-w-0">
-      <p className="text-text-light dark:text-text-dark tracking-tight text-3xl font-black break-words break-all">
+      <p className={`tracking-tight text-2xl font-bold break-words break-all ${colorClass ? colorClass.split(' ')[0] : 'text-blue-600'}`}>
         {value}
       </p>
       

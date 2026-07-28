@@ -139,12 +139,12 @@ const ImportGoods = () => {
             
             <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar">
                 <table className="w-full text-left">
-                   <thead className="text-xs uppercase text-gray-500 bg-gray-50">
+                   <thead className="text-xs uppercase font-bold text-black dark:text-white bg-gray-200/80 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700">
                        <tr>
-                           <th className="p-2 rounded-tl-lg">Sản phẩm</th>
-                           <th className="p-2 w-24">Số lượng</th>
-                           <th className="p-2 w-32">Giá nhập (đ)</th>
-                           <th className="p-2 w-32 text-right">Thành tiền</th>
+                           <th className="p-2 rounded-tl-lg">SẢN PHẨM</th>
+                           <th className="p-2 w-24">SỐ LƯỢNG</th>
+                           <th className="p-2 w-32">GIÁ NHẬP (Đ)</th>
+                           <th className="p-2 w-32 text-right">THÀNH TIỀN</th>
                            <th className="p-2 rounded-tr-lg w-10"></th>
                        </tr>
                    </thead>

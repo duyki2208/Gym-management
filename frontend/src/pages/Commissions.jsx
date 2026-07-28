@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import commissionService from '../services/commissionService';
 import { staffService } from '../services/customerService';
 import { useAuth } from '../context/AuthContext';
+import { RotateCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const formatCurrency = (amount) => {
@@ -116,13 +117,13 @@ const PTCommissionTable = ({ data, loading }) => {
           {/* Details table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800/50">
+              <thead className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-500">Ngày</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-500">Khách hàng</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-500">Giá buổi</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-500">%</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-500">Hoa hồng</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">NGÀY</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">KHÁCH HÀNG</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">GIÁ BUỔI</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">%</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">HOA HỒNG</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -177,14 +178,14 @@ const SaleCommissionTable = ({ data, loading }) => {
           {/* Details table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800/50">
+              <thead className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-500">Khách hàng</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-500">Gói tập</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-500">Loại</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-500">Giá trị HĐ</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-500">%</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-500">Hoa hồng</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">KHÁCH HÀNG</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">GÓI TẬP</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">LOẠI</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">GIÁ TRỊ HĐ</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">%</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">HOA HỒNG</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -236,6 +237,32 @@ const Commissions = () => {
   const [loadingPT, setLoadingPT] = useState(false);
   const [loadingSale, setLoadingSale] = useState(false);
   const [loadingPeriods, setLoadingPeriods] = useState(false);
+
+  // States cho Rollback Modal
+  const [rollbackModalOpen, setRollbackModalOpen] = useState(false);
+  const [selectedPeriodForRollback, setSelectedPeriodForRollback] = useState(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [rollbackReason, setRollbackReason] = useState('');
+
+  const handleOpenRollbackModal = (period) => {
+    setSelectedPeriodForRollback(period);
+    setConfirmText('');
+    setRollbackReason('');
+    setRollbackModalOpen(true);
+  };
+
+  const handleConfirmRollback = async () => {
+    if (!selectedPeriodForRollback) return;
+    try {
+      await commissionService.reopenPeriod(selectedPeriodForRollback._id, rollbackReason);
+      toast.success(`Mở lại kỳ hoa hồng Tháng ${selectedPeriodForRollback.month}/${selectedPeriodForRollback.year} thành công`);
+      setRollbackModalOpen(false);
+      fetchSummary();
+      fetchPeriods();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Lỗi mở lại kỳ hoa hồng');
+    }
+  };
 
   const fetchSummary = useCallback(async () => {
     if (!isManager) return;
@@ -593,15 +620,15 @@ const Commissions = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800/50">
+                <thead className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">Kỳ</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">Loại</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">Tổng tiền</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">Số bản ghi</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500">Trạng thái</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">Người duyệt</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500">Thao tác</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-black dark:text-white uppercase">KỲ</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-black dark:text-white uppercase">LOẠI</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-black dark:text-white uppercase">TỔNG TIỀN</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-black dark:text-white uppercase">SỐ BẢN GHI</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-black dark:text-white uppercase">TRẠNG THÁI</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-black dark:text-white uppercase">NGƯỜI DUYỆT</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-black dark:text-white uppercase">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -623,23 +650,27 @@ const Commissions = () => {
                         {p.approvedAt && <span className="block text-gray-400">{new Date(p.approvedAt).toLocaleDateString('vi-VN')}</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {isAdminLike && p.status === 'draft' && (
-                          <button onClick={() => handleApprove(p._id)}
-                            className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold transition-colors">
-                            Duyệt
-                          </button>
-                        )}
-                        {isAdminLike && p.status === 'approved' && (
-                          <button onClick={() => handleMarkPaid(p._id)}
-                            className="text-xs bg-green-50 text-green-600 hover:bg-green-100 px-3 py-1.5 rounded-lg font-bold transition-colors">
-                            Đã trả
-                          </button>
-                        )}
-                        {p.status === 'paid' && (
-                          <span className="text-xs text-gray-400">
-                            {p.paidBy?.fullName && `Trả bởi ${p.paidBy.fullName}`}
-                          </span>
-                        )}
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                          {isAdminLike && (p.status === 'draft' || p.status === 'pending') && (
+                            <button onClick={() => handleApprove(p._id)}
+                              className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold transition-colors">
+                              Duyệt
+                            </button>
+                          )}
+                          {isAdminLike && p.status === 'approved' && (
+                            <button onClick={() => handleMarkPaid(p._id)}
+                              className="text-xs bg-green-50 text-green-600 hover:bg-green-100 px-3 py-1.5 rounded-lg font-bold transition-colors">
+                              Đã trả
+                            </button>
+                          )}
+                          {isAdminLike && (p.status === 'approved' || p.status === 'paid') && (
+                            <button onClick={() => handleOpenRollbackModal(p)}
+                              className="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-bold transition-colors flex items-center gap-1">
+                              <RotateCcw size={12} />
+                              Mở lại kỳ
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -647,6 +678,89 @@ const Commissions = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Rollback Confirmation Modal ── */}
+      {rollbackModalOpen && selectedPeriodForRollback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+              <div className="p-2.5 bg-amber-100 dark:bg-amber-950/50 rounded-xl">
+                <RotateCcw size={22} />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">
+                  Mở Lại Kỳ Hoa Hồng (Rollback)
+                </h3>
+                <p className="text-xs text-gray-500">Chuyển kỳ thanh toán về trạng thái Chờ duyệt</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-xs space-y-1">
+              <p className="text-gray-600 dark:text-gray-400">
+                Kỳ hoa hồng: <strong className="text-gray-900 dark:text-gray-100 font-bold">Tháng {selectedPeriodForRollback.month}/{selectedPeriodForRollback.year} — {selectedPeriodForRollback.type.toUpperCase()}</strong>
+              </p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Tổng tiền: <strong className="text-blue-600 font-bold">{formatCurrency(selectedPeriodForRollback.totalAmount)}</strong>
+              </p>
+            </div>
+
+            {selectedPeriodForRollback.status === 'paid' ? (
+              <div className="p-3.5 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/40 text-xs text-red-700 dark:text-red-300 space-y-1">
+                <strong className="block font-bold uppercase text-red-800 dark:text-red-200">
+                  ⚠️ CẢNH BÁO NGHÊM TRỌNG (RỦI RO TÀI CHÍNH)
+                </strong>
+                <span>Kỳ này ĐÃ ĐƯỢC THANH TOÁN THỰC TẾ cho nhân viên. Việc mở lại kỳ sẽ hủy bỏ trạng thái Đã trả. Bạn chịu trách nhiệm về tính chính xác của sổ sách tài chính!</span>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/30 text-xs text-amber-800 dark:text-amber-300">
+                Mở lại kỳ để chuyển về trạng thái Chờ duyệt, giúp quản lý bổ sung hoặc điều chỉnh lại danh sách hoa hồng trước khi chốt lại.
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                Gõ lại tên kỳ để xác nhận: <span className="font-black text-amber-600">T{selectedPeriodForRollback.month}/{selectedPeriodForRollback.year}-{selectedPeriodForRollback.type.toUpperCase()}</span>
+              </label>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={`Ví dụ: T${selectedPeriodForRollback.month}/${selectedPeriodForRollback.year}-${selectedPeriodForRollback.type.toUpperCase()}`}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm outline-none focus:ring-2 focus:ring-amber-500 font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                Lý do mở lại kỳ
+              </label>
+              <textarea
+                rows="2"
+                value={rollbackReason}
+                onChange={(e) => setRollbackReason(e.target.value)}
+                placeholder="Nhập lý do điều chỉnh..."
+                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setRollbackModalOpen(false)}
+                className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleConfirmRollback}
+                disabled={confirmText !== `T${selectedPeriodForRollback.month}/${selectedPeriodForRollback.year}-${selectedPeriodForRollback.type.toUpperCase()}`}
+                className="px-5 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40 rounded-xl shadow-sm transition-all"
+              >
+                Xác Nhận Mở Lại Kỳ
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

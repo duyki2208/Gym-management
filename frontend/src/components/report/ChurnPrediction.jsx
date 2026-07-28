@@ -118,8 +118,8 @@ const ChurnPrediction = () => {
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-500">Nguy cơ Cao</p>
-            <p className="text-2xl font-bold text-red-600">{data.highRisk.length}</p>
+            <p className="text-sm font-bold text-black dark:text-white uppercase tracking-wider mb-1">Nguy cơ Cao</p>
+            <p className="text-xl font-bold text-rose-600">{data.highRisk.length}</p>
           </div>
         </div>
         
@@ -128,8 +128,8 @@ const ChurnPrediction = () => {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-500">Nguy cơ Trung Bình</p>
-            <p className="text-2xl font-bold text-orange-600">{data.mediumRisk.length}</p>
+            <p className="text-sm font-bold text-black dark:text-white uppercase tracking-wider mb-1">Nguy cơ Trung Bình</p>
+            <p className="text-xl font-bold text-amber-600">{data.mediumRisk.length}</p>
           </div>
         </div>
 
@@ -138,8 +138,8 @@ const ChurnPrediction = () => {
             <UserCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-500">Tỉ lệ an toàn</p>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-sm font-bold text-black dark:text-white uppercase tracking-wider mb-1">Tỉ lệ an toàn</p>
+            <p className="text-xl font-bold text-emerald-600">
               {Math.round((data.lowRisk.length / (allCustomers.length + data.lowRisk.length || 1)) * 100)}%
             </p>
           </div>

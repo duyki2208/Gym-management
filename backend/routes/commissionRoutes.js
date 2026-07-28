@@ -26,6 +26,9 @@ router.put("/period/:id/approve", protect, authorize("admin", "accountant"), com
 // Đánh dấu đã thanh toán
 router.put("/period/:id/pay", protect, authorize("admin", "accountant"), commissionController.markPeriodPaid);
 
+// Mở lại kỳ hoa hồng (nếu bấm lỡ chốt nhầm)
+router.put("/period/:id/reopen", protect, authorize("admin", "accountant", "manager"), commissionController.reopenPeriod);
+
 // === Thu hồi ===
 // Thu hồi hoa hồng theo hợp đồng (khi hủy HĐ)
 router.put("/revoke/:customerPackageId", protect, authorize("admin"), commissionController.revokeByPackage);

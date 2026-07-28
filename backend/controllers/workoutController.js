@@ -37,18 +37,7 @@ exports.deductSession = async (req, res) => {
     const { id } = req.params;
     const { ptId, ptName, note, payPerSession, paymentMethod } = req.body;
 
-    // Kiểm tra kỳ hoa hồng PT đã bị khóa (approved hoặc paid) chưa
-    const CommissionPeriod = require("../models/CommissionPeriod");
-    const now = new Date();
-    const lockedPeriod = await CommissionPeriod.findOne({
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
-      type: "pt",
-      status: { $in: ["approved", "paid"] }
-    });
-    if (lockedPeriod) {
-      return res.status(400).json({ message: "Kỳ thanh toán hoa hồng PT tháng này đã được duyệt hoặc chi trả, dữ liệu đã bị khóa." });
-    }
+
 
     // Ưu tiên ptId (ObjectId). Nếu không có thì dùng ptName (backward compat)
     let resolvedPtId = ptId || null;

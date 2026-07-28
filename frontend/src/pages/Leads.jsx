@@ -275,7 +275,7 @@ const Leads = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <tr className="bg-gray-200/80 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                   <th className="px-6 py-4">Tên & Thông tin liên hệ</th>
                   <th className="px-6 py-4">Nguồn khách</th>
                   <th className="px-6 py-4">Trạng thái</th>

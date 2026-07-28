@@ -10,6 +10,79 @@
   outline: none;
 }
 
+/* ── System-wide Dark Mode Styles (Matching Dark Charcoal Screenshot) ── */
+.dark {
+  color-scheme: dark;
+  background-color: #121316 !important;
+  color: #f3f4f6;
+}
+
+.dark body,
+.dark #root {
+  background-color: #121316 !important;
+  color: #f3f4f6;
+}
+
+/* Cards & Surface Containers in Dark Mode */
+.dark .bg-white,
+.dark .bg-surface-light,
+.dark .bg-surface-dark {
+  background-color: #1e1f26 !important;
+}
+
+/* Card Borders in Dark Mode */
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-gray-700,
+.dark .border-gray-800,
+.dark .border-border-light,
+.dark .border-border-dark {
+  border-color: #2d2f36 !important;
+}
+
+/* Card Title Labels & Text in Dark Mode */
+.dark .text-black {
+  color: #ffffff !important;
+}
+
+/* Inner elements / Secondary backgrounds inside Cards in Dark Mode */
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-gray-100\/80,
+.dark .bg-gray-200\/80,
+.dark .bg-background-light {
+  background-color: #25262e !important;
+}
+
+/* Sidebar & Header specific dark mode colors */
+.dark aside,
+.dark header {
+  background-color: #141518 !important;
+  border-color: #272830 !important;
+}
+
+/* Inputs & Selects in Dark Mode */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #25262e !important;
+  border-color: #2d2f36 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Recharts grid lines in Dark Mode */
+.dark .recharts-cartesian-grid-line line {
+  stroke: #2d2f36 !important;
+}
+
+/* Recharts Tooltip in Dark Mode */
+.dark .recharts-default-tooltip {
+  background-color: #25262e !important;
+  border-color: #2d2f36 !important;
+  color: #ffffff !important;
+}
+
 /* ── Dropdown slide-down animation ─────────────────── */
 @keyframes slideDown {
   from {
@@ -47,11 +120,11 @@
 
 /* Dark mode scrollbar */
 .dark .custom-scrollbar {
-  scrollbar-color: #374151 transparent;
+  scrollbar-color: #2d2f36 transparent;
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #2d2f36;
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #3f424d;
 }

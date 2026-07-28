@@ -20,3 +20,5 @@ Tài liệu này định nghĩa pattern bắt buộc khi code ở phía Frontend
 ## 4. UI/UX
 - Đảm bảo Loading skeleton / spinner khi đang load data.
 - Xử lý mượt mà các viền, bóng râm (shadow), góc bo tròn để phù hợp với ngôn ngữ thiết kế chung.
+- **Tiêu đề bảng (`<thead>` / `<th>`)**: Tiêu đề bảng bắt buộc phải giữ chữ màu **ĐEN** (`text-black` hoặc `dark:text-white font-bold`). Đối với bảng gộp chung một card với Toolbar bộ lọc, sử dụng nền nhẹ dịu (`bg-gray-50/80 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700`) để tổng thể card đồng bộ và tinh tế.
+

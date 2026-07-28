@@ -7,22 +7,41 @@ const CustomerPackage = require("../models/CustomerPackage");
  * 2 collection nhất quán.
  *
  * @param {mongoose.Types.ObjectId|string} customerId
+ * @param {object} [options] - Tùy chọn truyền vào như { session }
  */
-async function syncCustomerFields(customerId) {
+async function syncCustomerFields(customerId, options = {}) {
   try {
+    const session = options && options.session ? options.session : null;
+
     // Ưu tiên gói đang active, nếu không có thì lấy gói mới nhất
-    let activePackage = await CustomerPackage.findOne({
+    let activePackageQuery = CustomerPackage.findOne({
       customer: customerId,
       status: "active",
+      isDeleted: { $ne: true },
     }).sort({ endDate: -1 });
 
+    if (session) {
+      activePackageQuery = activePackageQuery.session(session);
+    }
+    let activePackage = await activePackageQuery;
+
     if (!activePackage) {
-      activePackage = await CustomerPackage.findOne({ customer: customerId }).sort({
-        createdAt: -1,
-      });
+      let latestPackageQuery = CustomerPackage.findOne({
+        customer: customerId,
+        isDeleted: { $ne: true },
+      }).sort({ createdAt: -1 });
+
+      if (session) {
+        latestPackageQuery = latestPackageQuery.session(session);
+      }
+      activePackage = await latestPackageQuery;
     }
 
-    const customer = await Customer.findById(customerId);
+    let customerQuery = Customer.findById(customerId);
+    if (session) {
+      customerQuery = customerQuery.session(session);
+    }
+    const customer = await customerQuery;
     if (!customer) return;
 
     if (activePackage) {
@@ -53,7 +72,7 @@ async function syncCustomerFields(customerId) {
       customer.packageNote     = "";
     }
 
-    await customer.save();
+    await customer.save({ session });
   } catch (err) {
     console.error("Lỗi đồng bộ hồ sơ khách hàng:", err);
     throw err; // Re-throw để caller biết sync thất bại

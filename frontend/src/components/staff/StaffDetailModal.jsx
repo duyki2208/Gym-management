@@ -201,13 +201,13 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                 </div>
               ) : (
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <thead className="bg-gray-200/80 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 uppercase font-bold text-black dark:text-white">
                     <tr>
-                      <th className="py-2.5 px-3 text-sm font-bold text-gray-600 dark:text-gray-300 w-1/3">
-                        Thứ / Ngày
+                      <th className="py-2.5 px-3 text-sm font-bold text-black dark:text-white w-1/3">
+                        THỨ / NGÀY
                       </th>
-                      <th className="py-2.5 px-3 text-sm font-bold text-gray-600 dark:text-gray-300">
-                        Ca làm (Sáng/Chiều/Full)
+                      <th className="py-2.5 px-3 text-sm font-bold text-black dark:text-white">
+                        CA LÀM (SÁNG/CHIỀU/FULL)
                       </th>
                     </tr>
                   </thead>

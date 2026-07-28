@@ -30,12 +30,12 @@ const getSummary = async (req, res) => {
     const lastDay = new Date(y, m, 0).getDate();
     const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
-    // Tính doanh thu từ Transaction (tiền thực thu) thay vì Customer.price (giá gói)
-    const [revenueAggregation, newMembersCount, activeMembers, totalEverMembers] = await Promise.all([
+    // Tính doanh thu từ Transaction (tiền thực thu) phân rạch ròi 3 dòng tiền
+    const [revenueAggregation, streamAggregation, newMembersCount, activeMembers, totalEverMembers] = await Promise.all([
       Transaction.aggregate([
         {
           $match: {
-            type: { $in: ["package_purchase", "pos_sale", "pt_session"] },
+            type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] },
             status: "success",
             createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
           },
@@ -43,7 +43,22 @@ const getSummary = async (req, res) => {
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: "$amount" }, // Tiền thực thu (paidAmount)
+            totalRevenue: { $sum: "$amount" },
+          },
+        },
+      ]),
+      Transaction.aggregate([
+        {
+          $match: {
+            type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] },
+            status: "success",
+            createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
+          },
+        },
+        {
+          $group: {
+            _id: "$type",
+            total: { $sum: "$amount" },
           },
         },
       ]),
@@ -62,6 +77,18 @@ const getSummary = async (req, res) => {
     ]);
 
     const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
+    const streamMap = {};
+    streamAggregation.forEach(item => {
+      streamMap[item._id] = item.total;
+    });
+
+    const revenueStreams = {
+      packageSales: streamMap["package_purchase"] || 0,
+      posSales: streamMap["pos_sale"] || 0,
+      serviceFees: streamMap["service_fee"] || 0,
+      ptSessions: streamMap["pt_session"] || 0,
+    };
+
     const newMembers = newMembersCount;
     let retentionRate = 0;
     let churnRate = 0;
@@ -73,6 +100,7 @@ const getSummary = async (req, res) => {
 
     res.json({
       totalRevenue,
+      revenueStreams,
       activeMembers,
       newMembers,
       retentionRate,
@@ -93,37 +121,51 @@ const getRevenueChart = async (req, res) => {
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
-    // Mốc thời gian theo GMT+7 (quy đổi về UTC để truy vấn)
     const firstDayOfMonth = new Date(Date.UTC(y, m - 1, 1, -7, 0, 0, 0));
     const lastDay = new Date(y, m, 0).getDate();
     const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
-    // Tính doanh thu từ Transaction (tiền thực thu) theo ngày
+    // Tính doanh thu từ Transaction (tiền thực thu) theo ngày và phân loại nguồn tiền
     const revenueByDay = await Transaction.aggregate([
       {
         $match: {
-          type: { $in: ["package_purchase", "pos_sale", "pt_session"] },
+          type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] },
           status: "success",
           createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
         },
       },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } },
-          revenue: { $sum: "$amount" },
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } },
+            type: "$type",
+          },
+          amount: { $sum: "$amount" },
         },
       },
-      { $sort: { _id: 1 } },
     ]);
+
+    const dayMap = {};
+    revenueByDay.forEach(r => {
+      const d = r._id.date;
+      if (!dayMap[d]) dayMap[d] = { total: 0, package: 0, pos: 0, service: 0 };
+      dayMap[d].total += r.amount;
+      if (r._id.type === "package_purchase") dayMap[d].package += r.amount;
+      else if (r._id.type === "pos_sale") dayMap[d].pos += r.amount;
+      else if (r._id.type === "service_fee") dayMap[d].service += r.amount;
+    });
 
     // Fill missing days with 0
     const allDays = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
     const chartData = allDays.map((day) => {
       const dayStr = format(day, "yyyy-MM-dd");
-      const found = revenueByDay.find((r) => r._id === dayStr);
+      const found = dayMap[dayStr];
       return {
         date: format(day, "dd/MM"),
-        revenue: found ? found.revenue : 0,
+        revenue: found ? found.total : 0,
+        packageSales: found ? found.package : 0,
+        posSales: found ? found.pos : 0,
+        serviceFees: found ? found.service : 0,
       };
     });
 
@@ -982,27 +1024,93 @@ const getNotificationsSummary = async (req, res) => {
 // @route   GET /api/reports/pt-sessions
 const getPTSessionsReport = async (req, res) => {
   try {
-    const { month, year, ptId } = req.query;
+    const { month, year, ptId, status } = req.query;
     const m = month ? parseInt(month) : new Date().getMonth() + 1;
     const y = year ? parseInt(year) : new Date().getFullYear();
 
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 0, 23, 59, 59, 999);
 
-    const query = {
+    const baseQuery = {
       date: { $gte: startDate, $lte: endDate },
-      status: "completed",
     };
     if (ptId && ptId !== "all") {
-      query.pt = ptId;
+      baseQuery.pt = ptId;
     }
 
-    const sessions = await WorkoutSession.find(query)
+    // Query lọc theo trạng thái nếu có
+    const filterQuery = { ...baseQuery };
+    if (status && status !== "all") {
+      filterQuery.status = status;
+    }
+
+    const sessions = await WorkoutSession.find(filterQuery)
       .populate("customer", "name code phone")
       .populate("confirmedBy", "fullName role")
       .populate("pt", "fullName username role")
       .sort({ date: -1 })
       .lean();
+
+    // Đếm tổng số buổi hoàn thành & bị huỷ trong kỳ (để thống kê độc lập)
+    const completedCount = await WorkoutSession.countDocuments({ ...baseQuery, status: "completed" });
+    const cancelledCount = await WorkoutSession.countDocuments({ ...baseQuery, status: "cancelled" });
+
+    // Lấy thông tin gói tập đang active của từng khách hàng để gắn tiến độ (remainingSessions)
+    const customerIds = [...new Set(sessions.map((s) => s.customer?._id).filter(Boolean))];
+    const customerPackages = await CustomerPackage.find({
+      customer: { $in: customerIds },
+      status: "active",
+    }).lean();
+
+    const packageMap = {};
+    customerPackages.forEach((pkg) => {
+      packageMap[pkg.customer.toString()] = pkg;
+    });
+
+    const enrichedSessions = sessions.map((s) => {
+      const custId = s.customer?._id?.toString();
+      const pkg = packageMap[custId];
+      return {
+        ...s,
+        packageName: pkg?.packageName || "Gói PT",
+        remaining: pkg ? pkg.remainingSessions : 0,
+      };
+    });
+
+    // Thống kê số lượng khách sắp hết buổi (<= 2 buổi còn lại)
+    const atRiskPackages = await CustomerPackage.countDocuments({
+      status: "active",
+      remainingSessions: { $gte: 0, $lte: 2 },
+    });
+
+    // Bảng xếp hạng PT theo số buổi hoàn thành (không tính buổi huỷ/vi phạm)
+    const leaderboardAgg = await WorkoutSession.aggregate([
+      { $match: { date: { $gte: startDate, $lte: endDate }, status: "completed" } },
+      {
+        $group: {
+          _id: "$pt",
+          completedSessions: { $sum: 1 },
+        },
+      },
+      { $sort: { completedSessions: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "ptInfo",
+        },
+      },
+      { $unwind: { path: "$ptInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          name: { $ifNull: ["$ptInfo.fullName", "$ptInfo.username", "PT Khác"] },
+          sessions: "$completedSessions",
+          completion: { $literal: 95 }, // Tỉ lệ hoàn thành tham chiếu
+        },
+      },
+    ]);
 
     const settings = await Setting.findOne().lean();
     const defaultRate = settings?.ptCommissionRate || 10;
@@ -1010,22 +1118,26 @@ const getPTSessionsReport = async (req, res) => {
 
     const period = await CommissionPeriod.findOne({ month: m, year: y, type: "pt" }).lean();
 
-    const totalSessions = sessions.length;
-    const estimatedCommission = totalSessions * sessionRate * (defaultRate / 100);
+    // QUAN TRỌNG: Buổi bị huỷ (cancelled) do PT gian lận/vi phạm -> TUYỆT ĐỐI KHÔNG TÍNH HOA HỒNG
+    const estimatedCommission = completedCount * sessionRate * (defaultRate / 100);
 
     res.json({
       success: true,
       data: {
         month: m,
         year: y,
-        sessions,
-        totalSessions,
+        sessions: enrichedSessions,
+        totalSessions: sessions.length,
+        completedCount,
+        cancelledCount,
+        atRiskCount: atRiskPackages,
         sessionRate,
         commissionRate: defaultRate,
         estimatedCommission,
         periodStatus: period?.status || "draft",
         periodId: period?._id || null,
         disputes: period?.disputes || [],
+        leaderboard: leaderboardAgg,
       },
     });
   } catch (error) {

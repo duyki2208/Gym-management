@@ -126,13 +126,13 @@ const Staff = () => {
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-background-light dark:bg-background-dark text-text-muted-light dark:text-text-muted-dark text-xs uppercase font-bold tracking-wider">
+            <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white text-xs uppercase font-bold tracking-wider border-b border-gray-300 dark:border-gray-700">
               <tr>
-                <th className="px-6 py-4">Họ tên</th>
-                <th className="px-6 py-4">Chức vụ</th>
+                <th className="px-6 py-4">HỌ TÊN</th>
+                <th className="px-6 py-4">CHỨC VỤ</th>
                 <th className="px-6 py-4 text-center">SỐ KH PHỤ TRÁCH</th>
-                <th className="px-6 py-4 text-center">Lịch làm việc</th>
-                {isAdmin && <th className="px-6 py-4 text-right">Hành động</th>}
+                <th className="px-6 py-4 text-center">LỊCH LÀM VIỆC</th>
+                {isAdmin && <th className="px-6 py-4 text-right">HÀNH ĐỘNG</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">

@@ -605,14 +605,14 @@ const CustomerList = () => {
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-100 dark:bg-gray-800 uppercase text-sm font-bold text-gray-700">
+          <thead className="bg-gray-200/80 dark:bg-gray-800 uppercase text-sm font-bold text-black dark:text-white border-b border-gray-300 dark:border-gray-700">
             <tr>
               <th className="p-4 w-[5%]"></th>
               <th className="p-4 pl-8 w-[25%]">HỌ VÀ TÊN</th>
               <th className="p-4 w-[15%]">SĐT</th>
               <th className="p-4 pl-8 w-[20%]">GÓI TẬP</th>
-              <th className="p-4 w-[20%]">Trạng thái</th>
-              {isAdmin && <th className="p-4 text-right w-[15%]">Hành động</th>}
+              <th className="p-4 w-[20%]">TRẠNG THÁI</th>
+              {isAdmin && <th className="p-4 text-right w-[15%]">HÀNH ĐỘNG</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 font-display">

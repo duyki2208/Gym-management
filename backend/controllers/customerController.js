@@ -147,8 +147,6 @@ const createCustomer = async (req, res) => {
 
     let customer = await Customer.findOne(checkQuery).session(isTransactionStarted ? session : null);
     const isNewCustomer = !customer;
-    isNewCustomerCreated = isNewCustomer;
-
     if (!customer) {
       customer = new Customer({
         name,
@@ -161,6 +159,7 @@ const createCustomer = async (req, res) => {
         email,
         healthNote,
         packageType,
+        price: price || 0,
         packageNote: packageNote || "",
         endDate: new Date(endDate),
         identityCard: identityCard || "",
@@ -200,22 +199,8 @@ const createCustomer = async (req, res) => {
       if (avatarUrl) customer.avatarUrl = avatarUrl;
       if (referredBy) customer.referredBy = referredBy;
       if (source) customer.source = source;
+      if (price) customer.price = price;
       await customer.save({ session: isTransactionStarted ? session : undefined });
-    }
-
-    const CommissionPeriod = require("../models/CommissionPeriod");
-    const now = new Date();
-    const lockedPeriod = await CommissionPeriod.findOne({
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
-      type: "sale",
-      status: { $in: ["approved", "paid"] }
-    }).session(isTransactionStarted ? session : null);
-
-    if (lockedPeriod) {
-      if (isTransactionStarted && session) await session.abortTransaction();
-      if (session) session.endSession();
-      return res.status(400).json({ message: "Kỳ thanh toán hoa hồng Sale tháng này đã được duyệt hoặc chi trả, dữ liệu đã bị khóa." });
     }
 
     if (assignedStaff) {
@@ -302,8 +287,8 @@ const createCustomer = async (req, res) => {
             ? `${referrerPackage.packageNote}\n${rewardNote}`
             : rewardNote;
 
-          await referrerPackage.save();
-          await syncCustomerFields(referredBy);
+          await referrerPackage.save({ session: isTransactionStarted ? session : undefined });
+          await syncCustomerFields(referredBy, { session: isTransactionStarted ? session : undefined });
           console.log(`Đã tặng thêm 30 ngày cho người giới thiệu: ${referrerCustomer?.name} (${referrerPackage._id})`);
         }
 
@@ -313,41 +298,45 @@ const createCustomer = async (req, res) => {
       }
     }
 
-    await customerPackage.save();
+    await customerPackage.save({ session: isTransactionStarted ? session : undefined });
 
-    await syncCustomerFields(customer._id);
+    await syncCustomerFields(customer._id, { session: isTransactionStarted ? session : undefined });
 
-    await Invoice.create({
-      customer: customer._id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      type: "package",
-      referenceId: customerPackage._id,
-      items: [
-        {
-          name: customerPackage.packageName,
-          quantity: 1,
-          price: customerPackage.price,
-          total: customerPackage.price,
-        },
-      ],
-      subtotal: customerPackage.price,
-      total: customerPackage.price,
-      paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
-      paymentStatus: customerPackage.paymentStatus,
-      staff: req.user ? req.user._id : undefined,
-    });
+    const invoiceDocs = await Invoice.create([
+      {
+        customer: customer._id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        type: "package",
+        referenceId: customerPackage._id,
+        items: [
+          {
+            name: customerPackage.packageName,
+            quantity: 1,
+            price: customerPackage.price,
+            total: customerPackage.price,
+          },
+        ],
+        subtotal: customerPackage.price,
+        total: customerPackage.price,
+        paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
+        paymentStatus: customerPackage.paymentStatus,
+        staff: req.user ? req.user._id : undefined,
+      }
+    ], { session: isTransactionStarted ? session : undefined });
 
-    await Transaction.create({
-      type: "package_purchase",
-      amount: customerPackage.paidAmount || 0,
-      paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
-      customer: customer._id,
-      customerName: customer.name,
-      customerPackage: customerPackage._id,
-      status: "success",
-      staff: req.user ? req.user._id : undefined,
-    });
+    const transactionDocs = await Transaction.create([
+      {
+        type: "package_purchase",
+        amount: customerPackage.paidAmount || 0,
+        paymentMethod: customerPackage.paymentStatus === "paid" ? "Tiền mặt" : "Chuyển khoản QR",
+        customer: customer._id,
+        customerName: customer.name,
+        customerPackage: customerPackage._id,
+        status: "success",
+        staff: req.user ? req.user._id : undefined,
+      }
+    ], { session: isTransactionStarted ? session : undefined });
 
     // Tự động tạo hoa hồng Sale nếu có nhân viên bán gói
     if (customerPackage.assignedStaff) {
@@ -386,6 +375,12 @@ const createCustomer = async (req, res) => {
       });
     }
 
+    if (isTransactionStarted && session) {
+      await session.commitTransaction();
+      session.endSession();
+      isTransactionStarted = false;
+    }
+
     const populatedPackage = await CustomerPackage.findById(customerPackage._id)
       .populate({
         path: "customer",
@@ -398,6 +393,14 @@ const createCustomer = async (req, res) => {
     const responseData = flattenPackage(populatedPackage);
     res.status(201).json({ ...responseData, isNewCustomer, referralWarning });
   } catch (error) {
+    if (isTransactionStarted && session) {
+      try {
+        await session.abortTransaction();
+        session.endSession();
+      } catch (abortErr) {
+        console.error("Lỗi huỷ transaction:", abortErr);
+      }
+    }
     console.error("Error creating customer:", error);
     res.status(400).json({ message: error.message || "Lỗi tạo khách hàng" });
   }
@@ -893,7 +896,7 @@ const freezeCustomer = async (req, res) => {
       return res.status(400).json({ message: `Gói tập hiện tại ở trạng thái "${customerPackage.status}", không thể đóng băng.` });
     }
 
-    const { startDate, endDate, reason } = req.body;
+    const { startDate, endDate, reason, reasonType, freezeFee, paymentMethod } = req.body;
     if (!startDate || !endDate) {
       return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ ngày bắt đầu và ngày kết thúc bảo lưu." });
     }
@@ -916,20 +919,41 @@ const freezeCustomer = async (req, res) => {
       customerPackage.endDate = new Date(customerPackage.endDate.getTime() + expectedFrozenDays * 24 * 60 * 60 * 1000);
     }
 
+    const finalReasonType = reasonType === "medical" ? "medical" : "other";
+    const actualFreezeFee = finalReasonType === "medical" ? 0 : Number(freezeFee || 0);
+
     customerPackage.status = "frozen";
     customerPackage.frozenPeriods.push({
       startDate: start,
       endDate: end,
       reason: reason || "Khách hàng yêu cầu tạm ngưng",
+      reasonType: finalReasonType,
+      freezeFee: actualFreezeFee,
     });
 
     await customerPackage.save();
+
+    if (actualFreezeFee > 0) {
+      const customerObj = await Customer.findById(customerPackage.customer);
+      await Transaction.create({
+        type: "service_fee",
+        amount: actualFreezeFee,
+        paymentMethod: paymentMethod || "Tiền mặt",
+        customer: customerPackage.customer,
+        customerName: customerObj?.name || "Hội viên",
+        customerPackage: customerPackage._id,
+        status: "success",
+        staff: req.user ? req.user._id : undefined,
+      });
+    }
 
     await syncCustomerFields(customerPackage.customer);
 
     res.status(200).json({
       success: true,
-      message: "Tạm dừng gói tập thành công, hạn gói đã được cộng thêm thời gian bảo lưu dự kiến.",
+      message: actualFreezeFee > 0
+        ? `Tạm dừng gói tập thành công (Đã thu phí bảo lưu ${actualFreezeFee.toLocaleString('vi-VN')} VNĐ).`
+        : "Tạm dừng gói tập thành công (Miễn phí bảo lưu lý do y tế/thương tích).",
       data: flattenPackage(await CustomerPackage.findById(customerPackage._id).populate({
         path: "customer",
         populate: {
@@ -941,6 +965,227 @@ const freezeCustomer = async (req, res) => {
   } catch (error) {
     console.error("Lỗi đóng băng gói tập:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+const upgradeCustomerPackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPackageId, assignedStaff, paymentMethod } = req.body;
+
+    const oldPackage = await CustomerPackage.findById(id);
+    if (!oldPackage) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng gốc cần nâng cấp." });
+    }
+
+    if (oldPackage.status !== "active") {
+      return res.status(400).json({ success: false, message: `Hợp đồng hiện ở trạng thái "${oldPackage.status}", không thể nâng cấp.` });
+    }
+
+    const PackageModel = require("../models/Package");
+    const newPkgInfo = await PackageModel.findById(newPackageId);
+    if (!newPkgInfo) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy gói tập mới cần nâng cấp." });
+    }
+
+    const oldPkgInfo = await PackageModel.findOne({ name: oldPackage.packageName });
+    if (oldPkgInfo && oldPkgInfo.type !== "monthly") {
+      return res.status(400).json({ success: false, message: "Tính năng nâng cấp hợp đồng chỉ áp dụng cho gói Member (tính theo ngày), không áp dụng gói PT." });
+    }
+
+    const now = new Date();
+    const startDate = new Date(oldPackage.startDate);
+    const diffDays = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+    if (diffDays > 30) {
+      return res.status(400).json({
+        success: false,
+        message: `Hợp đồng đã đăng ký được ${diffDays} ngày. Chỉ được phép nâng cấp trong vòng 30 ngày kể từ ngày tạo hợp đồng gốc.`,
+      });
+    }
+
+    const priceDiff = newPkgInfo.price - oldPackage.price;
+    if (priceDiff <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Giá gói mới (${newPkgInfo.price.toLocaleString("vi-VN")}đ) phải lớn hơn giá gói cũ (${oldPackage.price.toLocaleString("vi-VN")}đ).`,
+      });
+    }
+
+    // Tính ngày hết hạn mới theo thời lượng duration (số ngày) của gói mới B
+    const newDurationDays = newPkgInfo.duration || 30;
+    const newEndDate = new Date(oldPackage.startDate.getTime() + newDurationDays * 24 * 60 * 60 * 1000);
+
+    const newContractCode = oldPackage.contractCode ? `${oldPackage.contractCode}-UP` : `HĐ-UPGRADE`;
+    const newCustomerPackage = new CustomerPackage({
+      customer: oldPackage.customer,
+      package: newPkgInfo._id,
+      packageName: newPkgInfo.name,
+      startDate: oldPackage.startDate,
+      endDate: newEndDate,
+      price: newPkgInfo.price,
+      contractCode: newContractCode,
+      packageNote: `Nâng cấp từ gói [${oldPackage.packageName}] (Thu thêm ${priceDiff.toLocaleString("vi-VN")}đ)`,
+      status: "active",
+      assignedStaff: assignedStaff || oldPackage.assignedStaff,
+      contractType: "upgrade",
+      paymentStatus: "paid",
+      paidAmount: newPkgInfo.price,
+      upgradedFrom: oldPackage._id,
+      upgradeDeltaPrice: priceDiff,
+      hasLocker: oldPackage.hasLocker,
+      hasWater: oldPackage.hasWater,
+    });
+    await newCustomerPackage.save();
+
+    // Xóa bỏ gói A cũ khỏi DB để không bị trùng lặp gói
+    await oldPackage.deleteOne();
+
+    const customerObj = await Customer.findById(oldPackage.customer);
+    await Transaction.create({
+      type: "package_purchase",
+      amount: priceDiff,
+      paymentMethod: paymentMethod || "Tiền mặt",
+      customer: oldPackage.customer,
+      customerName: customerObj?.name || "Hội viên",
+      customerPackage: newCustomerPackage._id,
+      status: "success",
+      staff: req.user ? req.user._id : undefined,
+    });
+
+    const { handleUpgradeCommission } = require("./commissionController");
+    await handleUpgradeCommission({
+      oldPackage,
+      newPackageId: newPkgInfo._id,
+      newPackagePrice: newPkgInfo.price,
+      newCustomerPackageId: newCustomerPackage._id,
+      customerId: oldPackage.customer,
+      upgradeSaleStaffId: assignedStaff || oldPackage.assignedStaff,
+      priceDiff,
+    });
+
+    await syncCustomerFields(oldPackage.customer);
+
+    res.status(200).json({
+      success: true,
+      message: `Nâng cấp hợp đồng lên gói [${newPkgInfo.name}] thành công! Thu thêm ${priceDiff.toLocaleString("vi-VN")} VNĐ.`,
+      data: newCustomerPackage,
+    });
+  } catch (error) {
+    console.error("Lỗi nâng cấp hợp đồng:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const transferCustomerPackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { targetCustomerId, newCustomer, note, paymentMethod } = req.body;
+
+    const customerPackage = await CustomerPackage.findById(id);
+    if (!customerPackage) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng cần chuyển nhượng." });
+    }
+
+    if (customerPackage.status !== "active") {
+      return res.status(400).json({ success: false, message: `Hợp đồng hiện ở trạng thái "${customerPackage.status}", không thể chuyển nhượng.` });
+    }
+
+    let targetCustomer = null;
+
+    if (targetCustomerId) {
+      targetCustomer = await Customer.findById(targetCustomerId);
+      if (!targetCustomer) {
+        return res.status(404).json({ success: false, message: "Không tìm thấy thông tin hội viên nhận chuyển nhượng." });
+      }
+    } else if (newCustomer) {
+      const { name, phone, dob, gender, email, address, identityCard, emergencyContactName, emergencyContactPhone } = newCustomer;
+      if (!name || !phone) {
+        return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ Họ tên và Số điện thoại của người nhận hợp đồng." });
+      }
+
+      const existingCust = await Customer.findOne({ phone, isDeleted: { $ne: true } });
+      if (existingCust) {
+        targetCustomer = existingCust;
+      } else {
+        targetCustomer = new Customer({
+          name,
+          phone,
+          dob: dob ? new Date(dob) : undefined,
+          gender: gender || "Khác",
+          email: email || "",
+          address: address || "",
+          identityCard: identityCard || "",
+          emergencyContactName: emergencyContactName || "",
+          emergencyContactPhone: emergencyContactPhone || "",
+          source: "transfer",
+          packageType: customerPackage.packageName,
+          startDate: customerPackage.startDate,
+          endDate: customerPackage.endDate,
+          price: customerPackage.price || 0,
+          paidAmount: customerPackage.paidAmount || customerPackage.price || 0,
+          paymentStatus: customerPackage.paymentStatus || "paid",
+          remainingSessions: customerPackage.remainingSessions || 0,
+          contractCode: customerPackage.contractCode || "",
+          contractType: "transfer",
+        });
+        await targetCustomer.save();
+      }
+    } else {
+      return res.status(400).json({ success: false, message: "Vui lòng chọn hội viên có sẵn hoặc nhập thông tin người nhận hợp đồng mới." });
+    }
+
+    const originalCustomerId = customerPackage.originalCustomer || customerPackage.customer;
+
+    customerPackage.originalCustomer = originalCustomerId;
+    customerPackage.customer = targetCustomer._id;
+    customerPackage.transferFee = 1000000;
+    customerPackage.contractType = "transfer";
+    if (note) {
+      customerPackage.packageNote = customerPackage.packageNote
+        ? `${customerPackage.packageNote}\n[Chuyển nhượng] Phí 1.000.000đ - Ghi chú: ${note}`
+        : `[Chuyển nhượng] Phí 1.000.000đ - Ghi chú: ${note}`;
+    }
+    await customerPackage.save();
+
+    await Transaction.create({
+      type: "service_fee",
+      amount: 1000000,
+      paymentMethod: paymentMethod || "Tiền mặt",
+      customer: targetCustomer._id,
+      customerName: targetCustomer.name,
+      customerPackage: customerPackage._id,
+      status: "success",
+      staff: req.user ? req.user._id : undefined,
+    });
+
+    // Đồng bộ thông tin Khách B (người nhận)
+    await syncCustomerFields(targetCustomer._id);
+
+    // Kiểm tra Khách A (người chuyển nhượng): Nếu không còn gói tập active nào khác -> Xóa mềm Khách A
+    const originalCustomerObj = await Customer.findById(originalCustomerId);
+    if (originalCustomerObj) {
+      const remainingCount = await CustomerPackage.countDocuments({
+        customer: originalCustomerId,
+        _id: { $ne: customerPackage._id },
+        status: "active",
+      });
+      if (remainingCount === 0) {
+        originalCustomerObj.isDeleted = true;
+        await originalCustomerObj.save();
+        console.log(`[Transfer Cleanup] Đã ẩn hồ sơ Khách A (${originalCustomerObj.name} - ${originalCustomerObj.code}) do đã sang tay toàn bộ hợp đồng.`);
+      } else {
+        await syncCustomerFields(originalCustomerId);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Chuyển nhượng hợp đồng [${customerPackage.contractCode}] sang hội viên [${targetCustomer.name}] thành công! Phí dịch vụ: 1.000.000 VNĐ.`,
+      data: customerPackage,
+    });
+  } catch (error) {
+    console.error("Lỗi chuyển nhượng hợp đồng:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -1366,4 +1611,6 @@ module.exports = {
   enrollFace,
   checkExisting: checkExistingCustomer,
   exportExcel: exportCustomersExcel,
+  upgradePackage: upgradeCustomerPackage,
+  transferPackage: transferCustomerPackage,
 };

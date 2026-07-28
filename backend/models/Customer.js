@@ -35,7 +35,7 @@ const customerSchema = mongoose.Schema(
     // Thanh toán và Nguồn khách
     paymentStatus: { type: String, enum: ['paid', 'deposit', 'unpaid'], default: 'paid' },
     paidAmount: { type: Number, default: 0 },
-    contractType: { type: String, enum: ['new', 'renew', 'upgrade'], default: 'new' },
+    contractType: { type: String, enum: ['new', 'renew', 'upgrade', 'transfer'], default: 'new' },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     source: { type: String, default: "other" },
 

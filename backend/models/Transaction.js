@@ -6,7 +6,7 @@ const transactionSchema = new mongoose.Schema(
     code: { type: String, unique: true },
     type: {
       type: String,
-      enum: ["package_purchase", "pos_sale", "refund", "pt_session"],
+      enum: ["package_purchase", "pos_sale", "refund", "pt_session", "service_fee"],
       required: true,
     },
     amount: { type: Number, required: true },

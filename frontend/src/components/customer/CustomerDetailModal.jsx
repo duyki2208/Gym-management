@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { customerService, checkInService, workoutService, staffService } from "../../services/customerService";
 import FaceCaptureModal from "./FaceCaptureModal";
+import FreezeContractModal from "./FreezeContractModal";
+import UpgradeContractModal from "./UpgradeContractModal";
+import TransferContractModal from "./TransferContractModal";
 import toast from "react-hot-toast";
 import { useConfirm } from "../../context/ConfirmContext";
 
@@ -41,6 +44,11 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const [unfreezeData, setUnfreezeData] = useState({ 
     actualUnfreezeDate: new Date().toISOString().split("T")[0] 
   });
+
+  const [isFreezeContractModalOpen, setIsFreezeContractModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [selectedPackageForAction, setSelectedPackageForAction] = useState(null);
 
   // Quyền trừ buổi tập
   const currentUser = JSON.parse(localStorage.getItem("gym_user") || "{}");
@@ -327,7 +335,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
       return "Đang hoạt động";
   }
 
-  const InfoRow = ({ label, value, isBoolean, boldValue }) => (
+  const InfoRow = ({ label, value, isBoolean }) => (
     <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-gray-100/80 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm min-w-0 overflow-hidden">
         <span className="text-sm uppercase font-bold text-gray-900 dark:text-gray-100 font-display">
             {label}
@@ -335,12 +343,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
         {isBoolean ? (
              <div className="flex items-center gap-2 mt-1 min-w-0">
                 <div className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-gray-300'} flex-shrink-0`}></div>
-                <span className={`font-medium text-base font-display ${value ? 'text-green-700' : 'text-gray-500'} break-all`}>
+                <span className={`font-normal text-base font-display ${value ? 'text-green-700' : 'text-gray-500'} break-all`}>
                     {value ? 'Đã đăng ký' : 'Không'}
                 </span>
              </div>
         ) : (
-             <span className={`text-base text-gray-700 dark:text-gray-300 font-display ${boldValue ? 'font-bold' : 'font-medium'} break-all md:break-words min-w-0 overflow-hidden`}>
+             <span className="text-base text-gray-700 dark:text-gray-200 font-display font-normal break-all md:break-words min-w-0 overflow-hidden">
                  {value || "-"}
              </span>
         )}
@@ -518,11 +526,11 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          {/* 2. Package Info */}
                          <section>
                              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
-                                 2. Thông tin gói tập 
+                                 2. Thông tin gói tập  
                              </h3>
                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                  <div className="col-span-2 md:col-span-2">
-                                     <InfoRow label="Gói đăng ký" value={customer.packageType} boldValue />
+                                     <InfoRow label="Gói đăng ký" value={customer.packageType} />
                                  </div>
                                  <div className="col-span-2 md:col-span-2">
                                      <InfoRow 
@@ -532,7 +540,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                  </div>
                                  
                                  <InfoRow label="Giá gói" value={customer.price ? `${Number(customer.price).toLocaleString()} đ` : "0 đ"} />
-                                 <InfoRow label="Mã hợp đồng" value={customer.contractCode || "-"} boldValue />
+                                 <InfoRow label="Mã hợp đồng" value={customer.contractCode || "-"} />
                                  <InfoRow label="Ngày đăng ký" value={customer.startDate ? format(new Date(customer.startDate), "dd/MM/yyyy") : null} />
                                  <InfoRow label="Ngày hết hạn" value={customer.endDate ? format(new Date(customer.endDate), "dd/MM/yyyy") : null} />
                                  
@@ -605,12 +613,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                         </div>
                         <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex-1 overflow-y-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-50 dark:bg-gray-800 text-gray-900 font-bold uppercase sticky top-0 font-display">
+                                <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white font-bold uppercase sticky top-0 font-display border-b border-gray-300 dark:border-gray-700">
                                     <tr>
-                                        <th className="px-6 py-4">Thời gian</th>
-                                        <th className="px-6 py-4">Ngày</th>
-                                        <th className="px-6 py-4">Gói ghi nhận</th>
-                                        <th className="px-6 py-4 text-right">Trạng thái</th>
+                                        <th className="px-6 py-4">THỜI GIAN</th>
+                                        <th className="px-6 py-4">NGÀY</th>
+                                        <th className="px-6 py-4">GÓI GHI NHẬN</th>
+                                        <th className="px-6 py-4 text-right">TRẠNG THÁI</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -622,10 +630,10 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                 <td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200 text-base">
                                                     {format(new Date(h.time), "HH:mm")}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-medium">
+                                                <td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200">
                                                     {format(new Date(h.time), "dd/MM/yyyy")}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-500">
+                                                <td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200">
                                                     <span className="px-2 py-1 bg-gray-100 rounded text-xs font-bold">{h.packageType}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -705,12 +713,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                         {/* History Table */}
                         <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex-1 overflow-y-auto min-h-[300px]">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-50 dark:bg-gray-800 text-gray-900 font-bold uppercase sticky top-0 font-display">
+                                <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white font-bold uppercase sticky top-0 font-display border-b border-gray-300 dark:border-gray-700">
                                     <tr>
-                                        <th className="px-6 py-4">Ngày tập</th>
-                                        <th className="px-6 py-4">Giờ</th>
-                                        <th className="px-6 py-4">PT Hướng dẫn</th>
-                                        <th className="px-6 py-4">Lễ tân xác nhận</th>
+                                        <th className="px-6 py-4">NGÀY TẬP</th>
+                                        <th className="px-6 py-4">GIỜ</th>
+                                        <th className="px-6 py-4">PT HƯỚNG DẪN</th>
+                                        <th className="px-6 py-4">LỄ TÂN XÁC NHẬN</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -722,17 +730,17 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                 <td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200">
                                                     {format(new Date(w.date), "dd/MM/yyyy")}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-medium">
+                                                <td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200">
                                                     {format(new Date(w.date), "HH:mm")}
                                                 </td>
                                                 <td className="px-6 py-4 text-blue-700 font-bold">
                                                     {w.pt?.fullName || w.ptName}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-500">
+                                                <td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200">
                                                     <div className="flex justify-between items-center w-full">
                                                         <div className="flex flex-col border-r border-gray-100 pr-4">
-                                                            <span className="font-medium text-gray-800">{w.confirmedBy?.fullName || w.confirmedBy?.username || "N/A"}</span>
-                                                            <span className="text-xs">{w.note}</span>
+                                                            <span className="font-bold text-gray-800 dark:text-gray-200">{w.confirmedBy?.fullName || w.confirmedBy?.username || "N/A"}</span>
+                                                            <span className="text-xs font-semibold">{w.note}</span>
                                                         </div>
                                                         {currentUser.role === 'admin' && (
                                                             <button 
@@ -771,14 +779,14 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                         </div>
                         <div className="w-full overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl custom-scrollbar">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-50 dark:bg-gray-800 text-gray-900 font-bold uppercase sticky top-0 font-display">
+                                <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white font-bold uppercase sticky top-0 font-display border-b border-gray-300 dark:border-gray-700">
                                     <tr>
-                                        <th className="px-4 py-3">Mã HĐ</th>
-                                        <th className="px-4 py-3">Tên Gói tập</th>
-                                        <th className="px-4 py-3">Thời gian gói</th>
-                                        <th className="px-4 py-3">Giá tiền</th>
-                                        <th className="px-4 py-3">Ghi chú</th>
-                                        <th className="px-4 py-3">Trạng thái</th>
+                                        <th className="px-4 py-3">MÃ HĐ</th>
+                                        <th className="px-4 py-3">TÊN GÓI TẬP</th>
+                                        <th className="px-4 py-3">THỜI GIAN GÓI</th>
+                                        <th className="px-4 py-3">GIÁ TIỀN</th>
+                                        <th className="px-4 py-3">GHI CHÚ</th>
+                                        <th className="px-4 py-3">TRẠNG THÁI</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -787,19 +795,19 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                     ) : customerPackages.length > 0 ? (
                                         customerPackages.map((pkg, idx) => (
                                             <tr key={idx} className="hover:bg-bg-50 dark:hover:bg-gray-800/50">
-                                                <td className="px-4 py-3 text-gray-500 font-medium">
+                                                <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-200">
                                                     {pkg.contractCode || "-"}
                                                 </td>
                                                 <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-200">
                                                     {pkg.packageType || pkg.packageName}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
+                                                <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-200">
                                                     {pkg.startDate ? format(new Date(pkg.startDate), "dd/MM/yyyy") : "-"} - {pkg.endDate ? format(new Date(pkg.endDate), "dd/MM/yyyy") : "-"}
                                                 </td>
-                                                <td className="px-4 py-3 font-bold text-gray-950">
+                                                <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-200">
                                                     {pkg.price ? `${Number(pkg.price).toLocaleString()} đ` : "0 đ"}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600 whitespace-pre-line">
+                                                <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-200 whitespace-pre-line">
                                                     {pkg.packageNote || "-"}
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -852,37 +860,57 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                  <p className="text-sm text-gray-500 mt-1">Mã HĐ: {pkg.contractCode || "N/A"}</p>
                                                  <p className="text-sm text-gray-500">Thời gian gói: {pkg.startDate ? format(new Date(pkg.startDate), "dd/MM/yyyy") : "-"} - {pkg.endDate ? format(new Date(pkg.endDate), "dd/MM/yyyy") : "-"}</p>
                                              </div>
-                                             <div className="flex flex-col items-end gap-2">
-                                                 {pkg.status === 'active' && (
-                                                     <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">Đang hoạt động</span>
-                                                 )}
-                                                 {pkg.status === 'frozen' && (
-                                                     <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold border border-purple-200">Bảo lưu</span>
-                                                 )}
-                                                 
-                                                 {["admin", "manager"].includes(currentUser.role) && (
-                                                     <div className="mt-2">
-                                                         {pkg.status === 'active' && (
-                                                             <button
-                                                                 onClick={() => handleFreezeClick(pkg._id)}
-                                                                 disabled={isFreezing}
-                                                                 className="px-4 py-2 bg-amber-500 text-white hover:bg-amber-600 font-bold rounded-lg text-sm transition-colors shadow-sm"
-                                                             >
-                                                                 Thực hiện Bảo lưu
-                                                             </button>
-                                                         )}
-                                                         {pkg.status === 'frozen' && (
-                                                             <button
-                                                                 onClick={() => handleUnfreezeClick(pkg._id)}
-                                                                 disabled={isFreezing}
-                                                                 className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg text-sm transition-colors shadow-sm"
-                                                             >
-                                                                 Kích hoạt lại gói
-                                                             </button>
-                                                         )}
-                                                     </div>
-                                                 )}
-                                             </div>
+                                              <div className="flex flex-col items-end gap-2">
+                                                  {pkg.status === 'active' && (
+                                                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">Đang hoạt động</span>
+                                                  )}
+                                                  {pkg.status === 'frozen' && (
+                                                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold border border-purple-200">Bảo lưu</span>
+                                                  )}
+                                                  {pkg.status === 'upgraded' && (
+                                                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold border border-blue-200">Đã nâng cấp</span>
+                                                  )}
+                                                  
+                                                  {["admin", "manager", "reception", "sale", "staff"].includes(currentUser.role) && (
+                                                      <div className="mt-2 flex flex-wrap gap-2 justify-end">
+                                                          {pkg.status === 'active' && (
+                                                              <>
+                                                                  <button
+                                                                      type="button"
+                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsFreezeContractModalOpen(true); }}
+                                                                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                  >
+                                                                      Bảo lưu
+                                                                  </button>
+                                                                  <button
+                                                                      type="button"
+                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsUpgradeModalOpen(true); }}
+                                                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                  >
+                                                                      Nâng cấp
+                                                                  </button>
+                                                                  <button
+                                                                      type="button"
+                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsTransferModalOpen(true); }}
+                                                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                  >
+                                                                      Chuyển nhượng
+                                                                  </button>
+                                                              </>
+                                                          )}
+                                                          {pkg.status === 'frozen' && (
+                                                              <button
+                                                                  type="button"
+                                                                  onClick={() => handleUnfreezeClick(pkg._id)}
+                                                                  disabled={isFreezing}
+                                                                  className="px-3 py-1.5 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                              >
+                                                                  Kích hoạt lại
+                                                              </button>
+                                                          )}
+                                                      </div>
+                                                  )}
+                                              </div>
                                          </div>
                                          
                                          {/* Lịch sử bảo lưu */}
@@ -1071,6 +1099,27 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
               onSuccess={handleFaceCapture}
           />
       )}
+
+      <FreezeContractModal
+        isOpen={isFreezeContractModalOpen}
+        onClose={() => { setIsFreezeContractModalOpen(false); setSelectedPackageForAction(null); }}
+        customerPackage={selectedPackageForAction}
+        onSuccess={() => { fetchCustomerPackages(); if (onUpdate) onUpdate(); }}
+      />
+
+      <UpgradeContractModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => { setIsUpgradeModalOpen(false); setSelectedPackageForAction(null); }}
+        customerPackage={selectedPackageForAction}
+        onSuccess={() => { fetchCustomerPackages(); if (onUpdate) onUpdate(); }}
+      />
+
+      <TransferContractModal
+        isOpen={isTransferModalOpen}
+        onClose={() => { setIsTransferModalOpen(false); setSelectedPackageForAction(null); }}
+        customerPackage={selectedPackageForAction}
+        onSuccess={() => { fetchCustomerPackages(); if (onUpdate) onUpdate(); }}
+      />
     </div>
   );
 };

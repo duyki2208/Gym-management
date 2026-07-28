@@ -62,18 +62,56 @@ router.delete('/:id',
   customerController.delete
 );
 
-// POST /api/v1/customers/:id/freeze — Tạm dừng gói tập (chỉ Admin)
+// POST /api/v1/customers/:id/freeze — Tạm dừng gói tập (Hỗ trợ Admin, Manager, Reception, Sale, Staff)
 router.post('/:id/freeze',
   protect,
-  authorize('admin'),
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
   customerController.freeze
 );
 
-// POST /api/v1/customers/:id/unfreeze — Kích hoạt lại gói tập (chỉ Admin)
+router.post('/packages/:id/freeze',
+  protect,
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
+  customerController.freeze
+);
+
+// POST /api/v1/customers/:id/unfreeze — Kích hoạt lại gói tập
 router.post('/:id/unfreeze',
   protect,
-  authorize('admin'),
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
   customerController.unfreeze
+);
+
+router.post('/packages/:id/unfreeze',
+  protect,
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
+  customerController.unfreeze
+);
+
+// POST /api/v1/customers/packages/:id/upgrade — Nâng cấp hợp đồng
+router.post('/packages/:id/upgrade',
+  protect,
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
+  customerController.upgradePackage
+);
+
+router.post('/:id/upgrade',
+  protect,
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
+  customerController.upgradePackage
+);
+
+// POST /api/v1/customers/packages/:id/transfer — Chuyển nhượng hợp đồng
+router.post('/packages/:id/transfer',
+  protect,
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
+  customerController.transferPackage
+);
+
+router.post('/:id/transfer',
+  protect,
+  authorize('admin', 'manager', 'reception', 'sale', 'staff'),
+  customerController.transferPackage
 );
 
 // POST /api/v1/customers/:id/enroll-face — Đăng ký khuôn mặt qua InsightFace

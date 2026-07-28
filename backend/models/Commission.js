@@ -47,7 +47,13 @@ const commissionSchema = new mongoose.Schema(
     // Loại hợp đồng (chỉ dùng cho Sale)
     contractType: {
       type: String,
-      enum: ["new", "renew", "upgrade"],
+      enum: ["new", "renew", "upgrade", "upgrade_delta", "upgrade_full_recalc", "upgrade_adjustment_minus"],
+    },
+
+    // Liên kết ngược về bản ghi hoa hồng gốc (khi tạo bút toán điều chỉnh)
+    originalCommission: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Commission",
     },
 
     // Khách hàng liên quan
@@ -59,6 +65,13 @@ const commissionSchema = new mongoose.Schema(
     // Tháng/năm tính hoa hồng (để aggregate nhanh)
     month: { type: Number, required: true },
     year: { type: Number, required: true },
+
+    // Trạng thái duyệt chi
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved"],
+      default: "pending",
+    },
 
     // Trạng thái
     status: {

@@ -95,13 +95,13 @@ const Packages = () => {
 
       <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-100 dark:bg-gray-800 uppercase text-sm font-bold text-gray-700">
+          <thead className="bg-gray-200/80 dark:bg-gray-800 uppercase text-sm font-bold text-black dark:text-white border-b border-gray-300 dark:border-gray-700">
             <tr>
-              <th className="px-6 py-4">Tên gói</th>
-              <th className="px-6 py-4">Loại gói</th>
-              <th className="px-6 py-4">Giá (VNĐ)</th>
-              <th className="px-6 py-4">Thời hạn</th>
-              {isAdmin && <th className="px-6 py-4 text-center">Hành động</th>}
+              <th className="px-6 py-4">TÊN GÓI</th>
+              <th className="px-6 py-4">LOẠI GÓI</th>
+              <th className="px-6 py-4">GIÁ (VNĐ)</th>
+              <th className="px-6 py-4">THỜI HẠN</th>
+              {isAdmin && <th className="px-6 py-4 text-center">HÀNH ĐỘNG</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark">
