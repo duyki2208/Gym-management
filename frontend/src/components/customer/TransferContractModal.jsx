@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, UserPlus, AlertCircle, DollarSign, Search } from 'lucide-react';
+import { UserCheck, UserPlus, AlertCircle, DollarSign, Search, ShieldAlert } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) => {
-  const [transferMode, setTransferMode] = useState('new'); // 'new' (Đăng ký B mới) | 'existing' (Chọn B có sẵn)
+  const [user, setUser] = useState({});
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const [transferMode, setTransferMode] = useState('new'); // 'new' | 'existing'
   const [existingCustomers, setExistingCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  
-  // Form Khách B mới với ĐẦY ĐỦ THÔNG TIN
+
+  // Form Khách mới B
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     phone: '',
@@ -26,14 +29,25 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [dobForExisting, setDobForExisting] = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      try {
+        const u = JSON.parse(localStorage.getItem('gym_user') || localStorage.getItem('user') || '{}');
+        setUser(u);
+        const roleStr = (u.role || '').toLowerCase();
+        const allowed = ['admin', 'manager', 'accountant', 'sm', 'pm', 'om'];
+        setIsAdmin(allowed.includes(roleStr));
+      } catch (e) {
+        setIsAdmin(false);
+      }
       setTransferMode('new');
       setSelectedCustomerId('');
       setSearchQuery('');
       setNote('');
       setPaymentMethod('Tiền mặt');
+      setDobForExisting('');
       setNewCustomer({
         name: '',
         phone: '',
@@ -48,7 +62,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
     }
   }, [isOpen]);
 
-  // Tìm kiếm khách hàng có sẵn khi mode = 'existing'
+  // Tìm kiếm khách hàng có sẵn
   useEffect(() => {
     if (transferMode === 'existing' && searchQuery.trim().length >= 2) {
       const delayDebounce = setTimeout(async () => {
@@ -75,14 +89,31 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const u = JSON.parse(localStorage.getItem('gym_user') || localStorage.getItem('user') || '{}');
+    const roleStr = (u.role || '').toLowerCase();
+    const allowed = ['admin', 'manager', 'accountant', 'sm', 'pm', 'om'];
+    if (!allowed.includes(roleStr)) {
+      toast.error(`Tài khoản hiện tại (${u.fullName || u.username || 'Khách'} - Role: ${u.role || 'Không xác định'}) không có quyền thực hiện chuyển nhượng hợp đồng.`);
+      return;
+    }
+
     if (transferMode === 'existing') {
       if (!selectedCustomerId) {
         toast.error('Vui lòng chọn người nhận hợp đồng từ danh sách');
         return;
       }
+      const selectedCust = existingCustomers.find((c) => c._id === selectedCustomerId);
+      if (!selectedCust?.dob && !dobForExisting) {
+        toast.error('Vui lòng nhập Ngày sinh của người nhận hợp đồng');
+        return;
+      }
     } else {
       if (!newCustomer.name || !newCustomer.phone) {
         toast.error('Vui lòng nhập đầy đủ Họ tên và Số điện thoại của người nhận hợp đồng mới');
+        return;
+      }
+      if (!newCustomer.dob) {
+        toast.error('Ngày sinh (DOB) là bắt buộc khi tạo khách mới');
         return;
       }
     }
@@ -96,6 +127,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
 
       if (transferMode === 'existing') {
         payload.targetCustomerId = selectedCustomerId;
+        if (dobForExisting) payload.dobForExisting = dobForExisting;
       } else {
         payload.newCustomer = newCustomer;
       }
@@ -111,6 +143,8 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
     }
   };
 
+  const selectedCustObj = existingCustomers.find((c) => c._id === selectedCustomerId);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
@@ -123,7 +157,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
             <div>
               <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">Chuyển Nhượng Hợp Đồng</h3>
               <p className="text-xs text-gray-500 font-medium">
-                HĐ: <span className="font-bold text-gray-700 dark:text-gray-300">{customerPackage.contractCode || 'N/A'}</span> ({customerPackage.packageName})
+                Mã HĐ: <span className="font-bold text-gray-700 dark:text-gray-300">{customerPackage.contractCode || 'N/A'}</span> ({customerPackage.packageName})
               </p>
             </div>
           </div>
@@ -135,16 +169,12 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
           </button>
         </div>
 
-        {/* Fixed Fee Banner */}
-        <div className="px-6 py-3 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-            <DollarSign size={16} className="text-emerald-600" />
-            <span>Phí dịch vụ chuyển nhượng hợp đồng:</span>
+        {!isAdmin && (
+          <div className="p-4 bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-800 flex items-center gap-3 text-red-800 dark:text-red-300 text-xs font-bold">
+            <ShieldAlert size={20} className="text-red-600 shrink-0" />
+            <span>Tài khoản của bạn ({user?.fullName || user?.username || "Khách"} - Role: {user?.role || "N/A"}) không thuộc nhóm quyền Admin/Quản lý để thực hiện chuyển nhượng.</span>
           </div>
-          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-            1.000.000 VNĐ
-          </span>
-        </div>
+        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
@@ -184,7 +214,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
 
           {/* Mode = Existing Customer */}
           {transferMode === 'existing' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="block text-xs font-bold text-gray-600 dark:text-gray-400">
                 Tìm kiếm hội viên (Theo tên/SĐT/Mã HV)
               </label>
@@ -199,35 +229,78 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                 />
               </div>
 
-              <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-800">
                 {searching ? (
                   <div className="p-3 text-center text-xs text-gray-400">Đang tìm kiếm...</div>
                 ) : existingCustomers.length > 0 ? (
-                  existingCustomers.map((cust) => (
-                    <div
-                      key={cust._id}
-                      onClick={() => setSelectedCustomerId(cust._id)}
-                      className={`p-3 text-sm cursor-pointer flex justify-between items-center transition-colors ${
-                        selectedCustomerId === cust._id
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-bold'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      <div>
-                        <div>{cust.name} ({cust.code || 'N/A'})</div>
-                        <div className="text-xs text-gray-400 font-normal">{cust.phone} - {cust.email || 'Không có email'}</div>
+                  existingCustomers.map((cust) => {
+                    const hasActivePkg = cust.hasActivePackage || (cust.packages && cust.packages.some((p) => p.status === 'active'));
+                    return (
+                      <div
+                        key={cust._id}
+                        onClick={() => setSelectedCustomerId(cust._id)}
+                        className={`p-3 text-sm cursor-pointer flex justify-between items-center transition-colors ${
+                          selectedCustomerId === cust._id
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-bold'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span>{cust.name} ({cust.code || 'N/A'})</span>
+                            {/* Badge trạng thái gói theo Rule 4 */}
+                            {!hasActivePkg ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                Không có gói active
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
+                                Đang có gói active
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400 font-normal mt-0.5">{cust.phone} - {cust.email || 'Không có email'}</div>
+                        </div>
+                        {selectedCustomerId === cust._id && (
+                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">✓ Đã chọn</span>
+                        )}
                       </div>
-                      {selectedCustomerId === cust._id && (
-                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Đã chọn</span>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="p-3 text-center text-xs text-gray-400">
                     {searchQuery ? 'Không tìm thấy khách hàng nào' : 'Gõ từ khóa để tìm kiếm...'}
                   </div>
                 )}
               </div>
+
+              {/* Field DOB bắt buộc khi đã chọn khách có sẵn */}
+              {selectedCustomerId && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                  <label className="block text-xs font-bold text-amber-800 dark:text-amber-300 mb-1">
+                    Ngày sinh người nhận{' '}
+                    {!selectedCustObj?.dob && <span className="text-red-500">*</span>}
+                  </label>
+                  {selectedCustObj?.dob ? (
+                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300 px-3 py-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                      {new Date(selectedCustObj.dob).toLocaleDateString('vi-VN')}{' '}
+                      <span className="text-xs text-green-600 font-normal ml-2">✓ Đã có trong hệ thống</span>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="date"
+                        value={dobForExisting}
+                        onChange={(e) => setDobForExisting(e.target.value)}
+                        className="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                      <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                        Hội viên này chưa có ngày sinh. Bắt buộc nhập để hoàn tất chuyển nhượng.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -235,7 +308,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
           {transferMode === 'new' && (
             <div className="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200 dark:border-gray-700/60 space-y-3">
               <h4 className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-400">
-                Thông tin người nhận chuyển nhượng
+                Thông tin người nhận chuyển nhượng mới
               </h4>
 
               <div className="grid grid-cols-2 gap-3">
@@ -248,7 +321,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     required
                     value={newCustomer.name}
                     onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -262,7 +334,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     required
                     value={newCustomer.phone}
                     onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -286,10 +357,11 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
 
                 <div>
                   <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
-                    Ngày sinh
+                    Ngày sinh <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
+                    required
                     value={newCustomer.dob}
                     onChange={(e) => setNewCustomer({ ...newCustomer, dob: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium"
@@ -304,7 +376,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     type="text"
                     value={newCustomer.identityCard}
                     onChange={(e) => setNewCustomer({ ...newCustomer, identityCard: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium"
                   />
                 </div>
@@ -319,7 +390,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     type="email"
                     value={newCustomer.email}
                     onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium"
                   />
                 </div>
@@ -332,7 +402,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     type="text"
                     value={newCustomer.address}
                     onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium"
                   />
                 </div>
@@ -347,7 +416,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     type="text"
                     value={newCustomer.emergencyContactName}
                     onChange={(e) => setNewCustomer({ ...newCustomer, emergencyContactName: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium"
                   />
                 </div>
@@ -360,7 +428,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     type="text"
                     value={newCustomer.emergencyContactPhone}
                     onChange={(e) => setNewCustomer({ ...newCustomer, emergencyContactPhone: e.target.value })}
-                    
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm font-medium"
                   />
                 </div>
@@ -371,7 +438,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
           {/* Payment Method for Transfer Fee */}
           <div>
             <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
-              Hình thức thanh toán Phí Chuyển Nhượng (1.000.000 VNĐ)
+              Hình thức thanh toán 
             </label>
             <select
               value={paymentMethod}
@@ -379,7 +446,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm font-medium"
             >
               <option value="Tiền mặt">Tiền mặt</option>
-              <option value="Chuyển khoản QR">Chuyển khoản QR</option>
+              <option value="Chuyển khoản QR">Chuyển khoản </option>
             </select>
           </div>
 
@@ -396,7 +463,6 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
             />
           </div>
-
 
           {/* Submit buttons */}
           <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">

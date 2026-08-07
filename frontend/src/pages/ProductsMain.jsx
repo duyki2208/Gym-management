@@ -1,12 +1,12 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import PointOfSale from './PointOfSale';
+import SalesOrderList from './SalesOrderList';
 import ProductList from './ProductList';
 import ImportGoods from './ImportGoods';
 import { Store, ShoppingCart, Download, PackageSearch } from 'lucide-react';
 
 const titleMap = {
-  pos: { label: 'Bán Hàng (POS)', icon: ShoppingCart },
+  pos: { label: 'Bán Hàng', icon: ShoppingCart },
   inventory: { label: 'Quản Lý Tồn Kho', icon: PackageSearch },
   import: { label: 'Lập Phiếu Nhập Hàng', icon: Download },
 };
@@ -32,8 +32,8 @@ const ProductsMain = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden bg-gray-50/30">
-        {activeTab === 'pos' && <PointOfSale />}
+      <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
+        {activeTab === 'pos' && <SalesOrderList />}
         {activeTab === 'inventory' && <ProductList />}
         {activeTab === 'import' && <ImportGoods onFinish={() => {}} />}
       </div>

@@ -35,7 +35,7 @@ const ImportGoods = () => {
 
   const updateDetail = (idx, field, value) => {
     const newDetails = [...importDetails];
-    newDetails[idx][field] = Number(value);
+    newDetails[idx][field] = value === '' ? '' : Math.max(0, Number(value));
     setImportDetails(newDetails);
   };
 
@@ -44,7 +44,7 @@ const ImportGoods = () => {
   };
 
   const calculateTotal = () => {
-    return importDetails.reduce((sum, item) => sum + (item.quantity * item.importPrice), 0);
+    return importDetails.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.importPrice) || 0)), 0);
   };
 
   const handleSave = async () => {
@@ -58,8 +58,8 @@ const ImportGoods = () => {
         note,
         details: importDetails.map(d => ({
            product: d.product._id,
-           quantity: d.quantity,
-           importPrice: d.importPrice
+           quantity: Number(d.quantity) || 1,
+           importPrice: Number(d.importPrice) || 0
         }))
       };
       await inventoryService.importGoods(payload);
@@ -79,7 +79,7 @@ const ImportGoods = () => {
          </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-250px)] min-h-[520px]">
          {/* Left Side: Product Selection */}
          <div className="lg:col-span-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col h-[70vh]">
              <h3 className="font-bold text-gray-800 mb-4 bg-gray-50 p-2 rounded-lg text-center">Tìm Sản Phẩm</h3>
@@ -141,11 +141,11 @@ const ImportGoods = () => {
                 <table className="w-full text-left">
                    <thead className="text-xs uppercase font-bold text-black dark:text-white bg-gray-200/80 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700">
                        <tr>
-                           <th className="p-2 rounded-tl-lg">SẢN PHẨM</th>
+                           <th className="p-2">SẢN PHẨM</th>
                            <th className="p-2 w-24">SỐ LƯỢNG</th>
                            <th className="p-2 w-32">GIÁ NHẬP (Đ)</th>
                            <th className="p-2 w-32 text-right">THÀNH TIỀN</th>
-                           <th className="p-2 rounded-tr-lg w-10"></th>
+                           <th className="p-2 w-10"></th>
                        </tr>
                    </thead>
                    <tbody>

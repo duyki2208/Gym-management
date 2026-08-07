@@ -205,13 +205,106 @@ exports.handleWebhook = async (req, res) => {
 
 exports.getSales = async (req, res) => {
   try {
-    const sales = await SaleOrder.find()
-      .populate('customer', 'name phone') // Sửa lỗi typo fullName -> name
-      .populate('details.product', 'name category imageUrl')
+    const { startDate, endDate, search, paymentMethod, preset } = req.query;
+    let filter = {};
+
+    // Lọc thời gian theo preset hoặc ngày tùy chọn
+    let start, end;
+    const now = new Date();
+    
+    if (preset === 'today') {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    } else if (preset === 'yesterday') {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      start = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0);
+      end = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+    } else if (preset === 'thisWeek') {
+      const dayOfWeek = now.getDay();
+      const distanceToMonday = (dayOfWeek + 6) % 7;
+      start = new Date(now);
+      start.setDate(now.getDate() - distanceToMonday);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === '7days') {
+      start = new Date(now);
+      start.setDate(now.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === '30days') {
+      start = new Date(now);
+      start.setDate(now.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === 'thisMonth') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (startDate || endDate) {
+      if (startDate) {
+        start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+      }
+      if (endDate) {
+        end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+      }
+    } else if (preset === 'all') {
+      // Không lọc ngày
+    } else {
+      // Mặc định: Hôm nay
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    }
+
+    if (start || end) {
+      filter.createdAt = {};
+      if (start) filter.createdAt.$gte = start;
+      if (end) filter.createdAt.$lte = end;
+    }
+
+    if (paymentMethod && paymentMethod !== 'all') {
+      filter.paymentMethod = paymentMethod;
+    }
+
+    let sales = await SaleOrder.find(filter)
+      .populate('customer', 'name phone email')
+      .populate('details.product', 'name category imageUrl sellPrice')
       .sort({ createdAt: -1 });
-    res.status(200).json(sales);
+
+    // Lọc theo từ khóa tìm kiếm (Mã đơn, tên/SĐT khách hàng, tên sản phẩm)
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      sales = sales.filter(s => {
+        const code = `XBH${s._id.toString().slice(-8).toUpperCase()}`.toLowerCase();
+        const rawId = s._id.toString().toLowerCase();
+        const custName = (s.customer?.name || 'Khách lẻ').toLowerCase();
+        const custPhone = (s.customer?.phone || '').toLowerCase();
+        const prodMatch = s.details?.some(d => d.product?.name?.toLowerCase().includes(q));
+        return code.includes(q) || rawId.includes(q) || custName.includes(q) || custPhone.includes(q) || prodMatch;
+      });
+    }
+
+    // Tính toán tổng số liệu (Summary)
+    const totalAmountSum = sales.reduce((sum, item) => sum + (item.status === 'Đã thanh toán' ? item.totalAmount : 0), 0);
+    const paidAmountSum = sales.reduce((sum, item) => sum + (item.status === 'Đã thanh toán' ? item.totalAmount : 0), 0);
+    const dueAmountSum = 0;
+
+    res.status(200).json({
+      success: true,
+      sales,
+      summary: {
+        totalAmount: totalAmountSum,
+        totalPaid: paidAmountSum,
+        totalDue: dueAmountSum,
+        totalOrders: sales.length
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách bán hàng', error: error.message });
+    res.status(500).json({ success: false, message: 'Lỗi lấy danh sách bán hàng', error: error.message });
   }
 };
 

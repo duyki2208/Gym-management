@@ -10,6 +10,16 @@
   outline: none;
 }
 
+/* Hide spin buttons & prevent scroll jump on number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* ── System-wide Dark Mode Styles (Matching Dark Charcoal Screenshot) ── */
 .dark {
   color-scheme: dark;

@@ -1,5 +1,6 @@
 const Customer = require("../models/Customer");
 const CustomerPackage = require("../models/CustomerPackage");
+const ContractTransfer = require("../models/ContractTransfer");
 const Transaction = require("../models/Transaction");
 const Invoice = require("../models/Invoice");
 const ExcelJS = require("exceljs");
@@ -852,7 +853,12 @@ const deleteCustomer = async (req, res) => {
       };
     }
 
-    // Thực hiện xóa mềm gói tập
+    // Kiểm tra xem gói này có đang được tham chiếu bởi gói nâng cấp nào không
+    const isReferencedByUpgrade = await CustomerPackage.findOne({
+      upgradedFrom: customerPackage._id
+    }, null, { withDeleted: true }); // Tìm kể cả trong bản ghi đã soft-delete
+
+    // Soft Delete gói tập để bảo toàn lịch sử và audit trail
     customerPackage.isDeleted = true;
     await customerPackage.save();
 
@@ -872,7 +878,6 @@ const deleteCustomer = async (req, res) => {
       if (customer) {
         customer.isDeleted = true;
         await customer.save();
-        console.log(`Đã xóa mềm hồ sơ khách hàng gốc ${customerId} vì không còn gói tập nào hoạt động`);
       }
     } else {
       await syncCustomerFields(customerId);
@@ -890,6 +895,11 @@ const freezeCustomer = async (req, res) => {
     const customerPackage = await CustomerPackage.findById(req.params.id);
     if (!customerPackage) {
       return res.status(404).json({ message: "Không tìm thấy gói tập của hội viên" });
+    }
+
+    // Guard: Gói đã chuyển nhượng — khóa vĩnh viễn, không cho thực hiện bất kỳ thao tác nào
+    if (customerPackage.status === "transferred") {
+      return res.status(400).json({ message: "Hợp đồng này đã được chuyển nhượng và không còn hoạt động trên hệ thống. Không thể thực hiện bảo lưu." });
     }
 
     if (customerPackage.status !== "active") {
@@ -978,6 +988,11 @@ const upgradeCustomerPackage = async (req, res) => {
       return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng gốc cần nâng cấp." });
     }
 
+    // Guard: Gói đã chuyển nhượng — không thể nâng cấp
+    if (oldPackage.status === "transferred") {
+      return res.status(400).json({ success: false, message: "Hợp đồng này đã được chuyển nhượng và không còn hoạt động trên hệ thống. Không thể thực hiện nâng cấp." });
+    }
+
     if (oldPackage.status !== "active") {
       return res.status(400).json({ success: false, message: `Hợp đồng hiện ở trạng thái "${oldPackage.status}", không thể nâng cấp.` });
     }
@@ -1011,8 +1026,9 @@ const upgradeCustomerPackage = async (req, res) => {
       });
     }
 
-    // Giữ nguyên ngày hết hạn của gói cũ theo thống nhất nghiệp vụ
-    const newEndDate = oldPackage.endDate;
+    // Tính lại ngày hết hạn theo thời lượng gói tập mới từ ngày bắt đầu ban đầu (Cơ chế 1)
+    const durationDays = newPkgInfo.duration || 30;
+    const newEndDate = new Date(new Date(oldPackage.startDate).getTime() + durationDays * 24 * 60 * 60 * 1000);
 
     const newContractCode = oldPackage.contractCode ? `${oldPackage.contractCode}-UP` : `HĐ-UPGRADE`;
     const newCustomerPackage = new CustomerPackage({
@@ -1079,103 +1095,184 @@ const upgradeCustomerPackage = async (req, res) => {
 
 const transferCustomerPackage = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { targetCustomerId, newCustomer, note, paymentMethod } = req.body;
+    // Phân quyền: Yêu cầu Admin / Manager / Accountant
+    const allowedRoles = ["admin", "manager", "accountant", "sm", "pm", "om"];
+    if (req.user && !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: `Tài khoản quyền "${req.user.role}" không có quyền thực hiện chuyển nhượng hợp đồng. Yêu cầu quyền Admin/Quản lý.` });
+    }
 
-    const customerPackage = await CustomerPackage.findById(id);
-    if (!customerPackage) {
+    const { id } = req.params;
+    const { targetCustomerId, newCustomer, dobForExisting, note, paymentMethod } = req.body;
+
+    // 1. Tìm hợp đồng gốc
+    const originalPkg = await CustomerPackage.findById(id);
+    if (!originalPkg) {
       return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng cần chuyển nhượng." });
     }
 
-    if (customerPackage.status !== "active") {
-      return res.status(400).json({ success: false, message: `Hợp đồng hiện ở trạng thái "${customerPackage.status}", không thể chuyển nhượng.` });
+    // Validation: Hợp đồng phải ở trạng thái active
+    if (originalPkg.status !== "active") {
+      return res.status(400).json({ success: false, message: `Hợp đồng hiện ở trạng thái "${originalPkg.status}", không thể chuyển nhượng.` });
     }
 
+    // Validation: Hợp đồng phải được thanh toán 100% (paid)
+    if (originalPkg.paymentStatus !== "paid") {
+      return res.status(400).json({ success: false, message: "Hợp đồng chưa hoàn tất thanh toán (100%), không thể thực hiện chuyển nhượng." });
+    }
+
+    // 2. Xác định người nhận (B) và validate
     let targetCustomer = null;
 
     if (targetCustomerId) {
+      // Mode: Chọn khách có sẵn
+      if (targetCustomerId.toString() === originalPkg.customer.toString()) {
+        return res.status(400).json({ success: false, message: "Không thể chuyển nhượng hợp đồng cho chính chủ sở hữu." });
+      }
+
       targetCustomer = await Customer.findById(targetCustomerId);
       if (!targetCustomer) {
         return res.status(404).json({ success: false, message: "Không tìm thấy thông tin hội viên nhận chuyển nhượng." });
       }
+      // Bắt buộc có ngày sinh
+      if (!targetCustomer.dob && !dobForExisting) {
+        return res.status(400).json({ success: false, message: "Hội viên này chưa có ngày sinh trong hệ thống. Vui lòng nhập ngày sinh để tiếp tục chuyển nhượng." });
+      }
+      if (dobForExisting) {
+        targetCustomer.dob = new Date(dobForExisting);
+        await targetCustomer.save();
+      }
     } else if (newCustomer) {
+      // Mode: Tạo khách mới
       const { name, phone, dob, gender, email, address, identityCard, emergencyContactName, emergencyContactPhone } = newCustomer;
       if (!name || !phone) {
         return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ Họ tên và Số điện thoại của người nhận hợp đồng." });
       }
-
-      const existingCust = await Customer.findOne({ phone, isDeleted: { $ne: true } });
-      if (existingCust) {
-        targetCustomer = existingCust;
-      } else {
-        targetCustomer = new Customer({
-          name,
-          phone,
-          dob: dob ? new Date(dob) : undefined,
-          gender: gender || "Khác",
-          email: email || "",
-          address: address || "",
-          identityCard: identityCard || "",
-          emergencyContactName: emergencyContactName || "",
-          emergencyContactPhone: emergencyContactPhone || "",
-          source: "transfer",
-          packageType: customerPackage.packageName,
-          startDate: customerPackage.startDate,
-          endDate: customerPackage.endDate,
-          price: customerPackage.price || 0,
-          paidAmount: customerPackage.paidAmount || customerPackage.price || 0,
-          paymentStatus: customerPackage.paymentStatus || "paid",
-          remainingSessions: customerPackage.remainingSessions || 0,
-          contractCode: customerPackage.contractCode || "",
-          contractType: "transfer",
-        });
-        await targetCustomer.save();
+      if (!dob) {
+        return res.status(400).json({ success: false, message: "Ngày sinh (DOB) của người nhận hợp đồng là bắt buộc." });
       }
+
+      const parsedDob = new Date(dob);
+      if (isNaN(parsedDob.getTime())) {
+        return res.status(400).json({ success: false, message: "Ngày sinh không hợp lệ." });
+      }
+
+      // Check duplicate name + phone + dob
+      const existingCust = await Customer.findOne({
+        name: name.trim(),
+        phone: phone.trim(),
+        dob: parsedDob,
+        isDeleted: { $ne: true }
+      });
+
+      if (existingCust) {
+        return res.status(400).json({ success: false, message: "Khách hàng này đã tồn tại trong hệ thống. Vui lòng dùng chức năng 'Khách cũ' để chọn." });
+      }
+
+      // Kiểm tra trùng riêng SĐT để tránh tạo rác SĐT
+      const existingPhone = await Customer.findOne({ phone: phone.trim(), isDeleted: { $ne: true } });
+      if (existingPhone) {
+        return res.status(400).json({ success: false, message: `Số điện thoại ${phone} đã thuộc về hội viên "${existingPhone.name}". Vui lòng dùng chức năng 'Khách cũ'.` });
+      }
+
+      targetCustomer = new Customer({
+        name: name.trim(),
+        phone: phone.trim(),
+        dob: parsedDob,
+        gender: gender || "Khác",
+        email: email || "",
+        address: address || "",
+        identityCard: identityCard || "",
+        emergencyContactName: emergencyContactName || "",
+        emergencyContactPhone: emergencyContactPhone || "",
+        packageType: originalPkg.packageName,
+        endDate: originalPkg.endDate,
+        contractCode: originalPkg.contractCode || "",
+        remainingSessions: originalPkg.remainingSessions || 0,
+        source: "transfer",
+        contractType: "transfer",
+      });
+      await targetCustomer.save();
     } else {
       return res.status(400).json({ success: false, message: "Vui lòng chọn hội viên có sẵn hoặc nhập thông tin người nhận hợp đồng mới." });
     }
 
+    // 3. Lấy phí chuyển nhượng từ Setting
     const Setting = require("../models/Setting");
     const setting = await Setting.findOne();
     const transferFee = setting?.transferFee ?? 1000000;
 
-    const originalCustomerId = customerPackage.originalCustomer || customerPackage.customer;
+    const transferDate = new Date();
+    const previousOwnerId = originalPkg.customer;
+    const fromCustomer = await Customer.findById(previousOwnerId);
 
-    customerPackage.originalCustomer = originalCustomerId;
-    customerPackage.customer = targetCustomer._id;
-    customerPackage.transferFee = transferFee;
-    customerPackage.contractType = "transfer";
-    if (note) {
-      customerPackage.packageNote = customerPackage.packageNote
-        ? `${customerPackage.packageNote}\n[Chuyển nhượng] Phí ${transferFee.toLocaleString("vi-VN")}đ - Ghi chú: ${note}`
-        : `[Chuyển nhượng] Phí ${transferFee.toLocaleString("vi-VN")}đ - Ghi chú: ${note}`;
-    }
-    await customerPackage.save();
+    // 4. Lưu vết vào Bảng ContractTransfer
+    const transferRecord = await ContractTransfer.create({
+      contract: originalPkg._id,
+      fromCustomer: previousOwnerId,
+      toCustomer: targetCustomer._id,
+      transferDate: transferDate,
+      transferFee: transferFee,
+      staff: req.user ? req.user._id : undefined,
+      note: note || "",
+      remainingSessionsAtTransfer: originalPkg.remainingSessions || 0,
+      endDateAtTransfer: originalPkg.endDate,
+    });
 
+    // 5. Cập nhật chủ sở hữu trên hợp đồng gốc (Phương án A)
+    const originalCustomerFirst = originalPkg.originalCustomer || previousOwnerId;
+    const dateStr = transferDate.toLocaleDateString("vi-VN");
+    const transferNoteLine = `[Chuyển nhượng ${dateStr}] ${fromCustomer ? fromCustomer.name : "Khách cũ"} → ${targetCustomer.name}${note ? ` | Ghi chú: ${note}` : ""}`;
+
+    originalPkg.originalCustomer = originalCustomerFirst;
+    originalPkg.customer = targetCustomer._id;
+    originalPkg.contractType = "transfer";
+    originalPkg.transferFee = (originalPkg.transferFee || 0) + transferFee;
+    originalPkg.hasLocker = false; // Gỡ tủ đồ của chủ cũ
+    originalPkg.packageNote = originalPkg.packageNote
+      ? `${originalPkg.packageNote}\n${transferNoteLine}`
+      : transferNoteLine;
+    await originalPkg.save();
+
+    // 6. Ghi Transaction phí chuyển nhượng (Service Fee - không hoa hồng)
     await Transaction.create({
       type: "service_fee",
       amount: transferFee,
       paymentMethod: paymentMethod || "Tiền mặt",
       customer: targetCustomer._id,
       customerName: targetCustomer.name,
-      customerPackage: customerPackage._id,
+      customerPackage: originalPkg._id,
       status: "success",
       staff: req.user ? req.user._id : undefined,
+      note: `Phí chuyển nhượng hợp đồng ${originalPkg.contractCode} (từ ${fromCustomer ? fromCustomer.name : 'A'} sang ${targetCustomer.name})`,
     });
 
-    // Đồng bộ thông tin Khách B (người nhận)
+    // 7. Re-sync đồng bộ số liệu cả người chuyển và người nhận
     await syncCustomerFields(targetCustomer._id);
+    await syncCustomerFields(previousOwnerId);
 
-    // Đồng bộ thông tin Khách A (người chuyển nhượng): Bảo toàn hồ sơ Khách A (không soft-delete)
-    const originalCustomerObj = await Customer.findById(originalCustomerId);
-    if (originalCustomerObj) {
-      await syncCustomerFields(originalCustomerId);
-    }
+    // 8. Ghi AuditLog
+    const AuditLog = require("../models/AuditLog");
+    await AuditLog.create({
+      user: req.user ? req.user._id : undefined,
+      username: req.user ? (req.user.fullName || req.user.username) : "Hệ thống",
+      action: `Chuyển nhượng HĐ ${originalPkg.contractCode} sang ${targetCustomer.name}`,
+      method: req.method || "POST",
+      path: req.originalUrl || req.path || `/api/v1/customers/packages/${originalPkg._id}/transfer`,
+      details: {
+        contractCode: originalPkg.contractCode,
+        fromCustomer: fromCustomer ? fromCustomer.name : previousOwnerId,
+        toCustomer: targetCustomer.name,
+        transferFee,
+      },
+    });
 
     res.status(200).json({
       success: true,
-      message: `Chuyển nhượng hợp đồng [${customerPackage.contractCode}] sang hội viên [${targetCustomer.name}] thành công! Phí dịch vụ: ${transferFee.toLocaleString("vi-VN")} VNĐ.`,
-      data: customerPackage,
+      message: `Chuyển nhượng hợp đồng [${originalPkg.contractCode}] sang hội viên [${targetCustomer.name}] thành công! Phí dịch vụ: ${transferFee.toLocaleString("vi-VN")} VNĐ.`,
+      data: {
+        contract: originalPkg,
+        transferRecord,
+      },
     });
   } catch (error) {
     console.error("Lỗi chuyển nhượng hợp đồng:", error);

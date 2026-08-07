@@ -1056,24 +1056,69 @@ const getPTSessionsReport = async (req, res) => {
     const completedCount = await WorkoutSession.countDocuments({ ...baseQuery, status: "completed" });
     const cancelledCount = await WorkoutSession.countDocuments({ ...baseQuery, status: "cancelled" });
 
-    // Lấy thông tin gói tập đang active của từng khách hàng để gắn tiến độ (remainingSessions)
+    // Lấy thông tin gói tập của từng khách hàng (populate package để lấy tổng số buổi gốc của gói)
     const customerIds = [...new Set(sessions.map((s) => s.customer?._id).filter(Boolean))];
     const customerPackages = await CustomerPackage.find({
       customer: { $in: customerIds },
-      status: "active",
-    }).lean();
+      isDeleted: { $ne: true },
+    })
+      .populate("package", "name sessions type")
+      .sort({ createdAt: -1 })
+      .lean();
 
+    // Mapping customerId -> gói tập phù hợp nhất (ưu tiên active)
     const packageMap = {};
     customerPackages.forEach((pkg) => {
-      packageMap[pkg.customer.toString()] = pkg;
+      const custIdStr = pkg.customer.toString();
+      if (!packageMap[custIdStr] || (pkg.status === "active" && packageMap[custIdStr].status !== "active")) {
+        packageMap[custIdStr] = pkg;
+      }
+    });
+
+    // Thống kê số buổi tập PT đã hoàn thành (completed) trong lịch sử tập luyện của từng khách hàng
+    const completedHistoryAgg = await WorkoutSession.aggregate([
+      {
+        $match: {
+          customer: { $in: customerIds },
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: "$customer",
+          completedCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const completedHistoryMap = {};
+    completedHistoryAgg.forEach((item) => {
+      completedHistoryMap[item._id.toString()] = item.completedCount;
     });
 
     const enrichedSessions = sessions.map((s) => {
       const custId = s.customer?._id?.toString();
       const pkg = packageMap[custId];
+
+      // Số buổi đã tập trong lịch sử của hội viên này
+      const usedSessions = custId ? (completedHistoryMap[custId] || 0) : 0;
+
+      // Tổng số buổi của gói đăng ký
+      let totalSessions = 0;
+      if (pkg?.package?.sessions && pkg.package.sessions > 0) {
+        totalSessions = pkg.package.sessions;
+      } else if (pkg) {
+        totalSessions = Math.max(usedSessions, usedSessions + (pkg.remainingSessions || 0));
+      }
+
+      // Tên gói tập chính xác khách đăng ký
+      const packageName = pkg?.packageName || pkg?.package?.name || "Gói PT";
+
       return {
         ...s,
-        packageName: pkg?.packageName || "Gói PT",
+        packageName,
+        totalSessions,
+        usedSessions,
         remaining: pkg ? pkg.remainingSessions : 0,
       };
     });

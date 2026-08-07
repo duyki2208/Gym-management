@@ -121,8 +121,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Bắt các lỗi khác và hiển thị Toast (trừ 401 đã xử lý ở trên)
-    if (error.response?.status !== 401) {
+    // Bắt các lỗi khác và hiển thị Toast (trừ 401 đã xử lý ở trên, và các request có silentError)
+    if (error.response?.status !== 401 && !error.config?.silentError) {
       const errorMessage =
         error.response?.data?.message || "Có lỗi kết nối máy chủ";
       toast.error(errorMessage);

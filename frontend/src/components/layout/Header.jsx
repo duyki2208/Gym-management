@@ -1,65 +1,73 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Menu, Search, Bell, ChevronRight, X,
+  Search, Bell, ChevronRight, X,
   Settings, LogOut, Clock, AlertCircle, ChevronDown, Sun, Moon,
 } from 'lucide-react';
 import useDarkMode from '../../hooks/useDarkMode';
 import { notificationService } from '../../services/notificationService';
-import { productService } from '../../services/productService';
-import { customerService } from '../../services/customerService';
+import { searchService } from '../../services/searchService';
 
-// ── Breadcrumb map ──────────────────────────────────────────────
-const ROUTE_LABELS = {
-  '/':           'Tổng quan',
-  '/customers':  'Khách hàng',
-  '/checkin':    'Check-in',
-  '/history':    'Lịch sử',
-  '/packages':   'Gói tập',
-  '/products':   'Sản phẩm',
-  '/staff':      'Nhân viên',
-  '/reports':    'Báo cáo',
-  '/settings':   'Cài đặt',
+// ── Breadcrumb map (Trùng khớp 100% với Sidebar Left) ──────────────────────────
+const BREADCRUMB_MAP = {
+  '/':                            [{ label: 'Tổng quan', path: '/' }],
+  '/leads':                       [{ label: 'Khách hàng', path: '/customers' }, { label: 'Khách tiềm năng', path: '/leads' }],
+  '/customers':                   [{ label: 'Khách hàng', path: '/customers' }, { label: 'Hội viên', path: '/customers' }],
+  '/checkin':                     [{ label: 'Check-in', path: '/checkin' }],
+  '/history':                     [{ label: 'Lịch sử', path: '/history' }],
+  '/packages':                    [{ label: 'Gói tập', path: '/packages' }],
+  '/products':                    [{ label: 'Cửa hàng', path: '/products/pos' }, { label: 'Sản phẩm', path: '/products' }],
+  '/products/pos':                [{ label: 'Cửa hàng', path: '/products/pos' }, { label: 'Bán hàng', path: '/products/pos' }],
+  '/products/inventory':          [{ label: 'Cửa hàng', path: '/products/pos' }, { label: 'Tồn kho', path: '/products/inventory' }],
+  '/products/import':             [{ label: 'Cửa hàng', path: '/products/pos' }, { label: 'Nhập hàng', path: '/products/import' }],
+  '/staff':                       [{ label: 'Nhân sự', path: '/staff' }, { label: 'Nhân viên', path: '/staff' }],
+  '/commissions':                 [{ label: 'Nhân sự', path: '/staff' }, { label: 'Hoa hồng', path: '/commissions' }],
+  '/reports':                     [{ label: 'Báo cáo', path: '/reports/revenue' }],
+  '/reports/revenue':             [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Doanh thu', path: '/reports/revenue' }],
+  '/reports/pt-sessions':         [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Buổi tập PT', path: '/reports/pt-sessions' }],
+  '/reports/sales-funnel':        [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Hợp đồng', path: '/reports/sales-funnel' }],
+  '/reports/customer-analytics':  [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Phân tích khách hàng', path: '/reports/customer-analytics' }],
+  '/reports/inventory':           [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Phân tích kho hàng', path: '/reports/inventory' }],
+  '/reports/logs':                [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Nhật ký & Cảnh báo', path: '/reports/logs' }],
+  '/settings':                    [{ label: 'Cài đặt', path: '/settings' }],
 };
 
 const Breadcrumb = () => {
   const location = useLocation();
   const pathname = location.pathname;
 
-  // Xây dựng segments từ pathname hiện tại — không hardcode "Tổng quan" ở đầu
-  const segments = [];
+  // Lấy danh sách segments từ BREADCRUMB_MAP (nếu trùng route chính)
+  // Nếu là sub-route không định nghĩa trước, khớp theo prefix dài nhất
+  let segments = BREADCRUMB_MAP[pathname];
 
-  // Tìm top-level route khớp nhất (ưu tiên path dài hơn)
-  const topLevelKey = Object.keys(ROUTE_LABELS)
-    .filter(key => key === '/' ? pathname === '/' : pathname.startsWith(key))
-    .sort((a, b) => b.length - a.length)[0];
+  if (!segments) {
+    const matchedKey = Object.keys(BREADCRUMB_MAP)
+      .filter(key => key !== '/' && pathname.startsWith(key))
+      .sort((a, b) => b.length - a.length)[0];
 
-  if (topLevelKey) {
-    segments.push({ label: ROUTE_LABELS[topLevelKey], path: topLevelKey });
-
-    // Nếu có sub-path thêm vào sau (ví dụ /products/import)
-    const remaining = pathname.slice(topLevelKey === '/' ? 1 : topLevelKey.length);
-    if (remaining && remaining !== '/') {
-      const subLabel = remaining.replace(/^\//, '').replace(/-/g, ' ');
-      segments.push({ label: subLabel, path: pathname });
+    if (matchedKey) {
+      const baseSegments = BREADCRUMB_MAP[matchedKey];
+      const remaining = pathname.slice(matchedKey.length).replace(/^\//, '').replace(/-/g, ' ');
+      segments = [...baseSegments, { label: remaining, path: pathname }];
+    } else {
+      segments = [{ label: 'Trang chủ', path: '/' }];
     }
   }
 
   return (
-    <nav className="hidden md:flex items-center gap-1.5 text-sm">
+    <nav className="flex items-center gap-1.5 text-sm shrink-0">
       {segments.map((seg, i) => (
-        <React.Fragment key={seg.path}>
+        <React.Fragment key={seg.path + i}>
           {i > 0 && <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 shrink-0" />}
           {i === segments.length - 1 ? (
-            <span className="font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[160px]">
+            <span className="font-bold text-gray-800 dark:text-gray-100 truncate max-w-[200px]">
               {seg.label}
             </span>
           ) : (
             <Link
               to={seg.path}
-              className="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors truncate max-w-[120px]"
+              className="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors truncate max-w-[140px]"
             >
               {seg.label}
             </Link>
@@ -71,150 +79,219 @@ const Breadcrumb = () => {
 };
 
 // ── Global Search ───────────────────────────────────────────────
+
+const HighlightMatch = ({ text = '', query = '' }) => {
+  if (!query.trim() || !text) return <span>{text}</span>;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return (
+    <span>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 rounded px-0.5 font-bold not-italic">
+            {part}
+          </mark>
+        ) : <span key={i}>{part}</span>
+      )}
+    </span>
+  );
+};
+
+const ROLE_LABEL = {
+  admin: 'Quản trị viên', accountant: 'Kế toán', manager: 'Quản lý',
+  sm: 'SM', pm: 'PT Manager', om: 'OM', staff: 'Nhân viên',
+  pt: 'PT', sale: 'Sale', reception: 'Lễ tân',
+};
+
 const GlobalSearch = () => {
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState({ customers: [], products: [] });
-  const [open, setOpen] = useState(false);
+  const [query, setQuery]     = useState('');
+  const [results, setResults] = useState({ customers: [], staff: [], packages: [], leads: [], products: [] });
+  const [open, setOpen]       = useState(false);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef     = useRef(null);
   const containerRef = useRef(null);
 
   // Debounced search
   useEffect(() => {
     if (!query.trim()) {
-      setResults({ customers: [], products: [] });
+      setResults({ customers: [], staff: [], packages: [], leads: [], products: [] });
       return;
     }
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const [custRes, prodRes] = await Promise.allSettled([
-          customerService.getAll({ search: query.trim(), limit: 5 }),
-          productService.getAll(query.trim()),
-        ]);
-        setResults({
-          customers: custRes.status === 'fulfilled' ? (custRes.value?.customers || []).slice(0, 4) : [],
-          products:  prodRes.status === 'fulfilled' ? (Array.isArray(prodRes.value) ? prodRes.value.slice(0, 3) : []) : [],
-        });
+        const res = await searchService.search(query.trim(), { limit: 5 });
+        setResults(res.data || { customers: [], staff: [], packages: [], leads: [], products: [] });
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 350);
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Keyboard shortcut Ctrl+K
+  // Escape để đóng
   useEffect(() => {
     const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        inputRef.current?.focus();
-        setOpen(true);
-      }
-      if (e.key === 'Escape') {
-        setOpen(false);
-        setQuery('');
-        inputRef.current?.blur();
-      }
+      if (e.key === 'Escape') { setOpen(false); setQuery(''); inputRef.current?.blur(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Click outside to close
+  // Click outside
   useEffect(() => {
     const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false);
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const hasResults = results.customers.length > 0 || results.products.length > 0;
-  const showDropdown = open && query.trim();
+  const go = (path) => { navigate(path); setOpen(false); setQuery(''); };
+
+  const hasResults = Object.values(results).some(arr => arr.length > 0);
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-xs lg:max-w-sm">
-      <div className={`
-        flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200
-        ${open
-          ? 'border-primary bg-white dark:bg-gray-800 shadow-md shadow-primary/10'
+    <div ref={containerRef} className="relative w-full max-w-sm lg:max-w-lg xl:max-w-xl">
+      {/* Input */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 ${
+        open
+          ? 'border-primary bg-white dark:bg-gray-800 shadow-lg shadow-primary/10'
           : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300'
-        }
-      `}>
-        <Search size={15} className={`shrink-0 ${open ? 'text-primary' : 'text-gray-400'}`} />
+      }`}>
+        <Search size={15} className={`shrink-0 transition-colors ${open ? 'text-primary' : 'text-gray-400'}`} />
         <input
           ref={inputRef}
           type="text"
-          placeholder="Tìm khách, SĐT, sản phẩm..."
+          placeholder="Tìm kiếm khách hàng, nhân viên, sản phẩm..."
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           className="flex-1 bg-transparent text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 outline-none min-w-0"
         />
-        {query ? (
-          <button onClick={() => { setQuery(''); setResults({ customers: [], products: [] }); }} className="text-gray-400 hover:text-gray-600">
+        {query && (
+          <button
+            onClick={() => { setQuery(''); setResults({ customers: [], staff: [], packages: [], leads: [], products: [] }); }}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
             <X size={14} />
           </button>
-        ) : null}
+        )}
       </div>
 
-      {/* Results dropdown */}
-      {showDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown">
-          {loading && (
-            <div className="px-4 py-3 text-xs text-gray-400 text-center">Đang tìm...</div>
-          )}
+      {/* Dropdown — chỉ hiện khi có query */}
+      {open && query.trim() && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
 
-          {!loading && !hasResults && (
-            <div className="px-4 py-6 text-center">
-              <Search size={24} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-400">Không tìm thấy kết quả</p>
+          {/* Loading */}
+          {loading && (
+            <div className="px-4 py-4 text-center">
+              <div className="inline-flex items-center gap-2 text-xs text-gray-400">
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                Đang tìm kiếm...
+              </div>
             </div>
           )}
 
+          {/* No results */}
+          {!loading && !hasResults && (
+            <div className="px-4 py-8 text-center">
+              <Search size={28} className="mx-auto text-gray-200 dark:text-gray-700 mb-2" />
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                Không tìm thấy "<span className="text-primary">{query}</span>"
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Thử từ khóa khác</p>
+            </div>
+          )}
+
+          {/* Customers */}
           {!loading && results.customers.length > 0 && (
             <div>
               <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Khách hàng ({results.customers.length})
+                👤 Khách hàng ({results.customers.length})
               </p>
               {results.customers.map(c => (
-                <button
-                  key={c._id}
-                  onClick={() => { navigate(`/customers?id=${c._id}&search=${encodeURIComponent(c.name)}`); setOpen(false); setQuery(''); }}
+                <button key={c._id}
+                  onClick={() => go(`/customers?id=${c._id}&search=${encodeURIComponent(c.name)}`)}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
                     {c.name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{c.name}</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      <HighlightMatch text={c.name} query={query} />
+                    </p>
                     <p className="text-xs text-gray-400 truncate">{c.phone} • {c.packageType}</p>
+                  </div>
+                  <span className="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">{c.code}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Staff */}
+          {!loading && results.staff.length > 0 && (
+            <div>
+              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                👥 Nhân viên ({results.staff.length})
+              </p>
+              {results.staff.map(s => (
+                <button key={s._id} onClick={() => go('/staff')}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center font-bold text-sm shrink-0">
+                    {(s.fullName || s.username)?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      <HighlightMatch text={s.fullName || s.username} query={query} />
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">{ROLE_LABEL[s.role] || s.role}{s.phone ? ` • ${s.phone}` : ''}</p>
                   </div>
                 </button>
               ))}
             </div>
           )}
 
+          {/* Packages */}
+          {!loading && results.packages.length > 0 && (
+            <div>
+              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                🎟️ Gói tập ({results.packages.length})
+              </p>
+              {results.packages.map(pkg => (
+                <button key={pkg._id} onClick={() => go('/packages')}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center text-sm shrink-0">🎟️</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      <HighlightMatch text={pkg.name} query={query} />
+                    </p>
+                    <p className="text-xs text-gray-400">{pkg.duration} ngày • {pkg.price?.toLocaleString()} đ</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Products */}
           {!loading && results.products.length > 0 && (
             <div>
               <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
-                Sản phẩm ({results.products.length})
+                📦 Sản phẩm ({results.products.length})
               </p>
               {results.products.map(p => (
-                <button
-                  key={p._id}
-                  onClick={() => { navigate('/products'); setOpen(false); setQuery(''); }}
+                <button key={p._id} onClick={() => go('/products')}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center font-bold text-sm shrink-0">
-                    📦
-                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center text-sm shrink-0">📦</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{p.name}</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      <HighlightMatch text={p.name} query={query} />
+                    </p>
                     <p className="text-xs text-gray-400">{p.sellPrice?.toLocaleString()} đ • Tồn: {p.stockQuantity}</p>
                   </div>
                 </button>
@@ -222,11 +299,28 @@ const GlobalSearch = () => {
             </div>
           )}
 
-          {hasResults && (
-            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-2">
-              <p className="text-[10px] text-gray-400 text-center">Nhấn Enter để xem tất cả</p>
+          {/* Leads */}
+          {!loading && results.leads.length > 0 && (
+            <div>
+              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                📋 Leads ({results.leads.length})
+              </p>
+              {results.leads.map(lead => (
+                <button key={lead._id} onClick={() => go('/leads')}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-pink-100 dark:bg-pink-900/30 text-pink-600 flex items-center justify-center text-sm shrink-0">📋</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      <HighlightMatch text={lead.name} query={query} />
+                    </p>
+                    <p className="text-xs text-gray-400">{lead.phone} • {lead.status}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
+
         </div>
       )}
     </div>
@@ -255,11 +349,10 @@ const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5 * 60 * 1000); // refresh mỗi 5 phút
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Click outside
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
@@ -398,7 +491,6 @@ const UserMenu = () => {
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center text-white font-black text-sm select-none shadow-sm">
           {initials}
         </div>
@@ -413,7 +505,6 @@ const UserMenu = () => {
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown">
-          {/* User info */}
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
             <p className="font-bold text-sm text-gray-800 dark:text-gray-100">{user?.name}</p>
             <p className="text-xs text-gray-400 mt-0.5">{user?.username}</p>
@@ -422,7 +513,6 @@ const UserMenu = () => {
             </span>
           </div>
 
-          {/* Menu items */}
           <div className="py-1">
             <button
               onClick={() => { navigate('/settings'); setOpen(false); }}
@@ -450,35 +540,20 @@ const UserMenu = () => {
 
 // ── Header (Main) ───────────────────────────────────────────────
 const Header = () => {
-  const { toggle } = useSidebar();
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [isDark, toggleDark] = useDarkMode();
 
   return (
     <header className="sticky top-0 z-30 h-16 flex items-center shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 gap-3">
-      {/* ── LEFT: chỉ Toggle ── */}
-      <div className="flex items-center shrink-0">
-        <button
-          onClick={toggle}
-          className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-all"
-          aria-label="Toggle sidebar"
-        >
-          <Menu size={20} />
-        </button>
-      </div>
-
-      {/* ── CENTER ── */}
+      {/* ── CENTER / BREADCRUMB & SEARCH ── */}
       <div className="flex-1 flex items-center gap-4 min-w-0">
         <Breadcrumb />
-        <div className="flex-1 max-w-sm">
+        <div className="flex-1">
           <GlobalSearch />
         </div>
       </div>
 
       {/* ── RIGHT ── */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* Dark mode toggle */}
         <button
           onClick={toggleDark}
           aria-label={isDark ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
@@ -488,16 +563,9 @@ const Header = () => {
           {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Divider */}
         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-        {/* Notification bell */}
         <NotificationBell />
-
-        {/* Divider */}
         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-        {/* User menu */}
         <UserMenu />
       </div>
     </header>

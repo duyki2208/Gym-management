@@ -35,8 +35,8 @@ export const posService = {
     const res = await api.post('/pos/checkout', data);
     return res.data;
   },
-  getSales: async () => {
-    const res = await api.get('/pos/sales');
+  getSales: async (params = {}) => {
+    const res = await api.get('/pos/sales', { params });
     return res.data;
   },
   getOrderStatus: async (id) => {

@@ -13,7 +13,7 @@ const customerPackageSchema = new mongoose.Schema(
     remainingSessions: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ["active", "expired", "frozen", "pending", "upgraded"],
+      enum: ["active", "expired", "frozen", "pending", "upgraded", "transferred"],
       default: "active",
     },
     trainer: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // PT phụ trách (ObjectId)
@@ -35,6 +35,8 @@ const customerPackageSchema = new mongoose.Schema(
     upgradedFrom: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage" }, // Hợp đồng gốc trước nâng cấp
     upgradeDeltaPrice: { type: Number, default: 0 }, // Số tiền chênh lệch nâng cấp
     transferFee: { type: Number, default: 0 }, // Phí chuyển nhượng đã thu (1.000.000đ)
+    transferredTo: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage", default: null }, // [Gói gốc] → Gói mới tạo cho người nhận
+    transferredFrom: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage", default: null }, // [Gói mới] → Gói gốc đã chuyển nhượng
     frozenPeriods: [
       {
         startDate: { type: Date, required: true },

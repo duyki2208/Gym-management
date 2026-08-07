@@ -68,62 +68,94 @@ const ProductList = () => {
 
   return (
     <div className="flex flex-col gap-6 font-display bg-transparent h-full overflow-y-auto custom-scrollbar">
-      <div className="flex justify-end gap-3 mb-2">
-          {/* Nút Thêm SP */}
-          <button
-            onClick={() => {
-              setSelectedProduct(null);
-              setShowModal(true);
-            }}
-            className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:bg-primary/90 flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"
-          >
-            <Plus size={20} />
-            Thêm Sản Phẩm Mới
-          </button>
-      </div>
-
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
-         <Search className="text-gray-400" />
-         <input 
-            type="text" 
+      {/* ── Card bao quanh: Search + Add Product ── */}
+      <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-xl">
+            search
+          </span>
+          <input
+            className="w-full pl-10 pr-4 h-10 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white text-gray-800 transition-colors"
             placeholder="Tìm theo tên sản phẩm..."
-            className="w-full bg-transparent outline-none text-gray-700"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-         />
+          />
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Nút Thêm Sản Phẩm Mới */}
+        <button
+          onClick={() => {
+            setSelectedProduct(null);
+            setShowModal(true);
+          }}
+          className="flex items-center gap-2 h-10 px-4 bg-primary text-white rounded-xl text-xs font-bold hover:opacity-90 shrink-0 shadow-sm transition-all"
+        >
+          <span
+            className="material-symbols-outlined text-base"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            add_circle
+          </span>
+          <span>Thêm Sản Phẩm Mới</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {loading ? (
              <div className="col-span-full py-10 text-center text-gray-500">Đang tải...</div>
         ) : products.length > 0 ? (
              products.map((p) => (
-                <div key={p._id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between min-w-0 w-full">
-                    <div>
-                        <div className="h-40 bg-gray-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
-                            {p.imageUrl ? (
-                                <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            ) : (
-                                <Package size={48} className="text-gray-300" />
-                            )}
+                <div 
+                  key={p._id} 
+                  className="aspect-square bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group flex flex-col justify-between relative overflow-hidden"
+                >
+                    {/* Header: Category & Action buttons */}
+                    <div className="flex justify-between items-center gap-2 min-w-0">
+                        <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md uppercase tracking-wider truncate shrink">
+                          {p.category}
+                        </span>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                             <button 
+                               onClick={() => { setSelectedProduct(p); setShowModal(true); }} 
+                               className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                               title="Sửa"
+                             >
+                               <Edit size={15}/>
+                             </button>
+                             <button 
+                               onClick={() => handleDelete(p._id)} 
+                               className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                               title="Xóa"
+                             >
+                               <Trash2 size={15}/>
+                             </button>
                         </div>
-                        <div className="flex justify-between items-start mb-2 gap-2 min-w-0">
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md uppercase tracking-wider truncate shrink-0">{p.category}</span>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                 <button onClick={() => { setSelectedProduct(p); setShowModal(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded text-sm"><Edit size={16}/></button>
-                                 <button onClick={() => handleDelete(p._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded text-sm"><Trash2 size={16}/></button>
-                            </div>
-                        </div>
-                        <h3 className="font-bold text-base text-gray-800 leading-snug mb-1 line-clamp-2 min-h-[3rem] flex items-center break-words" title={p.name}>{p.name}</h3>
                     </div>
-                    <div className="flex justify-between items-end mt-4 gap-2 border-t border-gray-50 pt-3 min-w-0">
-                        <div className="min-w-0">
-                            <p className="text-xs text-gray-500 mb-0.5 break-words">Giá bán</p>
-                            <p className="font-black text-gray-900 border-b-2 border-primary/20 pb-0.5 inline-block break-words break-all">{p.sellPrice.toLocaleString()} đ</p>
+
+                    {/* Middle: Icon + Product Name */}
+                    <div className="flex flex-col items-center justify-center my-auto py-1 text-center min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary mb-2 group-hover:scale-110 transition-transform">
+                            <Package size={22} />
                         </div>
-                        <div className={`text-right min-w-0 ${p.stockQuantity <= 10 ? 'text-red-600' : 'text-green-600'}`}>
-                            <p className="text-xs mb-0.5 break-words">Tồn kho</p>
-                            <p className="font-black text-lg bg-gray-50 px-2 py-0.5 rounded-md break-words break-all">{p.stockQuantity}</p>
+                        <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-snug px-1 break-words" title={p.name}>
+                          {p.name}
+                        </h3>
+                    </div>
+
+                    {/* Footer: Price & Stock */}
+                    <div className="flex justify-between items-center pt-2.5 border-t border-gray-100 min-w-0">
+                        <div className="min-w-0">
+                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Giá bán</p>
+                            <p className="font-black text-xs sm:text-sm text-gray-900 truncate">{p.sellPrice.toLocaleString()} đ</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Tồn kho</p>
+                            <span className={`inline-block font-black px-2 py-0.5 rounded-md text-xs ${p.stockQuantity <= 10 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                {p.stockQuantity}
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -305,6 +305,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
   const getStatusColor = (endDate, status) => {
     if (status === "frozen") return "text-purple-600 bg-purple-100 border-purple-200";
+    if (status === "transferred") return "text-orange-600 bg-orange-100 border-orange-200";
     if (!endDate) return "text-green-600 bg-green-100 border-green-200";
     const now = new Date();
     const start = customer.startDate ? new Date(customer.startDate) : now;
@@ -321,6 +322,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   
   const getStatusText = (endDate, status) => {
       if (status === "frozen") return "Bảo lưu";
+      if (status === "transferred") return "Đã chuyển nhượng";
       if (!endDate) return "Đang hoạt động";
        const now = new Date();
       const start = customer.startDate ? new Date(customer.startDate) : now;
@@ -547,7 +549,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                  <div className="col-span-2 md:col-span-2">
                                      <InfoRow 
                                          label="Loại hợp đồng" 
-                                         value={customer.contractType === 'renew' ? 'Gia hạn (Renew)' : customer.contractType === 'upgrade' ? 'Nâng cấp' : 'Khách mới'} 
+                                         value={customer.contractType === 'renew' ? 'Gia hạn (Renew)' : customer.contractType === 'upgrade' ? 'Nâng cấp' : customer.contractType === 'transfer' ? 'Chuyển nhượng' : 'Khách mới'} 
                                      />
                                  </div>
                                  <div className="col-span-2 md:col-span-2">
@@ -870,9 +872,18 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                   {pkg.status === 'upgraded' && (
                                                       <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold border border-blue-200">Đã nâng cấp</span>
                                                   )}
+                                                  {pkg.status === 'transferred' && (
+                                                      <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold border border-orange-200">Đã chuyển nhượng</span>
+                                                  )}
                                                   
                                                   {["admin", "manager", "reception", "sale", "staff"].includes(currentUser.role) && (
                                                       <div className="mt-2 flex flex-wrap gap-2 justify-end">
+                                                          {/* Gói đã chuyển nhượng: KHÓA toàn bộ */}
+                                                          {pkg.status === 'transferred' && (
+                                                              <span className="px-3 py-1.5 text-orange-700 bg-orange-50 border border-orange-200 rounded-lg text-xs font-bold">
+                                                                  🚫 Không khả dụng
+                                                              </span>
+                                                          )}
                                                           {pkg.status === 'active' && (
                                                               <>
                                                                   <button

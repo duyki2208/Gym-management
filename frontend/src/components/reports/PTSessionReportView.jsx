@@ -36,7 +36,6 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
   const [search, setSearch] = useState('');
   const [ptFilter, setPtFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [onlyAtRisk, setOnlyAtRisk] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
@@ -99,16 +98,14 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
       const custPhone = s.customer?.phone || '';
       const ptName = s.pt?.fullName || s.ptName || '';
 
-      const matchSearch =
+      return (
         search.trim() === '' ||
         custName.toLowerCase().includes(search.toLowerCase()) ||
         custPhone.includes(search) ||
-        ptName.toLowerCase().includes(search.toLowerCase());
-
-      const matchRisk = !onlyAtRisk || s.remaining <= 2;
-      return matchSearch && matchRisk;
+        ptName.toLowerCase().includes(search.toLowerCase())
+      );
     });
-  }, [rawSessions, search, onlyAtRisk]);
+  }, [rawSessions, search]);
 
   const completedCount = reportData?.completedCount ?? rawSessions.filter(s => s.status === 'completed').length;
   const cancelledCount = reportData?.cancelledCount ?? rawSessions.filter(s => s.status === 'cancelled').length;
@@ -208,17 +205,6 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 <option key={k} value={k}>{v.label}</option>
               ))}
             </select>
-
-            <button
-              onClick={() => setOnlyAtRisk((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                onlyAtRisk
-                  ? 'bg-amber-500 text-white shadow-sm'
-                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-100 border border-amber-200 dark:border-amber-800'
-              }`}
-            >
-              <AlertTriangle size={14} /> Sắp hết buổi (≤2)
-            </button>
           </div>
         </div>
 
@@ -231,6 +217,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 <th className="px-4 py-3.5">Hội viên</th>
                 <th className="px-4 py-3.5">SĐT</th>
                 <th className="px-4 py-3.5">Gói tập</th>
+                <th className="px-4 py-3.5">Số buổi</th>
                 <th className="px-4 py-3.5">PT hướng dẫn</th>
                 <th className="px-4 py-3.5">Trạng thái</th>
               </tr>
@@ -238,14 +225,14 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {loading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
                     Đang tải danh sách buổi tập...
                   </td>
                 </tr>
               )}
               {!loading && filteredSessions.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
                     Không tìm thấy buổi tập nào khớp bộ lọc
                   </td>
                 </tr>
@@ -253,7 +240,6 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
               {!loading && filteredSessions.map((s) => {
                 const st = STATUS_MAP[s.status] || STATUS_MAP.completed;
                 const StIcon = st.icon;
-                const atRisk = s.remaining <= 2 && s.remaining >= 0;
                 const custName = s.customer?.name || 'Khách hàng';
                 const custPhone = s.customer?.phone || s.customer?.code || 'N/A';
                 const ptName = s.pt?.fullName || s.ptName || 'PT Chưa gán';
@@ -275,16 +261,15 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                     <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 font-medium">{custPhone}</td>
                     {/* 4. Gói tập */}
                     <td className="px-4 py-3.5 font-medium text-gray-900 dark:text-gray-100">
-                      <span>{s.packageName || 'Gói PT'}</span>
-                      {atRisk && (
-                        <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200">
-                          <AlertTriangle size={10} /> còn {s.remaining} buổi
-                        </span>
-                      )}
+                      {s.packageName || 'Gói PT'}
                     </td>
-                    {/* 5. PT hướng dẫn */}
+                    {/* 5. Số buổi */}
+                    <td className="px-4 py-3.5 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                      {s.usedSessions ?? 0}/{s.totalSessions ?? 0}
+                    </td>
+                    {/* 6. PT hướng dẫn */}
                     <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 font-medium">{ptName}</td>
-                    {/* 6. Trạng thái */}
+                    {/* 7. Trạng thái */}
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${st.color}`}>
                         <StIcon size={13} /> {st.label}

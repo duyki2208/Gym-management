@@ -18,13 +18,26 @@ const ProductModal = ({ product, onSave, onClose }) => {
     }
   }, [product]);
 
+  const handleNumberChange = (field, val) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: val === '' ? '' : Math.max(0, Number(val))
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || formData.sellPrice < 0) {
+    const finalData = {
+      ...formData,
+      stockQuantity: Number(formData.stockQuantity) || 0,
+      importPrice: Number(formData.importPrice) || 0,
+      sellPrice: Number(formData.sellPrice) || 0
+    };
+    if (!finalData.name || finalData.sellPrice < 0) {
       toast.error("Vui lòng điền thông tin hợp lệ");
       return;
     }
-    onSave(formData);
+    onSave(finalData);
   };
 
   return (
@@ -72,7 +85,7 @@ const ProductModal = ({ product, onSave, onClose }) => {
                 min="0"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
                 value={formData.stockQuantity}
-                onChange={(e) => setFormData({...formData, stockQuantity: Number(e.target.value)})}
+                onChange={(e) => handleNumberChange('stockQuantity', e.target.value)}
                 disabled={!!product} // Chỉ cho nhập lúc tạo mới, sau này phải qua phiếu nhập
               />
             </div>
@@ -86,7 +99,7 @@ const ProductModal = ({ product, onSave, onClose }) => {
                 min="0"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
                 value={formData.importPrice}
-                onChange={(e) => setFormData({...formData, importPrice: Number(e.target.value)})}
+                onChange={(e) => handleNumberChange('importPrice', e.target.value)}
               />
             </div>
             <div>
@@ -96,22 +109,13 @@ const ProductModal = ({ product, onSave, onClose }) => {
                 min="0"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
                 value={formData.sellPrice}
-                onChange={(e) => setFormData({...formData, sellPrice: Number(e.target.value)})}
+                onChange={(e) => handleNumberChange('sellPrice', e.target.value)}
                 required
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Link Ảnh (tuỳ chọn)</label>
-            <input
-              type="text"
-              className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-              placeholder="https://..."
-            />
-          </div>
+
 
           <div className="pt-4 flex justify-end gap-3 mt-4">
             <button
