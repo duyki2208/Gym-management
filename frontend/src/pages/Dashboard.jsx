@@ -665,21 +665,39 @@ const Dashboard = () => {
 };
 
 // Component Modal Chung
-const Modal = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden animate-scale-in">
-      <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-        <h3 className="text-lg font-black text-gray-800 dark:text-white tracking-tight">{title}</h3>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-500">
-          <X size={20} />
-        </button>
-      </div>
-      <div className="p-6">
-        {children}
+const Modal = ({ title, onClose, children }) => {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+          <h3 className="text-lg font-black text-gray-800 dark:text-white tracking-tight">{title}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-500">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Component Popup Quản lý Task Ghi chú
 const TeamTasksModal = ({ onClose }) => {
@@ -688,6 +706,16 @@ const TeamTasksModal = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
   const [timeSlot, setTimeSlot] = useState("");
   const [taskText, setTaskText] = useState("");
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   // Lấy thông tin user hiện tại để phân quyền UI
   const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
@@ -705,9 +733,6 @@ const TeamTasksModal = ({ onClose }) => {
 
   // State quản lý tab (Chỉ Admin và Kế toán mới đổi được tab)
   const [activeTab, setActiveTab] = useState(isAdminOrAccountant ? "sale" : userTeam);
-  
-  // State quản lý việc chọn đội khi tạo task mới (chỉ Admin/Kế toán cần chọn)
-  const [createTeam, setCreateTeam] = useState("sale");
 
   const isTaskExpired = (t) => {
     if (t.isCompleted) return false;
@@ -775,7 +800,7 @@ const TeamTasksModal = ({ onClose }) => {
       return;
     }
     try {
-      const targetTeam = isAdminOrAccountant ? createTeam : userTeam;
+      const targetTeam = isAdminOrAccountant ? activeTab : userTeam;
       const res = await teamTaskService.create({ 
         timeSlot, 
         task: taskText,
@@ -785,12 +810,7 @@ const TeamTasksModal = ({ onClose }) => {
         toast.success("Thêm đầu việc thành công");
         setTimeSlot("");
         setTaskText("");
-        // Nếu Admin tạo task cho đội khác, chuyển sang tab đó để xem
-        if (isAdminOrAccountant && targetTeam !== activeTab) {
-          setActiveTab(targetTeam);
-        } else {
-          loadTasks();
-        }
+        loadTasks();
       }
     } catch (err) {
       toast.error(err.message);
@@ -831,8 +851,14 @@ const TeamTasksModal = ({ onClose }) => {
   const canComplete = isAdminOrAccountant || (activeTab === userTeam);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
           <h3 className="text-lg font-black text-gray-800 dark:text-white tracking-tight">Ghi Chú Ca Trực Hôm Nay</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-500">
@@ -889,27 +915,7 @@ const TeamTasksModal = ({ onClose }) => {
                 </div>
               </div>
               
-              <div className="flex justify-between items-center mt-1">
-                {/* Chọn đội để gán (Chỉ Admin/Kế toán mới chọn được) */}
-                {isAdminOrAccountant ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-500">Đội:</span>
-                    <select
-                      className="h-8 px-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark font-bold cursor-pointer"
-                      value={createTeam}
-                      onChange={(e) => setCreateTeam(e.target.value)}
-                    >
-                      <option value="sale">Sale</option>
-                      <option value="pt">PT</option>
-                      <option value="reception">Lễ tân</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-400 font-medium">
-                    Ghi chú cho đội: <span className="font-bold text-primary uppercase">{userTeam}</span>
-                  </div>
-                )}
-
+              <div className="flex justify-end items-center mt-1">
                 <button 
                   type="submit" 
                   className="h-9 px-4 bg-primary text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1.5 justify-center text-sm shrink-0"

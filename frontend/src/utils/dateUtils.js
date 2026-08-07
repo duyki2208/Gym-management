@@ -1,6 +1,9 @@
 // src/utils/dateUtils.js
 
 export const getCustomerStatus = (startDate, endDate, status) => {
+  if (status === 'transferred') {
+    return { status: 'transferred', label: 'Đã chuyển nhượng', color: 'bg-slate-100 text-slate-700 border-slate-300' };
+  }
   if (status === 'frozen') {
     return { status: 'frozen', label: 'Bảo lưu', color: 'bg-purple-50 text-purple-700 border-purple-200' };
   }

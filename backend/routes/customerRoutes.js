@@ -104,13 +104,13 @@ router.post('/:id/upgrade',
 // POST /api/v1/customers/packages/:id/transfer — Chuyển nhượng hợp đồng
 router.post('/packages/:id/transfer',
   protect,
-  authorize('admin', 'manager', 'accountant'),
+  authorize('admin', 'manager'),
   customerController.transferPackage
 );
 
 router.post('/:id/transfer',
   protect,
-  authorize('admin', 'manager', 'accountant'),
+  authorize('admin', 'manager'),
   customerController.transferPackage
 );
 

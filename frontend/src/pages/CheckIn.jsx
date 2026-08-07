@@ -44,6 +44,12 @@ const CheckIn = () => {
 
     // Kiểm tra trạng thái gói tập
     const status = getCustomerStatus(customer.startDate, customer.endDate, customer.activePackage?.status || customer.status);
+    if (status.status === "transferred") {
+      toast.error(
+        "Hợp đồng của khách hàng đã được chuyển nhượng. Không thể thực hiện check-in!"
+      );
+      return;
+    }
     if (status.status === "expired") {
       toast.error(
         "Gói tập của khách hàng đã hết hạn. Vui lòng gia hạn trước khi check-in."

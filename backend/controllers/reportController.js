@@ -240,15 +240,24 @@ const getRevenueDetails = async (req, res) => {
 
     // Lấy chi tiết giao dịch từ Transaction (tiền thực thu)
     const transactions = await Transaction.find({
-      type: { $in: ["package_purchase", "pt_session"] },
+      type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] },
       status: "success",
       createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
     })
-      .select("code customerName amount paymentMethod createdAt customerPackage")
+      .select("code customerName amount paymentMethod createdAt customerPackage type note")
       .populate("customer", "name phone code")
       .populate("customerPackage", "packageName endDate")
       .sort({ createdAt: -1 })
       .lean();
+
+    // Helper format loại giao dịch theo yêu cầu
+    const getPackageTypeLabel = (t) => {
+      if (t.customerPackage?.packageName) return t.customerPackage.packageName;
+      if (t.type === "pos_sale") return "Bán lẻ";
+      if (t.type === "service_fee") return "Phí dịch vụ";
+      if (t.type === "pt_session") return "Buổi PT";
+      return "Gói tập";
+    };
 
     // Format để tương thích với frontend export Excel
     const details = transactions.map((t) => ({
@@ -259,7 +268,7 @@ const getRevenueDetails = async (req, res) => {
       price: t.amount, // Tiền thực thu
       paymentMethod: t.paymentMethod,
       startDate: t.createdAt,
-      packageType: t.customerPackage?.packageName || (t.type === "pt_session" ? "Buổi PT lẻ" : "Bán gói"),
+      packageType: getPackageTypeLabel(t),
       endDate: t.customerPackage?.endDate || t.createdAt,
     }));
 

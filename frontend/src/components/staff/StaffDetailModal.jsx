@@ -7,6 +7,16 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   // Tính toán tuần hiện tại (bắt đầu từ Thứ 2)
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const now = new Date();
@@ -94,8 +104,14 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
   const daysOfWeek = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in font-display">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col relative text-gray-800 dark:text-gray-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in font-display"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col relative text-gray-800 dark:text-gray-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-2xl font-black uppercase tracking-wide text-blue-600 dark:text-blue-400">

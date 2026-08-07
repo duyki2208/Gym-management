@@ -1095,10 +1095,13 @@ const upgradeCustomerPackage = async (req, res) => {
 
 const transferCustomerPackage = async (req, res) => {
   try {
-    // Phân quyền: Yêu cầu Admin / Manager / Accountant
-    const allowedRoles = ["admin", "manager", "accountant", "sm", "pm", "om"];
+    // Phân quyền: Chỉ cho phép Admin hoặc Manager
+    const allowedRoles = ["admin", "manager"];
     if (req.user && !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: `Tài khoản quyền "${req.user.role}" không có quyền thực hiện chuyển nhượng hợp đồng. Yêu cầu quyền Admin/Quản lý.` });
+      return res.status(403).json({
+        success: false,
+        message: `Tài khoản quyền "${req.user.role}" không có quyền thực hiện chuyển nhượng hợp đồng. Yêu cầu quyền Admin/Quản lý.`
+      });
     }
 
     const { id } = req.params;
@@ -1204,8 +1207,55 @@ const transferCustomerPackage = async (req, res) => {
     const transferDate = new Date();
     const previousOwnerId = originalPkg.customer;
     const fromCustomer = await Customer.findById(previousOwnerId);
+    const dateStr = transferDate.toLocaleDateString("vi-VN");
 
-    // 4. Lưu vết vào Bảng ContractTransfer
+    // Phương án B: Clone hợp đồng mới cho người nhận & Đánh dấu gói gốc đã chuyển nhượng
+    const originalCustomerFirst = originalPkg.originalCustomer || previousOwnerId;
+    const newContractCode = originalPkg.contractCode
+      ? (originalPkg.contractCode.includes("-TR") ? originalPkg.contractCode : `${originalPkg.contractCode}-TR`)
+      : `HĐ-TRANSFER`;
+
+    const transferNoteForNew = `[Nhận chuyển nhượng ${dateStr}] Từ ${fromCustomer ? fromCustomer.name : "Khách cũ"}${note ? ` | Ghi chú: ${note}` : ""}`;
+
+    // 4. Tạo gói mới cho Khách B (status: "active", transferredFrom: originalPkg._id)
+    const newCustomerPackage = new CustomerPackage({
+      customer: targetCustomer._id,
+      package: originalPkg.package,
+      packageName: originalPkg.packageName,
+      startDate: originalPkg.startDate,
+      endDate: originalPkg.endDate,
+      price: originalPkg.price,
+      contractCode: newContractCode,
+      packageNote: transferNoteForNew,
+      remainingSessions: originalPkg.remainingSessions || 0,
+      status: "active",
+      trainer: originalPkg.trainer || null,
+      assignedStaff: originalPkg.assignedStaff,
+      hasLocker: false,
+      hasWater: originalPkg.hasWater || false,
+      contractType: "transfer",
+      paymentStatus: "paid",
+      paidAmount: originalPkg.paidAmount || originalPkg.price,
+      originalCustomer: originalCustomerFirst,
+      transferredFrom: originalPkg._id,
+      transferFee: transferFee,
+    });
+    await newCustomerPackage.save();
+
+    // 5. Cập nhật gói gốc của Khách A (status: "transferred", transferredTo: newCustomerPackage._id)
+    const transferNoteForOld = `[Đã chuyển nhượng ${dateStr}] Sang ${targetCustomer.name}${note ? ` | Ghi chú: ${note}` : ""}`;
+    originalPkg.originalCustomer = originalCustomerFirst;
+    originalPkg.status = "transferred";
+    originalPkg.transferredTo = newCustomerPackage._id;
+    originalPkg.contractType = "transfer";
+    originalPkg.transferFee = (originalPkg.transferFee || 0) + transferFee;
+    originalPkg.hasLocker = false; // Gỡ tủ đồ của chủ cũ
+    originalPkg.packageNote = originalPkg.packageNote
+      ? `${originalPkg.packageNote}\n${transferNoteForOld}`
+      : transferNoteForOld;
+    await originalPkg.save();
+
+    // 6. Lưu vết vào Bảng ContractTransfer
     const transferRecord = await ContractTransfer.create({
       contract: originalPkg._id,
       fromCustomer: previousOwnerId,
@@ -1218,39 +1268,24 @@ const transferCustomerPackage = async (req, res) => {
       endDateAtTransfer: originalPkg.endDate,
     });
 
-    // 5. Cập nhật chủ sở hữu trên hợp đồng gốc (Phương án A)
-    const originalCustomerFirst = originalPkg.originalCustomer || previousOwnerId;
-    const dateStr = transferDate.toLocaleDateString("vi-VN");
-    const transferNoteLine = `[Chuyển nhượng ${dateStr}] ${fromCustomer ? fromCustomer.name : "Khách cũ"} → ${targetCustomer.name}${note ? ` | Ghi chú: ${note}` : ""}`;
-
-    originalPkg.originalCustomer = originalCustomerFirst;
-    originalPkg.customer = targetCustomer._id;
-    originalPkg.contractType = "transfer";
-    originalPkg.transferFee = (originalPkg.transferFee || 0) + transferFee;
-    originalPkg.hasLocker = false; // Gỡ tủ đồ của chủ cũ
-    originalPkg.packageNote = originalPkg.packageNote
-      ? `${originalPkg.packageNote}\n${transferNoteLine}`
-      : transferNoteLine;
-    await originalPkg.save();
-
-    // 6. Ghi Transaction phí chuyển nhượng (Service Fee - không hoa hồng)
+    // 7. Ghi Transaction phí chuyển nhượng (Service Fee - không hoa hồng)
     await Transaction.create({
       type: "service_fee",
       amount: transferFee,
       paymentMethod: paymentMethod || "Tiền mặt",
       customer: targetCustomer._id,
       customerName: targetCustomer.name,
-      customerPackage: originalPkg._id,
+      customerPackage: newCustomerPackage._id,
       status: "success",
       staff: req.user ? req.user._id : undefined,
       note: `Phí chuyển nhượng hợp đồng ${originalPkg.contractCode} (từ ${fromCustomer ? fromCustomer.name : 'A'} sang ${targetCustomer.name})`,
     });
 
-    // 7. Re-sync đồng bộ số liệu cả người chuyển và người nhận
+    // 8. Re-sync đồng bộ số liệu cả người chuyển và người nhận
     await syncCustomerFields(targetCustomer._id);
     await syncCustomerFields(previousOwnerId);
 
-    // 8. Ghi AuditLog
+    // 9. Ghi AuditLog
     const AuditLog = require("../models/AuditLog");
     await AuditLog.create({
       user: req.user ? req.user._id : undefined,
@@ -1263,6 +1298,7 @@ const transferCustomerPackage = async (req, res) => {
         fromCustomer: fromCustomer ? fromCustomer.name : previousOwnerId,
         toCustomer: targetCustomer.name,
         transferFee,
+        newPackageId: newCustomerPackage._id,
       },
     });
 
@@ -1270,7 +1306,8 @@ const transferCustomerPackage = async (req, res) => {
       success: true,
       message: `Chuyển nhượng hợp đồng [${originalPkg.contractCode}] sang hội viên [${targetCustomer.name}] thành công! Phí dịch vụ: ${transferFee.toLocaleString("vi-VN")} VNĐ.`,
       data: {
-        contract: originalPkg,
+        contract: newCustomerPackage,
+        oldContract: originalPkg,
         transferRecord,
       },
     });

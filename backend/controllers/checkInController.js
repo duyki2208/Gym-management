@@ -20,18 +20,32 @@ async function getEmbeddingCandidates() {
     '_id name code faceEmbedding packageType endDate activePackage'
   ).populate('activePackage', 'status').lean();
 
-  embeddingCache = customers.map(c => ({
-    member_id: c._id.toString(),
-    embedding: c.faceEmbedding,
-    // metadata không gửi lên Python, giữ ở Node.js để lookup sau
-    _meta: { 
-      name: c.name, 
-      code: c.code, 
-      packageType: c.packageType, 
-      endDate: c.endDate,
-      status: c.activePackage?.status || 'active'
-    },
-  }));
+  const formattedCandidates = [];
+  for (const c of customers) {
+    let status = c.activePackage?.status || 'active';
+    if (!c.activePackage) {
+      const latestPkg = await CustomerPackage.findOne({
+        customer: c._id,
+        isDeleted: { $ne: true },
+      }).sort({ createdAt: -1 }).select('status').lean();
+      if (latestPkg?.status === 'transferred') {
+        status = 'transferred';
+      }
+    }
+    formattedCandidates.push({
+      member_id: c._id.toString(),
+      embedding: c.faceEmbedding,
+      _meta: { 
+        name: c.name, 
+        code: c.code, 
+        packageType: c.packageType, 
+        endDate: c.endDate,
+        status: status,
+      },
+    });
+  }
+
+  embeddingCache = formattedCandidates;
   cacheFetchedAt = Date.now();
   return embeddingCache;
 }
@@ -130,6 +144,17 @@ const create = async (req, res) => {
       return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng" });
     }
 
+    // Kiểm tra hợp đồng đã chuyển nhượng chưa
+    const activePkg = await CustomerPackage.findOne({ customer: customer._id, status: "active", isDeleted: { $ne: true } });
+    const latestPkg = await CustomerPackage.findOne({ customer: customer._id, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
+
+    if ((!activePkg && latestPkg?.status === "transferred") || (activePkg?.status === "transferred")) {
+      return res.status(400).json({
+        success: false,
+        message: `Hợp đồng của hội viên "${customer.name}" đã được chuyển nhượng. Không thể thực hiện check-in.`
+      });
+    }
+
     const checkin = new CheckIn({
       customerId: customer._id,
       customerName: customer.name,
@@ -200,6 +225,25 @@ const recognizeFace = async (req, res) => {
     // Tìm metadata của khách hàng đã khớp từ cache
     const matchedCandidate = candidates.find(c => c.member_id === result.member_id);
     const meta = matchedCandidate?._meta || {};
+
+    // Kiểm tra nếu hợp đồng đã bị chuyển nhượng -> Từ chối check-in
+    if (meta.status === "transferred") {
+      return res.json({
+        success: true,
+        matched: true,
+        rejected: true,
+        warning: "transferred",
+        message: `Hợp đồng của hội viên "${meta.name}" đã được chuyển nhượng. Từ chối check-in!`,
+        member: {
+          _id: result.member_id,
+          name: meta.name,
+          code: meta.code,
+          packageType: meta.packageType,
+          endDate: meta.endDate,
+          status: "transferred",
+        },
+      });
+    }
 
     // Ghi lịch sử check-in
     const checkin = new CheckIn({

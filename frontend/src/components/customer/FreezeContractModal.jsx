@@ -13,6 +13,16 @@ const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =>
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     if (isOpen) {
       const today = new Date().toISOString().split('T')[0];
       const defaultEnd = new Date();
@@ -57,8 +67,14 @@ const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
           <div className="flex items-center gap-3">
@@ -195,10 +211,7 @@ const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =>
             />
           </div>
 
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/30 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
-            <AlertCircle size={16} className="shrink-0 text-amber-600 mt-0.5" />
-            <span>Ngày hết hạn gói tập sẽ tự động được gia hạn cộng thêm số ngày tương ứng trong thời gian bảo lưu.</span>
-          </div>
+          
 
           {/* Submit buttons */}
           <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">

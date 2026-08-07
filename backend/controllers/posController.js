@@ -288,9 +288,10 @@ exports.getSales = async (req, res) => {
       });
     }
 
-    // Tính toán tổng số liệu (Summary)
-    const totalAmountSum = sales.reduce((sum, item) => sum + (item.status === 'Đã thanh toán' ? item.totalAmount : 0), 0);
-    const paidAmountSum = sales.reduce((sum, item) => sum + (item.status === 'Đã thanh toán' ? item.totalAmount : 0), 0);
+    // Tính toán tổng số liệu (Summary) — Chỉ tính đơn đã thanh toán hoàn tất (không công nợ)
+    const paidSales = sales.filter(item => item.status === 'Đã thanh toán');
+    const totalAmountSum = paidSales.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+    const paidAmountSum = totalAmountSum;
     const dueAmountSum = 0;
 
     res.status(200).json({

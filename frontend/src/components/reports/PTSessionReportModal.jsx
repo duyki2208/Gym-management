@@ -17,6 +17,16 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
   const [selectedSession, setSelectedSession] = useState(null);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     if (isOpen) {
       fetchPTList();
       fetchReport();
@@ -123,8 +133,14 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
   const currentBadge = statusBadges[reportData?.periodStatus || "draft"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto font-display">
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto font-display"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/50">
           <div className="flex items-center gap-3">

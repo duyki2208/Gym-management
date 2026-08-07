@@ -69,6 +69,16 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     const fetchHistory = async () => {
       if (!customer?._id) return;
       try {
@@ -293,20 +303,20 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
   if (!customer) return null;
 
-  const calculateDaysLeft = (endDate) => {
-      if (!endDate) return 0;
+  const calculateDaysLeft = (endDate, status) => {
+      if (!endDate || status === "transferred" || customer?.status === "transferred") return 0;
       const end = new Date(endDate);
       const now = new Date();
       const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
       return diff > 0 ? diff : 0;
   };
 
-  const daysLeft = calculateDaysLeft(customer.endDate);
+  const daysLeft = calculateDaysLeft(customer.endDate, customer.status);
 
   const getStatusColor = (endDate, status) => {
-    if (status === "frozen") return "text-purple-600 bg-purple-100 border-purple-200";
-    if (status === "transferred") return "text-orange-600 bg-orange-100 border-orange-200";
-    if (!endDate) return "text-green-600 bg-green-100 border-green-200";
+    if (status === "frozen") return "text-purple-800 bg-purple-100 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800";
+    if (status === "transferred") return "text-slate-700 bg-slate-100 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700";
+    if (!endDate) return "text-green-800 bg-green-100 border-green-300 dark:bg-green-950/60 dark:text-green-300 dark:border-green-800";
     const now = new Date();
     const start = customer.startDate ? new Date(customer.startDate) : now;
     const end = new Date(endDate);
@@ -338,28 +348,38 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   }
 
   const InfoRow = ({ label, value, isBoolean }) => (
-    <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-gray-100/80 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm min-w-0 overflow-hidden">
-        <span className="text-sm uppercase font-bold text-gray-900 dark:text-gray-100 font-display">
+    <div className="flex flex-col gap-1 p-2.5 sm:p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200/90 dark:border-gray-700 shadow-sm min-w-0 overflow-hidden">
+        <span className="text-[11px] sm:text-xs uppercase font-medium text-gray-500 dark:text-gray-400 font-display tracking-wider">
             {label}
         </span>
         {isBoolean ? (
-             <div className="flex items-center gap-2 mt-1 min-w-0">
-                <div className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-gray-300'} flex-shrink-0`}></div>
-                <span className={`font-normal text-base font-display ${value ? 'text-green-700' : 'text-gray-500'} break-all`}>
+             <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                <div className={`w-2.5 h-2.5 rounded-full ${value ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex-shrink-0`}></div>
+                <span className={`font-medium text-sm sm:text-base font-display ${value ? 'text-green-700 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'} break-all`}>
                     {value ? 'Đã đăng ký' : 'Không'}
                 </span>
              </div>
+        ) : value ? (
+             <span className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-display font-medium break-all md:break-words min-w-0 overflow-hidden">
+                 {value}
+             </span>
         ) : (
-             <span className="text-base text-gray-700 dark:text-gray-200 font-display font-normal break-all md:break-words min-w-0 overflow-hidden">
-                 {value || "-"}
+             <span className="text-sm sm:text-base text-gray-400 dark:text-gray-500 font-display font-medium">
+                 -
              </span>
         )}
     </div>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in font-display">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-6xl h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row relative">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in font-display"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-6xl h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row relative"
+        onClick={(e) => e.stopPropagation()}
+      >
          
          {/* Close Button Mobile/Absolute */}
          <button
@@ -370,8 +390,8 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
          </button>
 
         {/* LEFT PANEL: Identity (Static) */}
-        <div className="w-full md:w-[350px] bg-gray-50 dark:bg-gray-900/50 p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
-            <div className="w-64 h-64 aspect-square rounded-3xl overflow-hidden shadow-xl border-4 border-white dark:border-gray-800 mb-6 bg-white flex-shrink-0">
+        <div className="w-full md:w-[350px] bg-gray-50/70 dark:bg-gray-900/60 p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
+            <div className="w-64 h-64 aspect-square rounded-3xl overflow-hidden shadow-xl border-4 border-white dark:border-gray-800 mb-6 bg-white dark:bg-gray-800 flex-shrink-0">
                 {customer.avatarUrl ? (
                    <img 
                      src={customer.avatarUrl} 
@@ -385,8 +405,8 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                      className="w-full h-full object-cover"
                    />
                 ) : (
-                   <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
-                      <span className="material-symbols-outlined text-[10rem]">person</span>
+                   <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 text-amber-500/80">
+                      <span className="material-symbols-outlined text-[6rem]">account_circle</span>
                    </div>
                 )}
             </div>
@@ -403,11 +423,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-1">
                 {customer.name}
             </h2>
-             <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 mb-6">
+             <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 mb-5">
                 {customer.code || "NO CODE"}
              </span>
-             <div className={`py-2 px-5 rounded-full text-sm font-bold border flex items-center gap-2 font-display ${getStatusColor(customer.endDate, customer.status)}`}>
+             <div className={`py-2 px-5 rounded-full text-xs font-extrabold border flex items-center gap-2 font-display ${getStatusColor(customer.endDate, customer.status)}`}>
                  <span className={`w-2 h-2 rounded-full ${
+                     customer.status === "transferred" || getStatusText(customer.endDate, customer.status) === "Đã chuyển nhượng" ? "bg-slate-500" :
                      customer.status === "frozen" ? "bg-purple-500" :
                      getStatusText(customer.endDate, customer.status) === "Chưa kích hoạt" ? "bg-sky-500" :
                      getStatusText(customer.endDate, customer.status).includes("Sắp hết") ? "bg-yellow-500" :
@@ -416,14 +437,18 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                 {getStatusText(customer.endDate, customer.status)}
             </div>
             
-             <div className="mt-8 w-full space-y-3">
-                 <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-gray-200">
-                     <span className="text-xs font-bold text-gray-900 uppercase">Ngày tạo</span>
-                     <span className="font-medium text-gray-900">{customer.createdAt ? format(new Date(customer.createdAt), "dd/MM/yyyy") : format(new Date(), "dd/MM/yyyy")}</span>
+             <div className="mt-6 w-full space-y-3.5">
+                 <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                     <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Ngày tạo</span>
+                     <span className="font-medium text-base text-gray-800 dark:text-gray-200">{customer.createdAt ? format(new Date(customer.createdAt), "dd/MM/yyyy") : format(new Date(), "dd/MM/yyyy")}</span>
                  </div>
-                 <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-gray-200">
-                     <span className="text-xs font-bold text-gray-900 uppercase">Còn lại</span>
-                     <span className="font-medium text-blue-600">{daysLeft} ngày</span>
+                 <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                     <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Còn lại</span>
+                     <span className="font-medium text-base text-gray-800 dark:text-gray-200">
+                       {customer.status === "transferred" || getStatusText(customer.endDate, customer.status) === "Đã chuyển nhượng"
+                         ? "0 ngày"
+                         : `${daysLeft} ngày`}
+                     </span>
                  </div>
              </div>
         </div>
@@ -431,56 +456,61 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
         {/* RIGHT PANEL: Tabs & Content */}
         <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 min-h-0 min-w-0">
              {/* TABS HEADER */}
-             <div className="flex items-center gap-1 p-2 pr-16 border-b border-gray-100 dark:border-gray-700 select-none overflow-x-auto">
+             <div className="flex items-center gap-2 p-3 border-b border-gray-200 dark:border-gray-700 select-none overflow-x-auto custom-scrollbar">
                  <button 
+                    type="button"
                     onClick={() => setActiveTab('info')}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'info' 
-                        ? "bg-blue-50 text-blue-700 shadow-sm" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                        ? "bg-blue-600 text-white shadow-sm" 
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                  >
-                    Thông tin khách hàng
-                 </button>
-                  <button 
-                    onClick={() => setActiveTab('history')}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
-                        activeTab === 'history' 
-                        ? "bg-blue-50 text-blue-700 shadow-sm" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                    }`}
-                 >
-                    Lịch sử Check-in
-                 </button>
-                  <button 
-                    onClick={() => setActiveTab('workout')}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
-                        activeTab === 'workout' 
-                        ? "bg-blue-50 text-blue-700 shadow-sm" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                    }`}
-                 >
-                    Lịch sử tập luyện
-                 </button>
-                  <button 
-                    onClick={() => { setActiveTab('packages'); fetchCustomerPackages(); }}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
-                        activeTab === 'packages' 
-                        ? "bg-blue-50 text-blue-700 shadow-sm" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                    }`}
-                 >
-                    Lịch sử Gói tập
+                    Thông tin
                  </button>
                  <button 
-                    onClick={() => { setActiveTab('freeze'); fetchCustomerPackages(); }}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
-                        activeTab === 'freeze' 
-                        ? "bg-blue-50 text-blue-700 shadow-sm" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                    type="button"
+                    onClick={() => setActiveTab('history')}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        activeTab === 'history' 
+                        ? "bg-blue-600 text-white shadow-sm" 
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                  >
-                    Bảo lưu gói tập
+                    Check-in
+                 </button>
+                 <button 
+                    type="button"
+                    onClick={() => setActiveTab('workout')}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        activeTab === 'workout' 
+                        ? "bg-blue-600 text-white shadow-sm" 
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                 >
+                    Buổi tập PT
+                 </button>
+                 <button 
+                    type="button"
+                    onClick={() => { setActiveTab('packages'); fetchCustomerPackages(); }}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        activeTab === 'packages' 
+                        ? "bg-blue-600 text-white shadow-sm" 
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                 >
+                    Gói đăng ký
+                 </button>
+                 <button 
+                    type="button"
+                    onClick={() => { setActiveTab('freeze'); fetchCustomerPackages(); }}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        activeTab === 'freeze' 
+                        ? "bg-blue-600 text-white shadow-sm" 
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                 >
+                    Thao tác gói
                  </button>
              </div>
 
@@ -492,45 +522,29 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                      <div className="space-y-8 animate-fade-in-up">
                          {/* 1. Basic Info */}
                          <section>
-                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
+                             <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
                                  1. Thông tin khách hàng
                              </h3>
-                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
                                  <InfoRow label="Số điện thoại" value={customer.phone} boldValue />
                                  <InfoRow label="Email" value={customer.email} />
                                  <InfoRow label="Ngày sinh" value={customer.dob ? format(new Date(customer.dob), "dd/MM/yyyy") : null} />
                                  <InfoRow label="Giới tính" value={customer.gender === 'male' ? 'Nam' : customer.gender === 'female' ? 'Nữ' : 'Khác'} />
                                  <InfoRow label="Số CCCD" value={customer.identityCard} />
-                                 <div className="col-span-3">
-                                     <InfoRow label="Địa chỉ" value={customer.address} />
-                                 </div>
-                                 <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 border-t border-red-100 dark:border-red-950/30 pt-4">
-                                     <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex flex-col gap-1 min-w-0">
-                                         <span className="text-sm uppercase font-bold text-red-700 dark:text-red-400 font-display">
-                                             Người liên hệ khẩn cấp
-                                         </span>
-                                         <span className="text-base text-gray-800 dark:text-gray-200 font-display font-bold">
-                                             {customer.emergencyContactName || "-"}
-                                         </span>
-                                     </div>
-                                     <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex flex-col gap-1 min-w-0">
-                                         <span className="text-sm uppercase font-bold text-red-700 dark:text-red-400 font-display">
-                                             SĐT liên hệ khẩn cấp
-                                         </span>
-                                         <span className="text-lg text-red-600 dark:text-red-400 font-display font-black">
-                                             {customer.emergencyContactPhone || "-"}
-                                         </span>
-                                     </div>
+                                 <InfoRow label="Địa chỉ" value={customer.address} />
+                                 <div className="col-span-2 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                     <InfoRow label="Người liên hệ khẩn cấp" value={customer.emergencyContactName} />
+                                     <InfoRow label="SĐT liên hệ khẩn cấp" value={customer.emergencyContactPhone} />
                                  </div>
                              </div>
                          </section>
 
                          {/* 2. Package Info */}
                          <section>
-                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
+                             <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
                                  2. Thông tin gói tập  
                              </h3>
-                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
                                  <div className="col-span-2 md:col-span-2">
                                      <InfoRow label="Gói đăng ký" value={customer.packageType} />
                                  </div>
@@ -584,21 +598,21 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
                          {/* 3. Notes & Services */}
                          <section>
-                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
+                             <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
                                  3. Ghi chú & Dịch vụ thêm
                              </h3>
-                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                 <div className="md:col-span-3 space-y-4">
-                                      <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 h-full font-display">
-                                          <p className="text-sm font-bold text-blue-900 dark:text-blue-200 uppercase mb-2">
+                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+                                 <div className="md:col-span-3 space-y-3.5">
+                                      <div className="p-3.5 sm:p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 h-full font-display">
+                                          <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 uppercase mb-1.5 tracking-wider">
                                               Ghi chú gói tập
                                           </p>
-                                          <p className="font-medium text-lg text-gray-900 dark:text-gray-100 break-all md:break-words whitespace-pre-line">
+                                          <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-gray-100 break-all md:break-words whitespace-pre-line">
                                               {customer.packageNote}
                                           </p>
                                       </div>
                                  </div>
-                                 <div className="md:col-span-1 flex flex-col gap-4">
+                                 <div className="md:col-span-1 flex flex-col gap-3.5">
                                      <InfoRow label="Thuê tủ đồ" value={customer.hasLocker} isBoolean />
                                      <InfoRow label="Gói nước uống" value={customer.hasWater} isBoolean />
                                  </div>
@@ -777,14 +791,14 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                  {activeTab === 'packages' && (
                      <div className="animate-fade-in-up h-full flex flex-col">
                         <div className="flex justify-between items-center mb-4">
-                             <h3 className="text-lg font-bold">Lịch sử đăng ký & Trạng thái gói tập</h3>
+                             <h3 className="text-lg font-bold">Lịch sử đăng ký </h3>
                         </div>
                         <div className="w-full overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl custom-scrollbar">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white font-bold uppercase sticky top-0 font-display border-b border-gray-300 dark:border-gray-700">
                                     <tr>
                                         <th className="px-4 py-3">MÃ HĐ</th>
-                                        <th className="px-4 py-3">TÊN GÓI TẬP</th>
+                                        <th className="px-4 py-3">TÊN GÓI </th>
                                         <th className="px-4 py-3">THỜI GIAN GÓI</th>
                                         <th className="px-4 py-3">GIÁ TIỀN</th>
                                         <th className="px-4 py-3">GHI CHÚ</th>
@@ -862,66 +876,65 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                  <p className="text-sm text-gray-500 mt-1">Mã HĐ: {pkg.contractCode || "N/A"}</p>
                                                  <p className="text-sm text-gray-500">Thời gian gói: {pkg.startDate ? format(new Date(pkg.startDate), "dd/MM/yyyy") : "-"} - {pkg.endDate ? format(new Date(pkg.endDate), "dd/MM/yyyy") : "-"}</p>
                                              </div>
-                                              <div className="flex flex-col items-end gap-2">
-                                                  {pkg.status === 'active' && (
-                                                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">Đang hoạt động</span>
-                                                  )}
-                                                  {pkg.status === 'frozen' && (
-                                                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold border border-purple-200">Bảo lưu</span>
-                                                  )}
-                                                  {pkg.status === 'upgraded' && (
-                                                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold border border-blue-200">Đã nâng cấp</span>
-                                                  )}
-                                                  {pkg.status === 'transferred' && (
-                                                      <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold border border-orange-200">Đã chuyển nhượng</span>
-                                                  )}
-                                                  
-                                                  {["admin", "manager", "reception", "sale", "staff"].includes(currentUser.role) && (
-                                                      <div className="mt-2 flex flex-wrap gap-2 justify-end">
-                                                          {/* Gói đã chuyển nhượng: KHÓA toàn bộ */}
-                                                          {pkg.status === 'transferred' && (
-                                                              <span className="px-3 py-1.5 text-orange-700 bg-orange-50 border border-orange-200 rounded-lg text-xs font-bold">
-                                                                  🚫 Không khả dụng
-                                                              </span>
-                                                          )}
-                                                          {pkg.status === 'active' && (
-                                                              <>
-                                                                  <button
-                                                                      type="button"
-                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsFreezeContractModalOpen(true); }}
-                                                                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
-                                                                  >
-                                                                      Bảo lưu
-                                                                  </button>
-                                                                  <button
-                                                                      type="button"
-                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsUpgradeModalOpen(true); }}
-                                                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
-                                                                  >
-                                                                      Nâng cấp
-                                                                  </button>
-                                                                  <button
-                                                                      type="button"
-                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsTransferModalOpen(true); }}
-                                                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
-                                                                  >
-                                                                      Chuyển nhượng
-                                                                  </button>
-                                                              </>
-                                                          )}
-                                                          {pkg.status === 'frozen' && (
-                                                              <button
-                                                                  type="button"
-                                                                  onClick={() => handleUnfreezeClick(pkg._id)}
-                                                                  disabled={isFreezing}
-                                                                  className="px-3 py-1.5 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg text-xs transition-colors shadow-sm"
-                                                              >
-                                                                  Kích hoạt lại
-                                                              </button>
-                                                          )}
-                                                      </div>
-                                                  )}
-                                              </div>
+                                             <div className="flex flex-col items-end gap-2">
+                                                 {pkg.status === 'active' && (
+                                                     <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">Đang hoạt động</span>
+                                                 )}
+                                                 {pkg.status === 'frozen' && (
+                                                     <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold border border-purple-200">Bảo lưu</span>
+                                                 )}
+                                                 {pkg.status === 'upgraded' && (
+                                                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold border border-blue-200">Đã nâng cấp</span>
+                                                 )}
+                                                 {pkg.status === 'transferred' && (
+                                                     <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-300">Đã chuyển nhượng</span>
+                                                 )}
+                                                 
+                                                 {["admin", "manager", "reception", "sale", "staff"].includes(currentUser.role) && (
+                                                     <div className="mt-2 flex flex-wrap gap-2 justify-end">
+                                                         {pkg.status === 'transferred' && (
+                                                             <span className="px-3 py-1.5 text-amber-800 bg-amber-100 border border-amber-300 rounded-lg text-xs font-bold">
+                                                                 🚫 Đã chuyển nhượng
+                                                             </span>
+                                                         )}
+                                                         {pkg.status === 'active' && (
+                                                             <>
+                                                                 <button
+                                                                     type="button"
+                                                                     onClick={() => { setSelectedPackageForAction(pkg); setIsFreezeContractModalOpen(true); }}
+                                                                     className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                 >
+                                                                     Bảo lưu
+                                                                 </button>
+                                                                 <button
+                                                                     type="button"
+                                                                     onClick={() => { setSelectedPackageForAction(pkg); setIsUpgradeModalOpen(true); }}
+                                                                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                 >
+                                                                     Nâng cấp
+                                                                 </button>
+                                                                 <button
+                                                                     type="button"
+                                                                     onClick={() => { setSelectedPackageForAction(pkg); setIsTransferModalOpen(true); }}
+                                                                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                 >
+                                                                     Chuyển nhượng
+                                                                 </button>
+                                                             </>
+                                                         )}
+                                                         {pkg.status === 'frozen' && (
+                                                             <button
+                                                                 type="button"
+                                                                 onClick={() => handleUnfreezeClick(pkg._id)}
+                                                                 disabled={isFreezing}
+                                                                 className="px-3 py-1.5 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                             >
+                                                                 Kích hoạt lại
+                                                             </button>
+                                                         )}
+                                                     </div>
+                                                 )}
+                                             </div>
                                          </div>
                                          
                                          {/* Lịch sử bảo lưu */}

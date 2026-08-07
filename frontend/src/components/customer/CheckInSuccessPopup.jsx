@@ -33,7 +33,13 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
   let leftAccentClass = "bg-green-500";
   let progressBarClass = "bg-green-500";
 
-  if (status.status === "expired") {
+  if (status.status === "transferred") {
+    statusBadgeClass = "bg-slate-100 text-slate-800 border-slate-300";
+    statusIcon = <XCircle size={14} className="text-slate-600" />;
+    statusLabel = "TỪ CHỐI - HỢP ĐỒNG ĐÃ CHUYỂN NHƯỢNG";
+    leftAccentClass = "bg-slate-600";
+    progressBarClass = "bg-slate-600";
+  } else if (status.status === "expired") {
     statusBadgeClass = "bg-red-100 text-red-700 border-red-200";
     statusIcon = <XCircle size={14} className="text-red-600" />;
     statusLabel = "GÓI TẬP HẾT HẠN";

@@ -32,6 +32,16 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
   const [dobForExisting, setDobForExisting] = useState('');
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     if (isOpen) {
       try {
         const u = JSON.parse(localStorage.getItem('gym_user') || localStorage.getItem('user') || '{}');
@@ -62,19 +72,26 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
     }
   }, [isOpen]);
 
-  // Tìm kiếm khách hàng có sẵn
+  // Tìm kiếm khách hàng có sẵn (Chỉ gọi API khi người dùng gõ từ khóa tìm kiếm)
   useEffect(() => {
-    if (transferMode === 'existing' && searchQuery.trim().length >= 2) {
+    if (transferMode === 'existing') {
+      const q = searchQuery.trim();
+      if (!q) {
+        setExistingCustomers([]);
+        setSearching(false);
+        return;
+      }
+
       const delayDebounce = setTimeout(async () => {
         try {
           setSearching(true);
-          const res = await api.get(`/customers?search=${encodeURIComponent(searchQuery)}`);
-          const list = res.data?.data || res.data || [];
+          const res = await api.get(`/customers?search=${encodeURIComponent(q)}`);
+          const list = res.data?.customers || res.data?.data || (Array.isArray(res.data) ? res.data : []);
           // Loại trừ chủ hợp đồng hiện tại
           const currentCustId = typeof customerPackage?.customer === 'object' ? customerPackage.customer._id : customerPackage.customer;
           setExistingCustomers(list.filter((c) => c._id !== currentCustId));
         } catch (err) {
-          console.error(err);
+          console.error('Lỗi tìm kiếm khách hàng:', err);
         } finally {
           setSearching(false);
         }
@@ -146,8 +163,14 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
   const selectedCustObj = existingCustomers.find((c) => c._id === selectedCustomerId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
           <div className="flex items-center gap-3">
@@ -268,8 +291,8 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
                     );
                   })
                 ) : (
-                  <div className="p-3 text-center text-xs text-gray-400">
-                    {searchQuery ? 'Không tìm thấy khách hàng nào' : 'Gõ từ khóa để tìm kiếm...'}
+                  <div className="p-4 text-center text-xs text-gray-400 font-medium">
+                    {searchQuery.trim() ? 'Không tìm thấy khách hàng nào' : 'Vui lòng nhập tên, SĐT hoặc mã hội viên để tìm kiếm...'}
                   </div>
                 )}
               </div>

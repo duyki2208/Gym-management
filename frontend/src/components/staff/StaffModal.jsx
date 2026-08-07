@@ -28,6 +28,16 @@ const StaffModal = ({ staff, onSave, onClose }) => {
   });
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     if (staff) {
       setFormData({
         name: staff.fullName || staff.name || "",
@@ -80,8 +90,14 @@ const StaffModal = ({ staff, onSave, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-lg w-full max-w-md p-6 shadow-xl relative">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg w-full max-w-md p-6 shadow-xl relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-800">
             {staff ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}

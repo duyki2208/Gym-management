@@ -51,7 +51,13 @@ const globalSearch = async (req, res) => {
     const searchPromises = {};
 
     if (requestedCategories.includes('customers')) {
-      searchPromises.customers = Customer.find({ name: regex })
+      searchPromises.customers = Customer.find({
+        $or: [
+          { name: regex },
+          { phone: regex },
+          { code: regex },
+        ],
+      })
         .select('_id name phone code packageType endDate status avatarUrl')
         .limit(maxLimit)
         .lean();

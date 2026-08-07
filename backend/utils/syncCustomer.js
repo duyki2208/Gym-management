@@ -45,19 +45,20 @@ async function syncCustomerFields(customerId, options = {}) {
     if (!customer) return;
 
     if (activePackage) {
+      const isTransferred = activePackage.status === "transferred";
       customer.activePackage   = activePackage._id;
       customer.packageType     = activePackage.packageName;
       customer.startDate       = activePackage.startDate;
-      customer.endDate         = activePackage.endDate;
-      customer.remainingSessions = activePackage.remainingSessions;
+      customer.endDate         = isTransferred ? new Date() : activePackage.endDate;
+      customer.remainingSessions = isTransferred ? 0 : (activePackage.remainingSessions || 0);
       customer.price           = activePackage.price;
       customer.paymentStatus   = activePackage.paymentStatus;
       customer.paidAmount      = activePackage.paidAmount;
       customer.contractType    = activePackage.contractType;
-      customer.trainer         = activePackage.trainer;
+      customer.trainer         = isTransferred ? null : activePackage.trainer;
       customer.assignedStaff   = activePackage.assignedStaff;
-      customer.hasLocker       = activePackage.hasLocker;
-      customer.hasWater        = activePackage.hasWater;
+      customer.hasLocker       = isTransferred ? false : activePackage.hasLocker;
+      customer.hasWater        = isTransferred ? false : activePackage.hasWater;
       customer.packageNote     = activePackage.packageNote;
       customer.contractCode    = activePackage.contractCode || "";
     } else {
