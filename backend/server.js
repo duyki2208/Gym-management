@@ -17,6 +17,9 @@ if (process.env.NODE_ENV !== "test") {
 
 const app = express();
 
+// Trust reverse proxy (Render) to get real client IP for rate limiting
+app.set("trust proxy", 1);
+
 // --- SECURITY HEADERS ---
 app.use(helmet());
 
