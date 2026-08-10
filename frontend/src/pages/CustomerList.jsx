@@ -707,8 +707,8 @@ const CustomerList = () => {
         
         {/* Pagination Controls */}
         <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
-                Hiển thị trang <span className="font-bold">{page}</span> / <span className="font-bold">{totalPages}</span>
+            <div className="text-sm font-bold text-gray-700">
+                Trang: {page}/{totalPages}
             </div>
             <div className="flex gap-2">
                 <button

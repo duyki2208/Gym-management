@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { posService } from '../services/productService';
 import PointOfSale from './PointOfSale';
 import toast from 'react-hot-toast';
-import { Search, Plus, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Search, Plus, ChevronRight, ChevronDown, ChevronLeft, Download, Calendar, Filter, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const SalesOrderList = () => {
   const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState({ totalAmount: 0, totalPaid: 0, totalDue: 0, totalOrders: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Filter States (Mặc định: Hôm nay)
+  // Filter States (Mặc định: Tháng này - Hiển thị danh sách các ngày đã bán trong tháng)
   const [search, setSearch] = useState('');
-  const [preset, setPreset] = useState('today');
+  const [preset, setPreset] = useState('thisMonth');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -22,6 +23,7 @@ const SalesOrderList = () => {
   // UI States (Bấm vào mới mở xem chi tiết)
   const [expandedDateGroups, setExpandedDateGroups] = useState({});
   const [showPosModal, setShowPosModal] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
 
   const fetchSales = async () => {
     setLoading(true);
@@ -148,88 +150,204 @@ const SalesOrderList = () => {
       case 'thisWeek':
         return 'Tuần này';
       case 'thisMonth':
-        return 'Tháng này';
+        return `Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
       case 'custom':
         if (startDate && endDate) {
           return `Từ ${formatDate(startDate)} đến ${formatDate(endDate)}`;
+        } else if (startDate) {
+          return `Từ ngày ${formatDate(startDate)}`;
+        } else if (endDate) {
+          return `Đến ngày ${formatDate(endDate)}`;
         }
-        return 'Theo ngày chọn';
+        return 'Theo khoảng ngày chọn';
       default:
-        return 'Hôm nay';
+        return 'Tháng này';
+    }
+  };
+
+  // Hàm Xuất File Excel Báo Cáo Bán Hàng
+  const handleExportExcel = () => {
+    try {
+      if (!allDateGroups || allDateGroups.length === 0) {
+        toast.error('Không có dữ liệu báo cáo để xuất Excel!');
+        return;
+      }
+
+      // 1. Bảng tổng hợp theo ngày
+      const summaryRows = allDateGroups.map(group => ({
+        'Ngày': group.formattedDate,
+        'Số loại sản phẩm': group.aggregatedProducts.length,
+        'Tổng số lượng bán': group.aggregatedProducts.reduce((sum, p) => sum + (p.quantity || 0), 0),
+        'Doanh thu ngày (VNĐ)': group.totalAmount
+      }));
+
+      // Dòng tổng cộng
+      summaryRows.push({
+        'Ngày': 'TỔNG CỘNG',
+        'Số loại sản phẩm': '-',
+        'Tổng số lượng bán': '-',
+        'Doanh thu ngày (VNĐ)': summary.totalAmount || 0
+      });
+
+      const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+      wsSummary['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 22 }, { wch: 25 }];
+
+      // 2. Bảng chi tiết từng sản phẩm bán
+      const detailRows = [];
+      allDateGroups.forEach(group => {
+        group.aggregatedProducts.forEach(p => {
+          detailRows.push({
+            'Ngày bán': group.formattedDate,
+            'Mã sản phẩm': p.code,
+            'Tên sản phẩm': p.name,
+            'Danh mục': p.category,
+            'Số lượng': p.quantity,
+            'Đơn vị': p.unit,
+            'Giá bán (VNĐ)': p.sellPrice,
+            'Thành tiền (VNĐ)': p.totalAmount
+          });
+        });
+      });
+
+      const wsDetail = XLSX.utils.json_to_sheet(detailRows);
+      wsDetail['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 20 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Doanh Thu Theo Ngày");
+      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi Tiết Sản Phẩm Bán");
+
+      const fileName = `Bao_Cao_Ban_Hang_${preset}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('Xuất file Excel báo cáo bán hàng thành công!');
+    } catch (error) {
+      console.error('Lỗi xuất Excel:', error);
+      toast.error('Lỗi khi xuất file Excel!');
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 font-display bg-transparent h-full">
+    <div className="flex flex-col gap-5 font-display bg-transparent h-full">
       {/* ── Compact Filter Bar ── */}
-      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+      <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs flex flex-wrap items-center justify-between gap-3 relative z-20">
         
-        {/* Left: Search Input */}
-        <div className="relative flex-1 min-w-[220px] max-w-md">
-          <Search className="absolute left-3.5 top-2.5 text-gray-400" size={18} />
+        {/* Search Input (Bên trái, mở rộng rộng rãi) */}
+        <div className="relative flex-1 max-w-lg min-w-[260px]">
+          <Search className="absolute left-3.5 top-2.5 text-gray-400" size={17} />
           <input
             type="text"
-            className="w-full pl-10 pr-4 h-10 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm bg-white text-gray-800 transition-colors"
+            className="w-full pl-9 pr-3 h-9 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 text-xs bg-white text-gray-800"
             placeholder="Tìm tên sản phẩm..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        {/* Center: Simplified Preset Time Dropdown */}
-        <div className="flex items-center gap-2">
-          <select
-            value={preset}
-            onChange={(e) => setPreset(e.target.value)}
-            className="h-10 px-3.5 border border-gray-200 rounded-xl text-xs font-bold bg-gray-50 hover:bg-gray-100 text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-primary"
+        {/* Right: Filter "Thời gian" & Action Buttons */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* DATE RANGE FILTER POPOVER (Tên: Thời gian, Đặt dịch sang bên phải) */}
+          <div className="relative">
+            <button
+              onClick={() => setShowDateDropdown(prev => !prev)}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                preset !== 'thisMonth' || startDate || endDate
+                  ? 'bg-primary/10 text-primary border-primary/30'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              <span>Thời gian</span>
+              <ChevronDown size={14} className="ml-0.5 opacity-60" />
+            </button>
+
+            {showDateDropdown && (
+              <div className="absolute top-full mt-2 right-0 sm:left-auto z-30 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 min-w-[300px] animate-fade-in space-y-4">
+                {/* Mốc thời gian nhanh */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-2">Mốc thời gian nhanh</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { id: 'thisMonth', label: 'Tháng này' },
+                      { id: 'today', label: 'Hôm nay' },
+                      { id: 'yesterday', label: 'Hôm qua' },
+                      { id: 'thisWeek', label: 'Tuần này' }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setPreset(item.id);
+                          setStartDate('');
+                          setEndDate('');
+                          setShowDateDropdown(false);
+                        }}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold text-left transition-all cursor-pointer ${
+                          preset === item.id && !startDate && !endDate
+                            ? 'bg-primary/10 text-primary border border-primary/20'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Khoảng ngày tùy chọn */}
+                <div className="pt-2 border-t border-gray-100">
+                  <label className="block text-xs font-bold text-gray-700 mb-2">Lọc theo ngày chọn</label>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="date" 
+                      className="w-full text-xs p-2 border border-gray-200 rounded-xl outline-none focus:border-primary bg-gray-50 font-medium" 
+                      value={startDate} 
+                      onChange={e => {
+                        setStartDate(e.target.value);
+                        setPreset('custom');
+                      }} 
+                      title="Từ ngày"
+                    />
+                    <span className="text-gray-400 font-bold text-xs">-</span>
+                    <input 
+                      type="date" 
+                      className="w-full text-xs p-2 border border-gray-200 rounded-xl outline-none focus:border-primary bg-gray-50 font-medium" 
+                      value={endDate} 
+                      onChange={e => {
+                        setEndDate(e.target.value);
+                        setPreset('custom');
+                      }} 
+                      title="Đến ngày"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center justify-center gap-1.5 h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            title="Xuất dữ liệu ra Excel"
           >
-            <option value="today">Hôm nay</option>
-            <option value="yesterday">Hôm qua</option>
-            <option value="thisWeek">Tuần này</option>
-            <option value="thisMonth">Tháng này</option>
-            <option value="custom">Theo ngày chọn...</option>
-          </select>
+            <FileSpreadsheet size={15} />
+            <span>Xuất Excel</span>
+          </button>
 
-          {preset === 'custom' && (
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                className="h-10 px-2.5 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-              <span className="text-gray-400 text-xs">-</span>
-              <input
-                type="date"
-                className="h-10 px-2.5 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          )}
+          <button
+            onClick={() => setShowPosModal(true)}
+            className="flex items-center justify-center gap-1.5 h-9 px-4 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Bán Hàng Mới</span>
+          </button>
         </div>
-
-        {/* Right: Button Bán Hàng Mới */}
-        <button
-          onClick={() => setShowPosModal(true)}
-          className="flex items-center justify-center gap-2 h-10 px-5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shrink-0 shadow-md shadow-primary/20 cursor-pointer"
-        >
-          <Plus size={18} />
-          <span>Bán Hàng Mới</span>
-        </button>
       </div>
 
       {/* ── Main Sales Table (Color White/Gray, Grouped by Date & 10 Days/Page) ── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex-1 flex flex-col justify-between">
         <div className="overflow-x-auto custom-scrollbar flex-1 p-4 space-y-3">
           
-          {/* Summary Row (Chỉ hiển thị Tổng doanh thu của mốc thời gian thuộc filter đó) */}
+          {/* Summary Row */}
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-wrap justify-between items-center text-sm font-bold text-gray-900">
             <div className="flex items-center gap-2">
-              <span className="text-gray-600 uppercase tracking-wide text-xs font-bold">
-                Báo cáo doanh thu: <span className="text-gray-900 font-extrabold normal-case text-sm ml-1">{getFilterLabel()}</span>
-              </span>
-              <span className="text-xs text-gray-400 font-normal">({allDateGroups.length} ngày phát sinh doanh thu)</span>
+              <span className="text-gray-900 font-black text-sm">{getFilterLabel()}</span>
             </div>
             <div className="flex gap-6 text-right">
               <div>
@@ -251,7 +369,7 @@ const SalesOrderList = () => {
 
               return (
                 <div key={group.dateKey} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                  {/* ── Header Báo Cáo Ngày (Chỉ hiển thị thông tin báo cáo sản phẩm ngày) ── */}
+                  {/* ── Header Ngày ── */}
                   <div 
                     onClick={() => toggleDateGroup(group.dateKey)}
                     className="bg-white px-4 py-3.5 border-b border-gray-200 flex flex-wrap justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
@@ -261,15 +379,12 @@ const SalesOrderList = () => {
                         {isGroupExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                       </button>
                       <span className="font-extrabold text-sm text-gray-900">
-                        Báo cáo ngày {group.formattedDate}
-                      </span>
-                      <span className="text-xs text-gray-500 font-medium">
-                        ({group.aggregatedProducts.length} loại sản phẩm)
+                        {group.formattedDate}
                       </span>
                     </div>
                     <div className="flex gap-6 text-right text-xs font-bold text-gray-800">
                       <div>
-                        <span className="text-gray-500 mr-2">Doanh thu ngày:</span>
+                        <span className="text-gray-500 mr-2">Tổng:</span>
                         <span className="text-gray-900 font-black text-sm">{group.totalAmount?.toLocaleString()} đ</span>
                       </div>
                     </div>
@@ -320,27 +435,24 @@ const SalesOrderList = () => {
 
         {/* ── Pagination Bar (Mỗi trang hiển thị 10 ngày) ── */}
         {allDateGroups.length > 0 && (
-          <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-600">
+          <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-sm text-gray-700 font-bold">
             <div>
-              Hiển thị <span className="font-bold text-gray-900">{currentPageGroups.length}</span> / <span className="font-bold text-gray-900">{allDateGroups.length}</span> ngày báo cáo
+              Trang: {currentPage}/{totalPages}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 font-normal">
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors cursor-pointer"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
-                <ChevronLeft size={14} /> Trước
+                Trang trước
               </button>
-              <span className="font-bold px-2 text-gray-800">
-                Trang {currentPage} / {totalPages}
-              </span>
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors cursor-pointer"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
-                Sau <ChevronRight size={14} />
+                Trang sau
               </button>
             </div>
           </div>

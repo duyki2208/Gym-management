@@ -22,3 +22,8 @@ Tài liệu này định nghĩa pattern bắt buộc khi code ở phía Frontend
 - Xử lý mượt mà các viền, bóng râm (shadow), góc bo tròn để phù hợp với ngôn ngữ thiết kế chung.
 - **Tiêu đề bảng (`<thead>` / `<th>`)**: Tiêu đề bảng bắt buộc phải giữ chữ màu **ĐEN** (`text-black` hoặc `dark:text-white font-bold`). Đối với bảng gộp chung một card với Toolbar bộ lọc, sử dụng nền nhẹ dịu (`bg-gray-50/80 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700`) để tổng thể card đồng bộ và tinh tế.
 
+## 5. Quy tắc Chân trang Phân trang (Pagination Footer)
+Mọi thanh phân trang ở phía dưới danh sách/bảng đều phải tuân thủ chuẩn giao diện:
+- **Bên trái**: Chỉ hiển thị thông tin trang ngắn gọn dạng `"Trang: X/Y"` (ví dụ: `Trang: 1/10`). Loại bỏ hoàn toàn các dòng chữ rườm rà như *"Hiển thị X/Y ngày..."*.
+- **Bên phải**: Gồm đúng 2 nút bấm: **`"Trang trước"`** và **`"Trang sau"`** (tuyệt đối KHÔNG có icon mũi tên đi kèm).
+

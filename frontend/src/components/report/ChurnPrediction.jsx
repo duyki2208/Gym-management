@@ -226,21 +226,21 @@ const ChurnPrediction = () => {
       {/* Phân trang */}
       {totalPages > 1 && (
         <div className="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <span className="text-sm text-gray-500">
-            Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredList.length)} trong {filteredList.length}
-          </span>
-          <div className="flex gap-1">
+          <div className="text-sm font-bold text-gray-700">
+            Trang: {currentPage}/{totalPages}
+          </div>
+          <div className="flex gap-2">
             <button 
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => prev - 1)}
-              className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 bg-white"
+              className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Trang trước
             </button>
             <button 
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 bg-white"
+              className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Trang sau
             </button>

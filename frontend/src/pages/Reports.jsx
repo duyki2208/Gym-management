@@ -891,24 +891,23 @@ const Reports = () => {
                     </div>
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                        <span className="text-xs text-gray-500">
-                          Hiển {(inactivePage - 1) * INACTIVE_PAGE_SIZE + 1}–{Math.min(inactivePage * INACTIVE_PAGE_SIZE, customerAnalytics.inactive.length)} / {customerAnalytics.inactive.length} khách
-                        </span>
+                        <div className="text-sm font-bold text-gray-700">
+                          Trang: {inactivePage}/{totalPages}
+                        </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setInactivePage(p => Math.max(p - 1, 1))}
                             disabled={inactivePage === 1}
-                            className="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            Trước
+                            Trang trước
                           </button>
-                          <span className="text-xs font-bold text-gray-700">{inactivePage} / {totalPages}</span>
                           <button
                             onClick={() => setInactivePage(p => Math.min(p + 1, totalPages))}
                             disabled={inactivePage >= totalPages}
-                            className="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            Sau
+                            Trang sau
                           </button>
                         </div>
                       </div>
@@ -1294,8 +1293,8 @@ const Reports = () => {
                 </div>
 
                 <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-                  <div className="text-sm text-gray-500">
-                    Trang <span className="font-bold">{auditPage}</span> / <span className="font-bold">{auditTotalPages}</span>
+                  <div className="text-sm font-bold text-gray-700">
+                    Trang: {auditPage}/{auditTotalPages}
                   </div>
                   <div className="flex gap-2">
                     <button
