@@ -1,12 +1,7 @@
 const mongoose = require("mongoose");
+const { scheduleSchema } = require("./schemas/branchSchemas");
+const { createModelProxy } = require("../utils/context");
 
-const scheduleSchema = new mongoose.Schema({
-  staff: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  date: { type: String, required: true }, // Format: YYYY-MM-DD
-  shiftType: { type: String, enum: ["Sáng", "Chiều", "Hành chính", "Nghỉ"], required: true }
-}, { timestamps: true });
+const defaultModel = mongoose.models.Schedule || mongoose.model("Schedule", scheduleSchema);
 
-// Ensure a staff member only has one shift per day
-scheduleSchema.index({ staff: 1, date: 1 }, { unique: true });
-
-module.exports = mongoose.model("Schedule", scheduleSchema);
+module.exports = createModelProxy("Schedule", defaultModel);

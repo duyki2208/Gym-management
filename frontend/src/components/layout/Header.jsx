@@ -4,10 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Search, Bell, ChevronRight, X,
   Settings, LogOut, Clock, AlertCircle, ChevronDown, Sun, Moon,
+  Building2, MapPin, Check,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import useDarkMode from '../../hooks/useDarkMode';
 import { notificationService } from '../../services/notificationService';
 import { searchService } from '../../services/searchService';
+import { authService } from '../../services/authService';
 
 // ── Breadcrumb map (Trùng khớp 100% với Sidebar Left) ──────────────────────────
 const BREADCRUMB_MAP = {
@@ -538,6 +541,174 @@ const UserMenu = () => {
   );
 };
 
+// ── Helper to format branch button label: 'Cơ sở : <Tên>' ──
+const formatBranchButtonLabel = (rawName) => {
+  if (!rawName) return 'Cơ sở : Chưa đặt tên';
+  let clean = rawName
+    .replace(/^GymPro\s*[-:]\s*/i, '')
+    .replace(/^Trụ sở\s+/i, '')
+    .replace(/^Chi nhánh\s+/i, '')
+    .replace(/^Cơ sở\s*[:\-]?\s*/i, '')
+    .trim();
+  return `Cơ sở : ${clean}`;
+};
+
+const cleanBranchName = (rawName) => {
+  if (!rawName) return '';
+  return rawName
+    .replace(/^GymPro\s*[-:]\s*/i, '')
+    .replace(/^Trụ sở\s+/i, '')
+    .replace(/^Chi nhánh\s+/i, '')
+    .replace(/^Cơ sở\s*[:\-]?\s*/i, '')
+    .trim();
+};
+
+// ── Branch Selector (Multi-Branch) ──────────────────────────────
+const BranchSelector = () => {
+  const { user, switchBranch } = useAuth();
+  const [branches, setBranches] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const ref = useRef(null);
+
+  const isCentral = user?.role === 'admin' || user?.role === 'accountant' || user?.isCentral;
+  const currentBranchCode = user?.activeBranch || user?.branchCode || 'HN01';
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      const list = await authService.getBranches();
+      if (list && list.length > 0) {
+        setBranches(list);
+      } else {
+        setBranches([
+          { code: 'HN01', name: 'Cầu Giấy - Hà Nội', address: 'Số 123 Đường Cầu Giấy, Quận Cầu Giấy, Hà Nội' },
+          { code: 'HCM01', name: 'Quận 1 - Hồ Chí Minh', address: 'Số 456 Đường Nguyễn Thị Minh Khai, Quận 1, TP.HCM' },
+        ]);
+      }
+    };
+    fetchBranches();
+  }, []);
+
+  // Lắng nghe sự kiện cập nhật Cài đặt để đổi tên/địa chỉ button ngay tức thì mà không cần reload
+  useEffect(() => {
+    const handleSettingsUpdated = (e) => {
+      if (e.detail?.gymName) {
+        setBranches((prev) =>
+          prev.map((b) =>
+            b.code === currentBranchCode
+              ? { ...b, name: e.detail.gymName, address: e.detail.address !== undefined ? e.detail.address : b.address }
+              : b
+          )
+        );
+      }
+    };
+    window.addEventListener("branch-settings-updated", handleSettingsUpdated);
+    return () => window.removeEventListener("branch-settings-updated", handleSettingsUpdated);
+  }, [currentBranchCode]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const activeBranchObj = branches.find((b) => b.code === currentBranchCode) || {
+    code: currentBranchCode,
+    name: currentBranchCode === 'HN01' ? 'Cầu Giấy - Hà Nội' : 'Quận 1 - Hồ Chí Minh',
+    address: currentBranchCode === 'HN01' ? 'Số 123 Đường Cầu Giấy, Quận Cầu Giấy, Hà Nội' : 'Số 456 Đường Nguyễn Thị Minh Khai, Quận 1, TP.HCM',
+  };
+
+  const handleSelectBranch = async (branchCode) => {
+    if (branchCode === currentBranchCode) {
+      setOpen(false);
+      return;
+    }
+    setSwitching(true);
+    const res = await switchBranch(branchCode);
+    setSwitching(false);
+    setOpen(false);
+    if (res.success) {
+      toast.success(`Đã chuyển sang ${cleanBranchName(res.branchName) || branchCode}`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 250);
+    } else {
+      toast.error(res.message || 'Lỗi chuyển chi nhánh');
+    }
+  };
+
+  if (!isCentral) {
+    return (
+      <div className="flex items-center h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 select-none shrink-0">
+        <span className="font-semibold text-sm">
+          {formatBranchButtonLabel(activeBranchObj.name)}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={switching}
+        className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-sm font-medium transition-all duration-150 cursor-pointer select-none ${
+          open
+            ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-800 dark:text-gray-100'
+        }`}
+        title="Bấm để chọn chi nhánh làm việc"
+      >
+        <span className="font-semibold text-sm tracking-tight truncate max-w-[220px]">
+          {formatBranchButtonLabel(activeBranchObj.name)}
+        </span>
+        <ChevronDown size={15} className={`text-gray-400 dark:text-gray-500 transition-transform duration-200 shrink-0 ${open ? 'rotate-180 text-gray-700 dark:text-gray-200' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <p className="font-bold text-xs text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              Chọn Chi Nhánh Làm Việc
+            </p>
+          </div>
+
+          <div className="py-1 max-h-64 overflow-y-auto">
+            {branches.map((b) => {
+              const isSelected = b.code === currentBranchCode;
+              return (
+                <button
+                  key={b.code}
+                  onClick={() => handleSelectBranch(b.code)}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer border-b border-gray-50 dark:border-gray-800/50 last:border-0 ${
+                    isSelected
+                      ? 'bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-semibold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1 pr-2">
+                    <p className="font-bold text-sm text-gray-800 dark:text-gray-100 truncate">
+                      {cleanBranchName(b.name)}
+                    </p>
+                    {b.address && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                        {b.address}
+                      </p>
+                    )}
+                  </div>
+                  {isSelected && <Check size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Header (Main) ───────────────────────────────────────────────
 const Header = () => {
   const [isDark, toggleDark] = useDarkMode();
@@ -553,7 +724,12 @@ const Header = () => {
       </div>
 
       {/* ── RIGHT ── */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Branch Selector / Active Branch Badge */}
+        <BranchSelector />
+
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-0.5" />
+
         <button
           onClick={toggleDark}
           aria-label={isDark ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
@@ -563,9 +739,9 @@ const Header = () => {
           {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-0.5" />
         <NotificationBell />
-        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-0.5" />
         <UserMenu />
       </div>
     </header>
@@ -573,3 +749,4 @@ const Header = () => {
 };
 
 export default Header;
+

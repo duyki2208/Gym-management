@@ -125,6 +125,11 @@ const Settings = () => {
       });
       if (res && res.success) {
         toast.success("Đã lưu thay đổi cài đặt thành công!");
+        window.dispatchEvent(
+          new CustomEvent("branch-settings-updated", {
+            detail: { gymName, address },
+          })
+        );
       }
     } catch (error) {
       toast.error(error.message || "Lỗi khi lưu cài đặt");

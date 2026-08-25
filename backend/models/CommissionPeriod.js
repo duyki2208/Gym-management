@@ -1,59 +1,7 @@
 const mongoose = require("mongoose");
+const { commissionPeriodSchema } = require("./schemas/branchSchemas");
+const { createModelProxy } = require("../utils/context");
 
-/**
- * CommissionPeriod — Kỳ thanh toán hoa hồng theo tháng
- * Workflow: draft → pending → approved → paid
- *
- * - draft:    Đang tính toán, có thể chỉnh sửa
- * - pending:  Đã chốt sổ, chờ duyệt
- * - approved: Đã được admin/accountant duyệt
- * - paid:     Đã thanh toán cho nhân viên
- */
-const commissionPeriodSchema = new mongoose.Schema(
-  {
-    month: { type: Number, required: true, min: 1, max: 12 },   // Tháng (1-12)
-    year: { type: Number, required: true },                       // Năm
-    type: {
-      type: String,
-      enum: ["pt", "sale"],
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["draft", "sent_for_review", "pt_confirmed", "disputed", "pending", "approved", "paid"],
-      default: "draft",
-    },
+const defaultModel = mongoose.models.CommissionPeriod || mongoose.model("CommissionPeriod", commissionPeriodSchema);
 
-    // Tổng hợp
-    totalAmount: { type: Number, default: 0 },    // Tổng hoa hồng phải trả trong kỳ
-    totalRecords: { type: Number, default: 0 },    // Tổng số bản ghi hoa hồng
-
-    // Danh sách khiếu nại đối soát của PT
-    disputes: [
-      {
-        workoutLogId: { type: mongoose.Schema.Types.ObjectId, ref: "WorkoutLog" },
-        ptUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        reason: { type: String, required: true },
-        status: { type: String, enum: ["pending", "resolved", "rejected"], default: "pending" },
-        resolutionNote: { type: String, default: "" },
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
-
-    // Duyệt
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    approvedAt: { type: Date },
-
-    // Thanh toán
-    paidBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    paidAt: { type: Date },
-
-    note: { type: String, default: "" },
-  },
-  { timestamps: true }
-);
-
-// Mỗi tháng chỉ có 1 kỳ cho mỗi loại (pt/sale)
-commissionPeriodSchema.index({ month: 1, year: 1, type: 1 }, { unique: true });
-
-module.exports = mongoose.model("CommissionPeriod", commissionPeriodSchema);
+module.exports = createModelProxy("CommissionPeriod", defaultModel);

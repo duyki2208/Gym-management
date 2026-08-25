@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
@@ -17,59 +17,68 @@ const queryClient = new QueryClient({
   },
 });
 
-// Import Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import CustomerList from './pages/CustomerList';
-import CheckIn from './pages/CheckIn';
-import History from './pages/History';
-import Packages from './pages/Packages';
-import Staff from './pages/Staff';
-import Reports from './pages/Reports';
-import Commissions from './pages/Commissions';
-import Settings from './pages/Settings';
-import ProductsMain from './pages/ProductsMain';
-import Leads from './pages/Leads';
+// Lazy load các trang để giảm initial bundle size & tăng tốc độ tải ứng dụng
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const CustomerList = lazy(() => import('./pages/CustomerList'));
+const CheckIn = lazy(() => import('./pages/CheckIn'));
+const History = lazy(() => import('./pages/History'));
+const Packages = lazy(() => import('./pages/Packages'));
+const Staff = lazy(() => import('./pages/Staff'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Commissions = lazy(() => import('./pages/Commissions'));
+const Settings = lazy(() => import('./pages/Settings'));
+const ProductsMain = lazy(() => import('./pages/ProductsMain'));
+const Leads = lazy(() => import('./pages/Leads'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 const App = () => {
-
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster position="top-right" reverseOrder={false} />
       <ConfirmProvider>
         <AuthProvider>
           <BrowserRouter>
-            <Routes>
-              {/* Public Route */}
-              <Route path="/login" element={<Login />} />
-              
-              {/* Protected Routes (Bọc bởi Layout) */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/customers" element={<CustomerList />} />
-                        <Route path="/checkin" element={<CheckIn />} />
-                        <Route path="/history" element={<History />} />
-                        <Route path="/packages" element={<Packages />} />
-                        <Route path="/staff" element={<Staff />} />
-                        <Route path="/reports/*" element={<Reports />} />
-                        <Route path="/commissions" element={<Commissions />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/products/*" element={<ProductsMain />} />
-                        <Route path="/leads" element={<Leads />} />
-                        
-                        {/* Fallback cho route sai */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public Route */}
+                <Route path="/login" element={<Login />} />
+                
+                {/* Protected Routes (Bọc bởi Layout) */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Suspense fallback={<PageLoader />}>
+                          <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/customers" element={<CustomerList />} />
+                            <Route path="/checkin" element={<CheckIn />} />
+                            <Route path="/history" element={<History />} />
+                            <Route path="/packages" element={<Packages />} />
+                            <Route path="/staff" element={<Staff />} />
+                            <Route path="/reports/*" element={<Reports />} />
+                            <Route path="/commissions" element={<Commissions />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/products/*" element={<ProductsMain />} />
+                            <Route path="/leads" element={<Leads />} />
+                            
+                            {/* Fallback cho route sai */}
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                          </Routes>
+                        </Suspense>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </AuthProvider>
       </ConfirmProvider>

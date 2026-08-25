@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   Download, Users, DollarSign, TrendingUp, AlertTriangle, ArrowUpRight,
-  ArrowDownRight, Package, ShoppingCart, Award, Calendar, Clock, BarChart2, ShieldAlert
+  ArrowDownRight, Package, ShoppingCart, Award, Calendar, Clock, BarChart2, ShieldAlert, Minus
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ChurnPrediction from '../components/report/ChurnPrediction';
@@ -18,6 +18,35 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6'
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+};
+
+const renderGrowthBadge = (percent, labelSuffix = "") => {
+  if (percent === null || percent === undefined) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500">
+        N/A
+      </span>
+    );
+  }
+  if (percent > 0) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50">
+        <ArrowUpRight size={14} /> +{percent}% {labelSuffix}
+      </span>
+    );
+  }
+  if (percent < 0) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50">
+        <ArrowDownRight size={14} /> {percent}% {labelSuffix}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+      <Minus size={14} /> 0% Không đổi
+    </span>
+  );
 };
 
 const pathToTabMap = {
@@ -277,307 +306,392 @@ const Reports = () => {
   return (
     <div className="space-y-6">
 
-
       {/* Header controls: Kỳ báo cáo & Nút thao tác */}
       {!["audit", "customer-analytics", "notifications-report", "leads-funnel", "contract-status", "sales-funnel", "pt-sessions"].includes(activeTab) && (
-        <div className="flex items-center justify-between gap-4 flex-wrap bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Kỳ báo cáo:</span>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m}>Tháng {m}</option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            {refreshing && <span className="text-xs text-gray-400 animate-pulse">Đang cập nhật...</span>}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Doanh thu</h1>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Theo dõi và phân tích hiệu quả kinh doanh của phòng gym</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={exportToExcel}
-              className="flex items-center gap-2 bg-primary text-background-dark font-bold px-4 py-2 rounded-xl hover:bg-primary/90 transition text-xs shadow-sm"
-            >
-              <Download size={16} /> Xuất Excel
-            </button>
-            <button
-              onClick={() => setIsPTModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white font-bold rounded-xl hover:bg-gray-700 transition text-xs shadow-sm"
-            >
-              Đối Soát Buổi Tập PT
-            </button>
+          <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Tháng:</span>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>Tháng {m}</option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              {refreshing && <span className="text-xs text-gray-400 animate-pulse ml-1">Đang cập nhật...</span>}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={exportToExcel}
+                className="flex items-center gap-2 bg-primary text-background-dark font-bold px-3.5 py-1.5 rounded-lg hover:bg-primary/90 transition text-xs shadow-xs"
+              >
+                <Download size={15} /> Xuất Excel
+              </button>
+              <button
+                onClick={() => setIsPTModalOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-gray-900 dark:bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 transition text-xs shadow-xs"
+              >
+                Đối Soát Buổi Tập PT
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* 1. Phân tích Doanh thu */}
       {(activeTab === 'revenue' || activeTab === 'business' || activeTab === 'revenue-advanced') && (
-        <div className="space-y-8">
-          {/* Top KPI Cards: Doanh Thu Tháng Này | Trung Bình Ngày | MoM */}
+        <div className="space-y-6">
+          {/* Top 3 KPI Cards: Doanh Thu Tháng Này | Trung Bình Ngày (Fix UX) | Doanh Thu Tháng Trước */}
           {(() => {
+            const isCurrentMonth = selectedMonth === (now.getMonth() + 1) && selectedYear === now.getFullYear();
             const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-            const avgDailyRevenue = Math.round((summary.totalRevenue || 0) / (daysInMonth || 30));
-            const momGrowth = revenueAdvanced?.compareLastMonth?.growthPercent ?? 0;
+            const elapsedDays = isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
+            const avgDailyRevenue = Math.round((summary.totalRevenue || 0) / (elapsedDays || 1));
+            const projectedRevenue = isCurrentMonth ? Math.round(avgDailyRevenue * daysInMonth) : null;
+            const momGrowth = revenueAdvanced?.compareLastMonth?.growthPercent ?? null;
+            const lastMonthValue = revenueAdvanced?.compareLastMonth?.value ?? 0;
+            const yoyGrowth = revenueAdvanced?.compareLastYear?.growthPercent ?? null;
 
             return (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Card 1: Doanh thu tháng này */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Doanh thu tháng này</p>
-                    <p className="text-xl md:text-2xl font-bold text-emerald-600 break-words">{summary.totalRevenue.toLocaleString()} VND</p>
-                    <p className="text-xs text-gray-400 mt-1">Tổng thu tháng {selectedMonth}/{selectedYear}</p>
-                  </div>
-                  <div className="bg-green-100 p-3 rounded-xl text-green-600 shrink-0">
-                    <DollarSign size={24} />
-                  </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Trung bình / ngày</p>
-                    <p className="text-xl md:text-2xl font-bold text-blue-600 break-words">{avgDailyRevenue.toLocaleString()} VND</p>
-                    <p className="text-xs text-gray-400 mt-1">Tính trên {daysInMonth} ngày</p>
-                  </div>
-                  <div className="bg-blue-100 p-3 rounded-xl text-blue-600 shrink-0">
-                    <BarChart2 size={24} />
-                  </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Tăng trưởng tháng</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className={`text-xl md:text-2xl font-bold ${momGrowth >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{momGrowth}%</p>
-                      <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
-                        momGrowth >= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                      }`}>
-                        {momGrowth >= 0 ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
-                        {momGrowth >= 0 ? 'Tăng' : 'Giảm'}
-                      </span>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Doanh thu tháng này</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+                      {formatCurrency(summary.totalRevenue || 0)}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {renderGrowthBadge(momGrowth, "so với tháng trước")}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">So với tháng trước</p>
+                    <p className="text-xs text-gray-400 mt-2">Tổng thu thực tế T{selectedMonth}/{selectedYear}</p>
                   </div>
-                  <div className="bg-purple-100 p-3 rounded-xl text-purple-600 shrink-0">
-                    <TrendingUp size={24} />
+                  <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
+                    <DollarSign size={22} />
+                  </div>
+                </div>
+
+                {/* Card 2: Trung bình / ngày (Tính theo số ngày thực tế) */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Trung bình / ngày</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+                      {formatCurrency(avgDailyRevenue)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">
+                      {isCurrentMonth ? `Tính trên ${elapsedDays} ngày đã qua` : `Tính trên ${daysInMonth} ngày`}
+                    </p>
+                    {isCurrentMonth && projectedRevenue > 0 && (
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Dự kiến cuối tháng: <span className="font-semibold text-gray-700 dark:text-gray-300">≈ {formatCurrency(projectedRevenue)}</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
+                    <BarChart2 size={22} />
+                  </div>
+                </div>
+
+                {/* Card 3: Doanh thu tháng trước & So cùng kỳ */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Doanh thu tháng trước</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+                      {formatCurrency(lastMonthValue)}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">So năm ngoái:</span>
+                      {renderGrowthBadge(yoyGrowth)}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">Tháng {selectedMonth === 1 ? 12 : selectedMonth - 1}/{selectedMonth === 1 ? selectedYear - 1 : selectedYear}</p>
+                  </div>
+                  <div className="w-11 h-11 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/30">
+                    <Calendar size={22} />
                   </div>
                 </div>
               </div>
             );
           })()}
 
-          {/* Card Phân Rạch Ròi 3 Dòng Doanh Thu */}
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Cơ cấu 3 dòng doanh thu (Thực thu)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase">1. Doanh số Gói tập Sale</div>
-                <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                  {Number(summary.revenueStreams?.packageSales || 0).toLocaleString()} VNĐ
-                </div>
-                <p className="text-[11px] text-gray-500 mt-1">Bao gồm bán mới, gia hạn và chênh lệch nâng cấp HĐ</p>
-              </div>
-
-              <div className="p-4 bg-blue-50/60 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                <div className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">2. Bán lẻ POS (Cửa hàng)</div>
-                <div className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1">
-                  {Number(summary.revenueStreams?.posSales || 0).toLocaleString()} VNĐ
-                </div>
-                <p className="text-[11px] text-gray-500 mt-1">Doanh thu nước uống, phụ kiện, thực phẩm bổ sung</p>
-              </div>
-
-              <div className="p-4 bg-purple-50/60 dark:bg-purple-950/20 rounded-xl border border-purple-100 dark:border-purple-900/30">
-                <div className="text-xs font-bold text-purple-800 dark:text-purple-300 uppercase">3. Phí Dịch Vụ</div>
-                <div className="text-lg font-black text-purple-600 dark:text-purple-400 mt-1">
-                  {Number(summary.revenueStreams?.serviceFees || 0).toLocaleString()} VNĐ
-                </div>
-                <p className="text-[11px] text-gray-500 mt-1">Phí chuyển nhượng (1.000.000đ/HĐ) & phí bảo lưu HĐ</p>
-              </div>
+          {/* Card Phân Rạch Ròi 3 Dòng Doanh Thu theo Nguồn (với % phần trăm) */}
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Cơ cấu doanh thu theo nguồn</h3>
+              <span className="text-xs text-gray-400 font-normal">Tháng {selectedMonth}/{selectedYear}</span>
             </div>
+            
+            {(() => {
+              const pkgVal = Number(summary.revenueStreams?.packageSales || 0);
+              const posVal = Number(summary.revenueStreams?.posSales || 0);
+              const feeVal = Number(summary.revenueStreams?.serviceFees || 0);
+              const totalStreams = pkgVal + posVal + feeVal || (summary.totalRevenue || 1);
+              
+              const pkgPct = ((pkgVal / totalStreams) * 100).toFixed(1);
+              const posPct = ((posVal / totalStreams) * 100).toFixed(1);
+              const feePct = ((feeVal / totalStreams) * 100).toFixed(1);
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-white dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Doanh số gói tập</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                        {pkgPct}% tổng thu
+                      </span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                      {formatCurrency(pkgVal)}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-1">Gồm bán mới, gia hạn & nâng cấp HĐ</p>
+                  </div>
+
+                  <div className="p-4 bg-white dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Bán lẻ (POS)</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                        {posPct}% tổng thu
+                      </span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                      {formatCurrency(posVal)}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-1">Nước uống, phụ kiện, TP bổ sung</p>
+                  </div>
+
+                  <div className="p-4 bg-white dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Phí dịch vụ</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+                        {feePct}% tổng thu
+                      </span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                      {formatCurrency(feeVal)}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-1">Phí chuyển nhượng & bảo lưu</p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Biểu Đồ Doanh Thu Theo Ngày</h2>
-            <div className="h-[400px] w-full relative">
+          {/* Biểu Đồ Doanh Thu Theo Ngày (Fix bug scale trục Y & định dạng tiền tệ rút gọn) */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Doanh thu theo ngày</h2>
+              <span className="text-xs text-gray-400 font-normal">Tháng {selectedMonth}/{selectedYear}</span>
+            </div>
+            <div className="h-[360px] w-full relative">
               {renderCharts ? (
-                <ResponsiveContainer width="100%" height={380} minWidth={1}>
-                  <BarChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" />
+                <ResponsiveContainer width="100%" height={340} minWidth={1}>
+                  <BarChart data={revenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
                     <YAxis 
-                      ticks={revenueTicks}
-                      tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(value)}
-                      domain={[0, 200000000]} 
+                      domain={[0, 'auto']}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      tickFormatter={(value) => {
+                        if (value >= 1000000) return `${(value / 1000000).toLocaleString('vi-VN')} Tr`;
+                        if (value >= 1000) return `${(value / 1000).toLocaleString('vi-VN')} K`;
+                        return value;
+                      }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Legend />
+                    <Tooltip 
+                      formatter={(value) => [formatCurrency(value), "Doanh Thu"]} 
+                      contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                    />
                     <Bar 
                       dataKey="revenue" 
-                      fill="#3b82f6" 
+                      fill="#2563eb" 
                       radius={[4, 4, 0, 0]} 
                       name="Doanh Thu"
-                      barSize={40}
+                      barSize={32}
                     />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-[380px] flex items-center justify-center text-gray-400 text-sm">
+                <div className="h-[340px] flex items-center justify-center text-gray-400 text-sm">
                   Đang tải biểu đồ doanh thu...
                 </div>
               )}
             </div>
           </div>
 
-          {/* Phân tích Doanh thu Nâng cao */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-6">
-            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-200">So sánh tăng trưởng</h2>
-            {loadingAdvanced ? (
-              <div className="text-center py-10 text-gray-500">Đang tải dữ liệu doanh thu nâng cao...</div>
-            ) : revenueAdvanced ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Doanh thu tháng trước</p>
-                      <p className="text-xl md:text-2xl font-bold text-blue-600">{formatCurrency(revenueAdvanced.compareLastMonth?.value)}</p>
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-full text-blue-600">
-                      <DollarSign size={24} />
-                    </div>
-                  </div>
+          {/* Grid 2 cột (50/50): Donut Chart Cơ cấu nguồn thu & Line Chart Xu hướng 6 tháng */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Donut Chart: Cơ cấu nguồn thu (Side-by-side layout + Center Total) */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Cơ cấu nguồn thu</h3>
+                <span className="text-xs text-gray-400 font-normal">Nguồn doanh thu</span>
+              </div>
 
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">So với tháng trước</p>
-                      <p className={`text-xl md:text-2xl font-bold ${(revenueAdvanced.compareLastMonth?.growthPercent ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{revenueAdvanced.compareLastMonth?.growthPercent ?? 0}%</p>
-                      <span className={`inline-flex items-center text-xs font-bold mt-1 px-2 py-0.5 rounded-full ${
-                        (revenueAdvanced.compareLastMonth?.growthPercent ?? 0) >= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                      }`}>
-                        {(revenueAdvanced.compareLastMonth?.growthPercent ?? 0) >= 0 ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
-                        Tăng trưởng so tháng trước
+              {revenueAdvanced?.sources && revenueAdvanced.sources.length > 0 ? (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 my-auto">
+                  <div className="h-[220px] w-full sm:w-1/2 relative flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={revenueAdvanced.sources}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={85}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {revenueAdvanced.sources.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v) => formatCurrency(v)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[11px] text-gray-400 font-medium">Tổng nguồn thu</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                        {formatCurrency(revenueAdvanced.sources.reduce((a, b) => a + (b.value || 0), 0))}
                       </span>
                     </div>
-                    <div className={`p-3 rounded-full ${(revenueAdvanced.compareLastMonth?.growthPercent ?? 0) >= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
-                      <TrendingUp size={24} />
-                    </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">So với năm ngoái</p>
-                      <p className={`text-xl md:text-2xl font-bold ${(revenueAdvanced.compareLastYear?.growthPercent ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{revenueAdvanced.compareLastYear?.growthPercent ?? 0}%</p>
-                      <span className={`inline-flex items-center text-xs font-bold mt-1 px-2 py-0.5 rounded-full ${
-                        (revenueAdvanced.compareLastYear?.growthPercent ?? 0) >= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                      }`}>
-                        {(revenueAdvanced.compareLastYear?.growthPercent ?? 0) >= 0 ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
-                        Tăng trưởng so năm ngoái
-                      </span>
-                    </div>
-                    <div className="bg-violet-50 p-3 rounded-full text-violet-600">
-                      <Calendar size={24} />
-                    </div>
+                  <div className="w-full sm:w-1/2 space-y-2.5">
+                    {revenueAdvanced.sources.map((entry, index) => {
+                      const total = revenueAdvanced.sources.reduce((a, b) => a + (b.value || 0), 0) || 1;
+                      const pct = ((entry.value / total) * 100).toFixed(1);
+                      return (
+                        <div key={index} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                            <span className="font-medium text-gray-700 dark:text-gray-300 truncate">{entry.name}</span>
+                          </div>
+                          <div className="text-right ml-2 shrink-0">
+                            <span className="font-bold text-gray-900 dark:text-white block">{formatCurrency(entry.value)}</span>
+                            <span className="text-[10px] text-gray-400 font-medium">{pct}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-4 text-base">Cơ cấu nguồn thu</h3>
-                    <div className="h-[300px] flex items-center justify-center relative">
-                      <ResponsiveContainer width="100%" height={280}>
-                        <PieChart>
-                          <Pie
-                            data={revenueAdvanced.sources}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={90}
-                            fill="#8884d8"
-                            paddingAngle={3}
-                            dataKey="value"
-                          >
-                            {revenueAdvanced.sources.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v) => formatCurrency(v)} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-4 text-base">Xu hướng doanh thu 6 tháng qua</h3>
-                    <div className="h-[300px] relative">
-                      <ResponsiveContainer width="100%" height={280}>
-                        <LineChart data={revenueAdvanced.trend}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="month" />
-                          <YAxis tickFormatter={(val) => `${val / 1000000}M`} />
-                          <Tooltip formatter={(v) => formatCurrency(v)} />
-                          <Legend />
-                          <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 8 }} name="Doanh Thu" />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+              ) : (
+                <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+                  Chưa có dữ liệu nguồn thu
                 </div>
-              </>
-            ) : null}
+              )}
+            </div>
+
+            {/* Line Chart: Xu hướng 6 tháng */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Xu hướng doanh thu 6 tháng</h3>
+                <span className="text-xs text-gray-400 font-normal">Gần đây</span>
+              </div>
+              <div className="h-[220px] w-full relative my-auto">
+                {revenueAdvanced?.trend && revenueAdvanced.trend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={revenueAdvanced.trend} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
+                      <YAxis 
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        tickFormatter={(val) => {
+                          if (val >= 1000000) return `${(val / 1000000).toLocaleString('vi-VN')} Tr`;
+                          if (val >= 1000) return `${(val / 1000).toLocaleString('vi-VN')} K`;
+                          return val;
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip 
+                        formatter={(v) => [formatCurrency(v), "Doanh Thu"]}
+                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#2563eb" 
+                        strokeWidth={3} 
+                        dot={{ r: 4, fill: '#2563eb' }}
+                        activeDot={{ r: 7 }} 
+                        name="Doanh Thu" 
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+                    Chưa có dữ liệu xu hướng
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Bảng lương nhân sự */}
+          {/* Bảng Lương & Hoa hồng nhân sự (Sentence case headers, highlight Thực nhận) */}
           {hrSummary.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
-              <h2 className="text-lg font-bold text-gray-700 dark:text-gray-200">Lương & Hoa hồng nhân sự</h2>
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Lương & hoa hồng nhân sự</h2>
+                <span className="text-xs text-gray-400 font-normal">Tháng {selectedMonth}/{selectedYear}</span>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 uppercase text-xs font-bold text-black dark:text-white">
+                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
                         <th className="p-4">Nhân viên</th>
                         <th className="p-4">Chức vụ</th>
                         <th className="p-4 text-right">Lương cơ bản</th>
                         <th className="p-4 text-right">Hoa hồng đạt</th>
                         <th className="p-4 text-center">Tiến độ KPI</th>
-                        <th className="p-4 text-right font-bold text-black dark:text-white">Thực nhận</th>
+                        <th className="p-4 text-right font-bold text-gray-900 dark:text-white">Thực nhận</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
                       {hrSummary.map((staff) => (
-                        <tr key={staff._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="p-4 font-bold text-gray-800">{staff.fullName}</td>
+                        <tr key={staff._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                          <td className="p-4 font-semibold text-gray-900 dark:text-white">{staff.fullName}</td>
                           <td className="p-4">
                             <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
-                              ['pt', 'pm'].includes(staff.role) ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'
+                              ['pt', 'pm'].includes(staff.role) ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
                             }`}>
                               {staff.role}
                             </span>
                           </td>
-                          <td className="p-4 text-right">{formatCurrency(staff.basicSalary)}</td>
-                          <td className="p-4 text-right text-emerald-600 font-medium">{formatCurrency(staff.commission)}</td>
+                          <td className="p-4 text-right text-gray-600 dark:text-gray-300">{formatCurrency(staff.basicSalary)}</td>
+                          <td className="p-4 text-right text-emerald-600 dark:text-emerald-400 font-medium">{formatCurrency(staff.commission)}</td>
                           <td className="p-4">
-                            <div className="flex items-center gap-2 justify-center max-w-[120px] mx-auto">
-                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div className="flex items-center gap-2 justify-center max-w-[140px] mx-auto">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                 <div
-                                  className={`h-1.5 rounded-full ${staff.kpiProgress >= 100 ? 'bg-green-500' : staff.kpiProgress >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                  className={`h-2 rounded-full ${staff.kpiProgress >= 100 ? 'bg-emerald-500' : staff.kpiProgress >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
                                   style={{ width: `${Math.min(staff.kpiProgress, 100)}%` }}
                                 />
                               </div>
-                              <span className="text-xs font-bold text-gray-700 shrink-0">{staff.kpiProgress}%</span>
+                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">{staff.kpiProgress}%</span>
                             </div>
                           </td>
-                          <td className="p-4 text-right font-black text-blue-600 text-base">{formatCurrency(staff.totalSalary)}</td>
+                          <td className="p-4 text-right font-extrabold text-blue-600 dark:text-blue-400 text-base">{formatCurrency(staff.totalSalary)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1322,103 +1436,182 @@ const Reports = () => {
       {/* 2. Chuyển đổi & Hợp đồng (Gộp Lead & Chuyển đổi + Tỷ lệ Hợp đồng) */}
       {(activeTab === 'sales-funnel' || activeTab === 'leads-funnel' || activeTab === 'contract-status') && (
         <div className="space-y-8">
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-200">Chuyển đổi khách tiềm năng</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Tổng Lead Tiềm Năng</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1.5">{leadReportData?.totalLeads || 0}</p>
+          {/* Phân khúc 1: Chuyển đổi khách tiềm năng (Lead Funnel) */}
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Chuyển đổi khách tiềm năng</h2>
+            
+            </div>
+
+            {/* 4 Cards KPI Cân Bằng Baseline */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between min-h-[110px]">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Tổng lead tiềm năng</p>
+                <p className="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight mt-2">
+                  {leadReportData?.totalLeads || 0}
+                </p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Tỷ lệ Chuyển đổi Khách</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1.5">{leadReportData?.conversionRateOverall || 0}%</p>
+
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between min-h-[110px]">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Tỷ lệ chuyển đổi</p>
+                <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight mt-2">
+                  {leadReportData?.conversionRateOverall || 0}%
+                </p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Đã Chốt Hợp Đồng</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1.5">{leadReportData?.statusCounts?.converted || 0}</p>
+
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between min-h-[110px]">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Đã chốt hợp đồng</p>
+                <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight mt-2">
+                  {leadReportData?.statusCounts?.converted || 0}
+                </p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Hủy / Từ chối</p>
-                <p className="text-2xl font-bold text-rose-600 mt-1.5">{leadReportData?.statusCounts?.lost || 0}</p>
+
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between min-h-[110px]">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Hủy / Từ chối</p>
+                <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight mt-2">
+                  {leadReportData?.statusCounts?.lost || 0}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Biểu đồ trạng thái Lead */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-base font-bold text-gray-900 mb-4">Tình trạng Lead theo giai đoạn</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={[
-                      { name: 'Mới ', count: leadReportData?.statusCounts?.new || 0 },
-                      { name: 'Đã liên hệ', count: leadReportData?.statusCounts?.contacted || 0 },
-                      { name: 'Hẹn tập thử', count: leadReportData?.statusCounts?.trial || 0 },
-                      { name: 'Chốt HĐ ', count: leadReportData?.statusCounts?.converted || 0 },
-                      { name: 'Từ chối ', count: leadReportData?.statusCounts?.lost || 0 },
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Biểu đồ trạng thái Lead (Auto-scale Y axis) */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Tình trạng lead theo giai đoạn</h3>
+                  
+                </div>
+                <div className="h-[240px] w-full relative">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart 
+                      data={[
+                        { name: 'Mới', count: leadReportData?.statusCounts?.new || 0 },
+                        { name: 'Đã liên hệ', count: leadReportData?.statusCounts?.contacted || 0 },
+                        { name: 'Hẹn tập thử', count: leadReportData?.statusCounts?.trial || 0 },
+                        { name: 'Chốt HĐ', count: leadReportData?.statusCounts?.converted || 0 },
+                        { name: 'Từ chối', count: leadReportData?.statusCounts?.lost || 0 },
+                      ]}
+                      margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
+                      <YAxis 
+                        domain={[0, (dataMax) => Math.max(dataMax + 1, 2)]} 
+                        allowDecimals={false} 
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value} Lead`, "Số lượng"]}
+                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                      />
+                      <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={36} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Hiệu suất Chuyển đổi theo Sale */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-                <h3 className="text-base font-bold text-gray-900 mb-4">Hiệu Suất Chuyển Đổi Theo Sale</h3>
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-white dark:bg-gray-800 text-black dark:text-white uppercase font-bold text-xs border-b border-gray-200 dark:border-gray-700">
-                    <tr>
-                      <th className="p-2.5">Nhân viên Sale</th>
-                      <th className="p-2.5 text-center">Tổng Lead</th>
-                      <th className="p-2.5 text-center">Chốt</th>
-                      <th className="p-2.5 text-center">Từ chối</th>
-                      <th className="p-2.5 text-right">Tỷ lệ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {leadReportData?.salePerformance?.map((sp, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="p-2.5 font-bold text-gray-800">{sp.saleName}</td>
-                        <td className="p-2.5 text-center font-semibold">{sp.total}</td>
-                        <td className="p-2.5 text-center font-bold text-emerald-600">{sp.converted}</td>
-                        <td className="p-2.5 text-center text-rose-500">{sp.lost}</td>
-                        <td className="p-2.5 text-right font-black text-blue-600">{sp.conversionRate}%</td>
+              {/* Hiệu suất Chuyển đổi theo Sale (Co giãn tự nhiên + Empty state) */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between overflow-x-auto">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Hiệu suất chuyển đổi theo sale</h3>
+                    
+                  </div>
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        <th className="p-3">Nhân viên sale</th>
+                        <th className="p-3 text-center">Tổng lead</th>
+                        <th className="p-3 text-center">Chốt</th>
+                        <th className="p-3 text-center">Từ chối</th>
+                        <th className="p-3 text-right">Tỷ lệ</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                      {leadReportData?.salePerformance && leadReportData.salePerformance.length > 0 ? (
+                        leadReportData.salePerformance.map((sp, i) => (
+                          <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                            <td className="p-3 font-semibold text-gray-900 dark:text-white">{sp.saleName}</td>
+                            <td className="p-3 text-center font-medium text-gray-700 dark:text-gray-300">{sp.total}</td>
+                            <td className="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">{sp.converted}</td>
+                            <td className="p-3 text-center text-rose-500 font-medium">{sp.lost}</td>
+                            <td className="p-3 text-right font-extrabold text-blue-600 dark:text-blue-400">{sp.conversionRate}%</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="p-8 text-center text-gray-400 text-xs">
+                            Chưa có dữ liệu hiệu suất chuyển đổi theo sale
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Phân khúc 2: Tình trạng Hợp đồng */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-6">
-            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-200">Tình trạng hợp đồng</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Tổng Hợp Đồng</p>
-                <p className="text-2xl font-bold text-indigo-600 mt-1.5">{contractBreakdownData?.totalContracts || 0} hợp đồng</p>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Cơ cấu & giá trị hợp đồng</h2>
+             
+            </div>
+
+            {/* 3 KPI Cards Màu Ngữ Nghĩa */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng hợp đồng</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight break-words">
+                    {contractBreakdownData?.totalContracts || 0} HĐ
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">Tổng số hợp đồng đã phát sinh</p>
+                </div>
+                <div className="w-11 h-11 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
+                  <Package size={22} />
+                </div>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Tổng Giá Trị Tiền Hợp Đồng</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1.5">{formatCurrency(contractBreakdownData?.grandTotalValue)}</p>
+
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng giá trị tiền hợp đồng</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+                    {formatCurrency(contractBreakdownData?.grandTotalValue)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">Tổng giá trị quy đổi tất cả hợp đồng</p>
+                </div>
+                <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
+                  <DollarSign size={22} />
+                </div>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider mb-1">Đang Hoạt Động (Active)</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1.5">{contractBreakdownData?.breakdown?.active?.count || 0} HĐ</p>
+
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Đang hoạt động (Active)</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight break-words">
+                    {contractBreakdownData?.breakdown?.active?.count || 0} HĐ
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">Hợp đồng đang có hiệu lực tập luyện</p>
+                </div>
+                <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
+                  <Users size={22} />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Pie Chart Tỷ lệ trạng thái */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-base font-bold text-gray-900 mb-4">Biểu Đồ Phân Bổ Trạng Thái Hợp Đồng</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Donut Chart Tỷ lệ trạng thái (Bỏ label leader-line bị đè chữ + Center Total) */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Phân bổ trạng thái hợp đồng</h3>
+                </div>
+
+                <div className="h-[240px] w-full relative flex items-center justify-center my-auto">
+                  <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
                       <Pie
                         data={contractBreakdownData?.statusChartData || []}
@@ -1426,8 +1619,9 @@ const Reports = () => {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
-                        label={({ name, percentage }) => `${name}: ${percentage}%`}
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={4}
                       >
                         {(contractBreakdownData?.statusChartData || []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -1437,35 +1631,46 @@ const Reports = () => {
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
+                    <span className="text-[11px] text-gray-400 font-medium">Tổng hợp đồng</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                      {contractBreakdownData?.totalContracts || 0} HĐ
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Bảng chi tiết trạng thái hợp đồng */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-                <h3 className="text-base font-bold text-gray-900 mb-4">Bảng Thống Kê Chi Tiết Loại Hợp Đồng</h3>
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-white dark:bg-gray-800 text-black dark:text-white uppercase font-bold text-xs border-b border-gray-200 dark:border-gray-700">
-                    <tr>
-                      <th className="p-3">Trạng thái Hợp đồng</th>
-                      <th className="p-3 text-center">Số lượng</th>
-                      <th className="p-3 text-center">Tỷ lệ</th>
-                      <th className="p-3 text-right">Tổng giá trị (VNĐ)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {(contractBreakdownData?.statusChartData || []).map((row, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="p-3 font-bold flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: row.color }} />
-                          {row.name}
-                        </td>
-                        <td className="p-3 text-center font-semibold">{row.count}</td>
-                        <td className="p-3 text-center font-bold text-gray-700">{row.percentage}%</td>
-                        <td className="p-3 text-right font-bold text-emerald-600">{formatCurrency(row.value)}</td>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-x-auto flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Bảng thống kê chi tiết loại hợp đồng</h3>
+                    
+                  </div>
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        <th className="p-3">Trạng thái hợp đồng</th>
+                        <th className="p-3 text-center">Số lượng</th>
+                        <th className="p-3 text-center">Tỷ lệ</th>
+                        <th className="p-3 text-right">Tổng giá trị (VNĐ)</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                      {(contractBreakdownData?.statusChartData || []).map((row, i) => (
+                        <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                          <td className="p-3 font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
+                            {row.name}
+                          </td>
+                          <td className="p-3 text-center font-medium text-gray-700 dark:text-gray-300">{row.count}</td>
+                          <td className="p-3 text-center font-bold text-gray-800 dark:text-gray-200">{row.percentage}%</td>
+                          <td className="p-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400">{formatCurrency(row.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

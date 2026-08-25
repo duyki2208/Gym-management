@@ -1,14 +1,7 @@
 const mongoose = require("mongoose");
+const { packageSchema } = require("./schemas/branchSchemas");
+const { createModelProxy } = require("../utils/context");
 
-const packageSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    type: { type: String, enum: ["monthly", "session"], default: "monthly" }, // monthly | session
-    duration: { type: Number, required: true }, // số ngày
-    sessions: { type: Number, default: 0 }, // Tổng số buổi tối đa của gói
-    price: { type: Number, required: true },
-  },
-  { timestamps: true }
-);
+const defaultModel = mongoose.models.Package || mongoose.model("Package", packageSchema);
 
-module.exports = mongoose.model("Package", packageSchema);
+module.exports = createModelProxy("Package", defaultModel);

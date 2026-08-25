@@ -18,6 +18,17 @@ import os
 
 app = Flask(__name__)
 
+INTERNAL_SECRET = os.environ.get("INTERNAL_SERVICE_SECRET", "gympro_internal_secret")
+
+def verify_internal_secret():
+    """Kiểm tra header bảo mật X-Internal-Secret nếu có cấu hình."""
+    secret = request.headers.get("X-Internal-Secret")
+    # Nếu env INTERNAL_SERVICE_SECRET được set khác rỗng, yêu cầu header phải khớp
+    if os.environ.get("REQUIRE_INTERNAL_AUTH") == "true":
+        if not secret or secret != INTERNAL_SECRET:
+            return False
+    return True
+
 # ──────────────────────────────────────────────
 # Khởi tạo InsightFace — load 1 lần khi start
 # buffalo_sc: model nhẹ, đủ dùng, chạy tốt trên CPU
@@ -72,13 +83,12 @@ def embed():
     """
     Nhận ảnh → trả về vector embedding 512 chiều.
     Dùng khi đăng ký khuôn mặt thành viên.
-
-    Request: multipart/form-data
-      - image: file ảnh (jpg/png)
-
-    Response:
-      { found: bool, embedding: float[] | null, message: str }
     """
+    if not verify_internal_secret():
+        return jsonify({'found': False, 'embedding': None, 'message': 'Unauthorized'}), 401
+
+    branch_code = request.headers.get("X-Branch-Code", request.form.get("branchCode", "DEFAULT"))
+
     if face_app is None:
         return jsonify({'found': False, 'embedding': None, 'message': 'Model chưa được load'}), 503
 
@@ -102,13 +112,13 @@ def embed():
             'message': 'Không phát hiện khuôn mặt trong ảnh'
         })
 
-    # Lấy khuôn mặt lớn nhất nếu có nhiều người
     face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     embedding = face.embedding.tolist()
 
     return jsonify({
         'found': True,
-        'embedding': embedding,   # 512 floats
+        'embedding': embedding,
+        'branch_code': branch_code,
         'message': 'OK'
     })
 
@@ -117,17 +127,12 @@ def embed():
 def recognize():
     """
     Nhận ảnh + danh sách candidates → trả về member_id khớp nhất.
-    Dùng khi check-in bằng FaceID.
-
-    Request: multipart/form-data
-      - image     : file ảnh (jpg/png)
-      - candidates: JSON string — [{ "member_id": str, "embedding": float[] }, ...]
-
-    Response (matched):
-      { matched: true, member_id: str, confidence: float }
-    Response (not matched):
-      { matched: false, reason: str, best_confidence: float }
     """
+    if not verify_internal_secret():
+        return jsonify({'matched': False, 'reason': 'unauthorized'}), 401
+
+    branch_code = request.headers.get("X-Branch-Code", request.form.get("branchCode", "DEFAULT"))
+
     if face_app is None:
         return jsonify({'matched': False, 'reason': 'model_not_loaded'}), 503
 
@@ -135,7 +140,6 @@ def recognize():
     if not file:
         return jsonify({'matched': False, 'reason': 'missing_image'}), 400
 
-    # Parse candidates từ form-data
     candidates_raw = request.form.get('candidates', '[]')
     try:
         candidates = json.loads(candidates_raw)
@@ -145,12 +149,10 @@ def recognize():
     if not candidates:
         return jsonify({'matched': False, 'reason': 'no_candidates'})
 
-    # Decode ảnh
     img = decode_image(file)
     if img is None:
         return jsonify({'matched': False, 'reason': 'invalid_image'}), 400
 
-    # Detect khuôn mặt trong frame
     try:
         faces = face_app.get(img)
     except Exception as e:
@@ -159,12 +161,10 @@ def recognize():
     if not faces:
         return jsonify({'matched': False, 'reason': 'no_face_detected'})
 
-    # Lấy khuôn mặt rõ nhất (lớn nhất trong frame)
     face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     query_vec = face.embedding
 
-    # So sánh với tất cả candidates
-    THRESHOLD = 0.45  # Ngưỡng cosine similarity (có thể tuning)
+    THRESHOLD = 0.45
     best_member_id = None
     best_score = 0.0
 
@@ -184,19 +184,18 @@ def recognize():
         return jsonify({
             'matched': True,
             'member_id': best_member_id,
-            'confidence': round(best_score, 4)
+            'confidence': round(best_score, 4),
+            'branch_code': branch_code
         })
     else:
         return jsonify({
             'matched': False,
             'reason': 'below_threshold',
-            'best_confidence': round(best_score, 4)
+            'best_confidence': round(best_score, 4),
+            'branch_code': branch_code
         })
 
 
-# ──────────────────────────────────────────────
-# Entry point
-# ──────────────────────────────────────────────
 if __name__ == '__main__':
     print("[INFO] GymPro Face Service dang khoi dong tren port 5001...")
     app.run(host='0.0.0.0', port=5001, debug=False)

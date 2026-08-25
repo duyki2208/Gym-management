@@ -59,6 +59,38 @@ export const authService = {
     return localStorage.getItem('gym_token');
   },
   
+  // Lấy danh sách các chi nhánh hoạt động
+  getBranches: async () => {
+    try {
+      const response = await api.get('/auth/branches');
+      return response.data?.branches || [];
+    } catch (error) {
+      console.error("Lỗi lấy danh sách chi nhánh:", error);
+      return [];
+    }
+  },
+
+  // Chuyển đổi chi nhánh làm việc (cho admin / accountant)
+  switchBranch: async (branchCode) => {
+    try {
+      const response = await api.post('/auth/switch-branch', { branchCode });
+      const data = response.data;
+      if (data.token) {
+        localStorage.setItem('gym_token', data.token);
+      }
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        currentUser.activeBranch = data.activeBranch;
+        localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(currentUser));
+      }
+      return data;
+    } catch (error) {
+      console.error("Lỗi chuyển chi nhánh:", error);
+      const message = error.response?.data?.message || error.message || 'Chuyển chi nhánh thất bại';
+      throw new Error(message);
+    }
+  },
+
   // Hàm kiểm tra quyền
   hasRole: (allowedRoles) => {
     const user = authService.getCurrentUser();

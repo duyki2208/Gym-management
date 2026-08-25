@@ -1,10 +1,7 @@
 const mongoose = require("mongoose");
+const { counterSchema } = require("./schemas/branchSchemas");
+const { createModelProxy } = require("../utils/context");
 
-const counterSchema = new mongoose.Schema({
-  _id: { type: String, required: true },
-  seq: { type: Number, default: 0 },
-});
+const defaultModel = mongoose.models.Counter || mongoose.model("Counter", counterSchema);
 
-const Counter = mongoose.model("Counter", counterSchema);
-
-module.exports = Counter;
+module.exports = createModelProxy("Counter", defaultModel);

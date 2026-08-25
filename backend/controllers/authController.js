@@ -1,95 +1,159 @@
 /**
- * authController.js — Xử lý xác thực người dùng
+ * authController.js — Xử lý xác thực người dùng Đa chi nhánh (1-Step Auth & Token Rotation)
  *
- * Export: { loginUser, refreshToken, logoutUser }
- *
- * Luồng xác thực:
- *   Login → Access Token (15p, JSON) + Refresh Token (7d, HTTP-only Cookie)
- *   Access Token hết hạn → FE gọi /refresh-token → nhận Access Token mới
- *   Refresh Token hết hạn → Yêu cầu login lại
- *   Logout → Xóa đúng Session của thiết bị đó, các thiết bị khác không bị ảnh hưởng
+ * Export: { loginUser, refreshToken, logoutUser, switchBranch }
  */
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../models/User");
-const Session = require("../models/Session");
+const { getCentralModels, getBranchModels } = require("../db/branchConnectionManager");
 const {
   generateAccessToken,
   generateRefreshToken,
   hashToken,
 } = require("../utils/generateTokens");
 
-// Cấu hình cookie chung — tái sử dụng để tránh lặp code
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // true khi deploy HTTPS
+  secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày (ms)
-  path: "/api/v1/auth", // Cookie chỉ gửi kèm khi gọi các route /auth
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+  path: "/api/v1/auth",
 };
 
 // -----------------------------------------------------------------------
-// POST /api/v1/auth/login
+// POST /api/v1/auth/login (1-Step Multi-Branch Login)
 // -----------------------------------------------------------------------
 const loginUser = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, branchCode: reqBranchCode } = req.body;
 
-    // 1. Tìm user trong DB
-    const user = await User.findOne({ username });
-    if (!user) {
+    const centralModels = req.centralModels || (await getCentralModels());
+
+    // 1. Tra cứu LoginIndex tại CSDL Trung tâm (cho nhân viên chi nhánh)
+    const loginIndex = await centralModels.LoginIndex.findOne({ username });
+
+    if (loginIndex) {
+      // === LUỒNG 1: BRANCH USER (sale, pt, reception, om, sm, pm) ===
+      const branchCode = loginIndex.branchCode;
+      const branchModels = await getBranchModels(branchCode);
+
+      const user = await branchModels.User.findOne({ username });
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy thông tin nhân viên tại chi nhánh." });
+      }
+
+      if (user.isActive === false) {
+        return res.status(401).json({
+          code: "USER_DEACTIVATED",
+          message: "Tài khoản của bạn đã bị vô hiệu hóa / khóa.",
+        });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Mật khẩu không đúng!" });
+      }
+
+      const accessToken = generateAccessToken(user._id, user.role, {
+        branchCode,
+        isCentral: false,
+      });
+      const refreshToken = generateRefreshToken(user._id, {
+        branchCode,
+        isCentral: false,
+      });
+
+      // Lưu Session vào Branch DB
+      await branchModels.Session.create({
+        userId: user._id,
+        tokenHash: hashToken(refreshToken),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        userAgent: req.headers["user-agent"] || null,
+        ipAddress: req.ip || null,
+      });
+
+      res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTIONS);
+
+      return res.status(200).json({
+        message: "Đăng nhập thành công",
+        token: accessToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          fullName: user.fullName,
+          role: user.role,
+          branchCode,
+          isCentral: false,
+        },
+      });
+    }
+
+    // === LUỒNG 2: CENTRAL USER (admin, accountant) ===
+    const centralUser = await centralModels.CentralUser.findOne({ username });
+    if (!centralUser) {
       return res.status(404).json({ message: "Tài khoản không tồn tại!" });
     }
 
-    // 2. Kiểm tra mật khẩu
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (centralUser.isActive === false) {
+      return res.status(401).json({
+        code: "USER_DEACTIVATED",
+        message: "Tài khoản quản trị đã bị vô hiệu hóa / khóa.",
+      });
+    }
+
+    const isCentralMatch = await bcrypt.compare(password, centralUser.password);
+    if (!isCentralMatch) {
       return res.status(400).json({ message: "Mật khẩu không đúng!" });
     }
 
-    // 3. Kiểm tra JWT_REFRESH_SECRET đã được cấu hình chưa
-    if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
-      console.error("LỖI NGHIÊM TRỌNG: JWT_SECRET hoặc JWT_REFRESH_SECRET chưa được cấu hình.");
-      return res.status(500).json({ message: "Lỗi cấu hình server nội bộ (Auth)." });
-    }
+    const allowedBranches = centralUser.allowedBranches || ["*"];
+    const activeBranch =
+      reqBranchCode ||
+      (allowedBranches.includes("*") ? "HN01" : allowedBranches[0] || "HN01");
 
-    // 4. Tạo cặp token mới
-    const accessToken = generateAccessToken(user._id, user.role);
-    const refreshToken = generateRefreshToken(user._id);
+    const accessToken = generateAccessToken(centralUser._id, centralUser.role, {
+      allowedBranches,
+      activeBranch,
+      isCentral: true,
+    });
+    const refreshToken = generateRefreshToken(centralUser._id, {
+      isCentral: true,
+      activeBranch,
+    });
 
-    // 5. Lưu Session mới vào DB (hỗ trợ đăng nhập đa thiết bị)
-    await Session.create({
-      userId: user._id,
+    // Lưu Session vào Central DB
+    await centralModels.CentralSession.create({
+      userId: centralUser._id,
       tokenHash: hashToken(refreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       userAgent: req.headers["user-agent"] || null,
       ipAddress: req.ip || null,
     });
 
-    // 6. Gửi Refresh Token qua HTTP-only Cookie
     res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTIONS);
 
-    // 7. Trả về Access Token + thông tin user qua JSON
-    res.status(200).json({
-      message: "Đăng nhập thành công",
-      token: accessToken, // Giữ tên "token" để tương thích với FE hiện tại
+    return res.status(200).json({
+      message: "Đăng nhập trung tâm thành công",
+      token: accessToken,
       user: {
-        id: user._id,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
+        id: centralUser._id,
+        username: centralUser.username,
+        fullName: centralUser.fullName,
+        role: centralUser.role,
+        allowedBranches,
+        activeBranch,
+        isCentral: true,
       },
     });
+
   } catch (error) {
     console.error("Lỗi login:", error);
-    res.status(500).json({ message: "Lỗi Server" });
+    res.status(500).json({ message: "Lỗi Server: " + error.message });
   }
 };
 
 // -----------------------------------------------------------------------
 // POST /api/v1/auth/refresh-token
-// Cấp Access Token mới dựa trên Refresh Token từ Cookie.
-// Áp dụng Rotation: refresh token cũ bị vô hiệu, cặp token mới được cấp.
 // -----------------------------------------------------------------------
 const refreshToken = async (req, res) => {
   const token = req.cookies?.refreshToken;
@@ -102,54 +166,96 @@ const refreshToken = async (req, res) => {
   }
 
   try {
-    // 1. Xác minh chữ ký và thời hạn của refresh token
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const centralModels = req.centralModels || (await getCentralModels());
 
-    // 2. Tìm Session tương ứng trong DB (khớp cả userId và hash)
-    const session = await Session.findOne({
-      userId: decoded.id,
-      tokenHash: hashToken(token),
-    });
-
-    if (!session) {
-      // Token hợp lệ về chữ ký nhưng không có trong DB
-      // → Có thể là token cũ đã bị xoay vòng (rotation reuse attack)
-      // → Thu hồi toàn bộ session của user này để đảm bảo an toàn
-      console.warn(`[Security] Phát hiện Refresh Token tái sử dụng cho user ${decoded.id}. Thu hồi toàn bộ session.`);
-      await Session.deleteMany({ userId: decoded.id });
-
-      return res.status(401).json({
-        code: "REFRESH_TOKEN_REUSE",
-        message: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+    if (decoded.isCentral) {
+      // 1. Central User Refresh
+      const session = await centralModels.CentralSession.findOne({
+        userId: decoded.id,
+        tokenHash: hashToken(token),
       });
-    }
 
-    // 3. Lấy thông tin user để đưa vào Access Token mới
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      await Session.findByIdAndDelete(session._id);
-      return res.status(401).json({
-        code: "USER_NOT_FOUND",
-        message: "Không tìm thấy người dùng",
+      if (!session) {
+        console.warn(`[Security] Phát hiện Central Refresh Token tái sử dụng: ${decoded.id}`);
+        await centralModels.CentralSession.deleteMany({ userId: decoded.id });
+        return res.status(401).json({
+          code: "REFRESH_TOKEN_REUSE",
+          message: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+        });
+      }
+
+      const user = await centralModels.CentralUser.findById(decoded.id);
+      if (!user || user.isActive === false) {
+        await centralModels.CentralSession.findByIdAndDelete(session._id);
+        return res.status(401).json({ code: "USER_NOT_FOUND", message: "Tài khoản không hợp lệ" });
+      }
+
+      const activeBranch = decoded.activeBranch || "HN01";
+      const newAccessToken = generateAccessToken(user._id, user.role, {
+        allowedBranches: user.allowedBranches || ["*"],
+        activeBranch,
+        isCentral: true,
       });
+      const newRefreshToken = generateRefreshToken(user._id, {
+        isCentral: true,
+        activeBranch,
+      });
+
+      await centralModels.CentralSession.findByIdAndUpdate(session._id, {
+        tokenHash: hashToken(newRefreshToken),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        userAgent: req.headers["user-agent"] || session.userAgent,
+      });
+
+      res.cookie("refreshToken", newRefreshToken, REFRESH_COOKIE_OPTIONS);
+      return res.json({ token: newAccessToken });
+
+    } else {
+      // 2. Branch User Refresh
+      const branchCode = decoded.branchCode || "HN01";
+      const branchModels = await getBranchModels(branchCode);
+
+      const session = await branchModels.Session.findOne({
+        userId: decoded.id,
+        tokenHash: hashToken(token),
+      });
+
+      if (!session) {
+        console.warn(`[Security] Phát hiện Branch Refresh Token tái sử dụng: ${decoded.id} tại ${branchCode}`);
+        await branchModels.Session.deleteMany({ userId: decoded.id });
+        return res.status(401).json({
+          code: "REFRESH_TOKEN_REUSE",
+          message: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+        });
+      }
+
+      const user = await branchModels.User.findById(decoded.id);
+      if (!user || user.isActive === false) {
+        await branchModels.Session.findByIdAndDelete(session._id);
+        return res.status(401).json({ code: "USER_NOT_FOUND", message: "Tài khoản nhân viên không hợp lệ" });
+      }
+
+      const newAccessToken = generateAccessToken(user._id, user.role, {
+        branchCode,
+        isCentral: false,
+      });
+      const newRefreshToken = generateRefreshToken(user._id, {
+        branchCode,
+        isCentral: false,
+      });
+
+      await branchModels.Session.findByIdAndUpdate(session._id, {
+        tokenHash: hashToken(newRefreshToken),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        userAgent: req.headers["user-agent"] || session.userAgent,
+      });
+
+      res.cookie("refreshToken", newRefreshToken, REFRESH_COOKIE_OPTIONS);
+      return res.json({ token: newAccessToken });
     }
-
-    // 4. Rotation: Tạo cặp token mới, cập nhật hash trong DB
-    const newAccessToken = generateAccessToken(user._id, user.role);
-    const newRefreshToken = generateRefreshToken(user._id);
-
-    await Session.findByIdAndUpdate(session._id, {
-      tokenHash: hashToken(newRefreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      userAgent: req.headers["user-agent"] || session.userAgent,
-    });
-
-    // 5. Cập nhật Cookie và trả về Access Token mới
-    res.cookie("refreshToken", newRefreshToken, REFRESH_COOKIE_OPTIONS);
-    res.json({ token: newAccessToken }); // Giữ tên "token" để tương thích với FE
 
   } catch (error) {
-    // Refresh Token hết hạn hoặc chữ ký sai → yêu cầu đăng nhập lại
     return res.status(401).json({
       code: "REFRESH_TOKEN_EXPIRED",
       message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
@@ -158,22 +264,79 @@ const refreshToken = async (req, res) => {
 };
 
 // -----------------------------------------------------------------------
+// POST /api/v1/auth/switch-branch
+// Chuyển chi nhánh làm việc cho tài khoản Central (admin / accountant)
+// -----------------------------------------------------------------------
+const switchBranch = async (req, res) => {
+  try {
+    const { branchCode } = req.body;
+
+    if (!branchCode) {
+      return res.status(400).json({ message: "Vui lòng chọn mã chi nhánh (branchCode)" });
+    }
+
+    if (!req.user || (!req.user.isCentral && req.user.role !== "admin" && req.user.role !== "accountant")) {
+      return res.status(403).json({ message: "Chỉ tài khoản quản trị Trung tâm mới có quyền chuyển chi nhánh" });
+    }
+
+    const normalizedCode = branchCode.trim().toUpperCase();
+    const centralModels = req.centralModels || (await getCentralModels());
+
+    // Xác thực chi nhánh có tồn tại trong hệ thống không
+    const branch = await centralModels.Branch.findOne({ code: normalizedCode, isActive: true });
+    if (!branch) {
+      return res.status(404).json({ message: `Chi nhánh ${normalizedCode} không tồn tại hoặc đã ngừng hoạt động` });
+    }
+
+    // Kiểm tra quyền truy cập chi nhánh của user
+    const allowedBranches = req.user.allowedBranches || ["*"];
+    if (!allowedBranches.includes("*") && !allowedBranches.includes(normalizedCode)) {
+      return res.status(403).json({ message: `Bạn không có quyền truy cập chi nhánh ${normalizedCode}` });
+    }
+
+    // Cấp lại Access Token mới với activeBranch đã thay đổi
+    const newAccessToken = generateAccessToken(req.user._id, req.user.role, {
+      allowedBranches,
+      activeBranch: normalizedCode,
+      isCentral: true,
+    });
+
+    return res.json({
+      success: true,
+      message: `Đã chuyển sang chi nhánh ${branch.name} (${normalizedCode})`,
+      token: newAccessToken,
+      activeBranch: normalizedCode,
+      branchName: branch.name,
+    });
+
+  } catch (error) {
+    console.error("Lỗi switch-branch:", error);
+    res.status(500).json({ message: "Lỗi Server: " + error.message });
+  }
+};
+
+// -----------------------------------------------------------------------
 // POST /api/v1/auth/logout
-// Xóa đúng Session của thiết bị đang đăng xuất.
-// Các thiết bị khác của cùng user KHÔNG bị ảnh hưởng.
 // -----------------------------------------------------------------------
 const logoutUser = async (req, res) => {
   const token = req.cookies?.refreshToken;
 
   if (token) {
     try {
-      // Chỉ xóa đúng session tương ứng với thiết bị đang logout
-      await Session.deleteOne({
-        userId: req.user._id, // req.user được set bởi middleware protect
-        tokenHash: hashToken(token),
-      });
+      if (req.user && req.user.isCentral) {
+        const centralModels = req.centralModels || (await getCentralModels());
+        await centralModels.CentralSession.deleteOne({
+          userId: req.user._id,
+          tokenHash: hashToken(token),
+        });
+      } else if (req.user && req.models) {
+        await req.models.Session.deleteOne({
+          userId: req.user._id,
+          tokenHash: hashToken(token),
+        });
+      }
     } catch (e) {
-      // Token đã invalid thì bỏ qua, vẫn tiến hành clear cookie
+      // Bỏ qua lỗi xóa session
     }
   }
 
@@ -181,4 +344,4 @@ const logoutUser = async (req, res) => {
   res.json({ message: "Đã đăng xuất thành công" });
 };
 
-module.exports = { loginUser, refreshToken, logoutUser };
+module.exports = { loginUser, refreshToken, switchBranch, logoutUser };

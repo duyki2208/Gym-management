@@ -8,11 +8,14 @@ const rateLimit = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 
-// Initialize Cron Jobs
+// Initialize Cron Jobs after DB Connection
 if (process.env.NODE_ENV !== "test") {
   const startExpirationCron = require("./jobs/expirationCron");
-  startExpirationCron();
-  connectDB();
+  const { startTransferPendingWatcher } = require("./jobs/transferPendingWatcher");
+  connectDB().then(() => {
+    startExpirationCron();
+    startTransferPendingWatcher();
+  });
 }
 
 const app = express();

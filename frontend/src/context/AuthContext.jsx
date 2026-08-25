@@ -35,8 +35,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const switchBranch = async (branchCode) => {
+    try {
+      const result = await authService.switchBranch(branchCode);
+      const updatedUser = { ...user, activeBranch: result.activeBranch };
+      setUser(updatedUser);
+      return { success: true, ...result };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, switchBranch, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

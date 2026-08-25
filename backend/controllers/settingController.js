@@ -69,9 +69,31 @@ const updateSettings = async (req, res) => {
     }
     
     await setting.save();
+
+    // Đồng bộ tên phòng tập & địa chỉ sang CSDL Trung tâm (Branch)
+    if (gymName !== undefined || address !== undefined) {
+      try {
+        const { getCentralModels } = require("../db/branchConnectionManager");
+        const centralModels = await getCentralModels();
+        const targetBranchCode = req.branchCode || req.user?.activeBranch || req.user?.branchCode;
+        if (targetBranchCode && centralModels?.Branch) {
+          const updateBranch = {};
+          if (gymName !== undefined) updateBranch.name = gymName;
+          if (address !== undefined) updateBranch.address = address;
+          await centralModels.Branch.findOneAndUpdate(
+            { code: targetBranchCode.toUpperCase() },
+            { $set: updateBranch }
+          );
+        }
+      } catch (syncErr) {
+        console.warn("[updateSettings] Không thể đồng bộ sang Central Branch:", syncErr.message);
+      }
+    }
     
     const cacheService = require("../utils/cacheService");
     await cacheService.delPattern("api:settings");
+    await cacheService.delPattern("api:branches");
+    await cacheService.delPattern("api:auth*");
 
     res.json({
       success: true,

@@ -1,10 +1,29 @@
+const mongoose = require('mongoose');
 const SaleOrder = require('../models/SaleOrder');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Transaction = require('../models/Transaction');
 const Invoice = require('../models/Invoice');
+const { isReplicaSetConnected } = require('../utils/dbTransaction');
 
 exports.createCheckout = async (req, res) => {
+  let session = null;
+  let useSession = false;
+
+  if (isReplicaSetConnected()) {
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      useSession = true;
+    } catch (err) {
+      useSession = false;
+      if (session) session.endSession();
+      session = null;
+    }
+  }
+
+  const queryOptions = useSession ? { session } : {};
+
   try {
     const { customerId, details, paymentMethod, note } = req.body;
     
@@ -14,16 +33,14 @@ exports.createCheckout = async (req, res) => {
     let cust = null;
     
     if (customerId) {
-        cust = await Customer.findById(customerId);
-        if (cust) {
-            isWalkIn = false;
-            validCustomerId = cust._id;
-        }
+      cust = await Customer.findById(customerId, null, queryOptions);
+      if (cust) {
+        isWalkIn = false;
+        validCustomerId = cust._id;
+      }
     }
 
     // Xác định trạng thái ban đầu của hóa đơn POS
-    // Nếu là Chuyển khoản QR, để trạng thái là 'Chờ thanh toán'
-    // Nếu là Tiền mặt, chuyển thẳng sang 'Đã thanh toán'
     const status = paymentMethod === 'Chuyển khoản QR' ? 'Chờ thanh toán' : 'Đã thanh toán';
 
     const saleOrder = new SaleOrder({
@@ -37,65 +54,78 @@ exports.createCheckout = async (req, res) => {
 
     const invoiceItems = [];
 
-    // Tính toán và trừ tồn kho
+    // Tính toán và trừ tồn kho nguyên tử (atomic decrement)
     for (const item of details) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        if (product.stockQuantity < item.quantity) {
-             return res.status(400).json({ success: false, message: `Sản phẩm ${product.name} chỉ còn ${product.stockQuantity} trong kho.` });
-        }
-        product.stockQuantity -= item.quantity;
-        await product.save();
-        
-        const itemTotal = item.quantity * product.sellPrice;
-        totalAmount += itemTotal;
-        
-        saleOrder.details.push({
-          product: product._id,
-          quantity: item.quantity,
-          sellPrice: product.sellPrice
-        });
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: item.product, stockQuantity: { $gte: item.quantity } },
+        { $inc: { stockQuantity: -item.quantity } },
+        { new: true, ...queryOptions }
+      );
 
-        invoiceItems.push({
-          name: product.name,
-          quantity: item.quantity,
-          price: product.sellPrice,
-          total: itemTotal
-        });
-      } else {
-        return res.status(404).json({ success: false, message: `Không tìm thấy sản phẩm` });
+      if (!updatedProduct) {
+        const existingProduct = await Product.findById(item.product, null, queryOptions);
+        if (!existingProduct) {
+          throw new Error(`NOT_FOUND:Không tìm thấy sản phẩm`);
+        } else {
+          throw new Error(`INSUFFICIENT_STOCK:Sản phẩm ${existingProduct.name} chỉ còn ${existingProduct.stockQuantity} trong kho.`);
+        }
       }
+      
+      const itemTotal = item.quantity * updatedProduct.sellPrice;
+      totalAmount += itemTotal;
+      
+      saleOrder.details.push({
+        product: updatedProduct._id,
+        quantity: item.quantity,
+        sellPrice: updatedProduct.sellPrice
+      });
+
+      invoiceItems.push({
+        name: updatedProduct.name,
+        quantity: item.quantity,
+        price: updatedProduct.sellPrice,
+        total: itemTotal
+      });
     }
 
     saleOrder.totalAmount = totalAmount;
-    await saleOrder.save();
+    await saleOrder.save(queryOptions);
 
     // Nếu thanh toán bằng Tiền mặt, tạo luôn Hóa đơn & Giao dịch
     if (status === 'Đã thanh toán') {
-      await Transaction.create({
-        type: 'pos_sale',
-        amount: totalAmount,
-        paymentMethod: 'Tiền mặt',
-        customer: validCustomerId,
-        customerName: cust ? cust.name : 'Khách Lẻ',
-        saleOrder: saleOrder._id,
-        status: 'success',
-        staff: req.user ? req.user._id : null
-      });
+      await Transaction.create([
+        {
+          type: 'pos_sale',
+          amount: totalAmount,
+          paymentMethod: 'Tiền mặt',
+          customer: validCustomerId,
+          customerName: cust ? cust.name : 'Khách Lẻ',
+          saleOrder: saleOrder._id,
+          status: 'success',
+          staff: req.user ? req.user._id : null
+        }
+      ], queryOptions);
 
-      await Invoice.create({
-        customer: validCustomerId,
-        customerName: cust ? cust.name : 'Khách Lẻ',
-        customerPhone: cust ? cust.phone : '',
-        type: 'pos',
-        referenceId: saleOrder._id,
-        items: invoiceItems,
-        subtotal: totalAmount,
-        total: totalAmount,
-        paymentMethod: 'Tiền mặt',
-        paymentStatus: 'paid',
-        staff: req.user ? req.user._id : null
-      });
+      await Invoice.create([
+        {
+          customer: validCustomerId,
+          customerName: cust ? cust.name : 'Khách Lẻ',
+          customerPhone: cust ? cust.phone : '',
+          type: 'pos',
+          referenceId: saleOrder._id,
+          items: invoiceItems,
+          subtotal: totalAmount,
+          total: totalAmount,
+          paymentMethod: 'Tiền mặt',
+          paymentStatus: 'paid',
+          staff: req.user ? req.user._id : null
+        }
+      ], queryOptions);
+    }
+
+    if (useSession && session) {
+      await session.commitTransaction();
+      session.endSession();
     }
 
     res.status(201).json({ 
@@ -103,7 +133,19 @@ exports.createCheckout = async (req, res) => {
       message: status === 'Đã thanh toán' ? 'Thanh toán thành công' : 'Đã tạo đơn hàng chờ thanh toán', 
       saleOrder 
     });
+
   } catch (error) {
+    if (useSession && session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
+
+    if (error.message && error.message.startsWith("NOT_FOUND:")) {
+      return res.status(404).json({ success: false, message: error.message.replace("NOT_FOUND:", "") });
+    }
+    if (error.message && error.message.startsWith("INSUFFICIENT_STOCK:")) {
+      return res.status(400).json({ success: false, message: error.message.replace("INSUFFICIENT_STOCK:", "") });
+    }
     res.status(500).json({ success: false, message: 'Lỗi thanh toán', error: error.message });
   }
 };

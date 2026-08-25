@@ -2,32 +2,46 @@
  * utils/generateTokens.js — Tiện ích tạo và xử lý JWT Token
  *
  * Export:
- *   generateAccessToken(userId)  — Tạo Access Token ngắn hạn (15 phút)
- *   generateRefreshToken(userId) — Tạo Refresh Token dài hạn (7 ngày)
- *   hashToken(token)             — Hash SHA-256 một chiều để lưu vào DB
+ *   generateAccessToken(userId, role, extraPayload)  — Tạo Access Token ngắn hạn (15 phút)
+ *   generateRefreshToken(userId, extraPayload)       — Tạo Refresh Token dài hạn (7 ngày)
+ *   hashToken(token)                                — Hash SHA-256 một chiều để lưu vào DB
  */
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
 /**
  * Tạo Access Token ngắn hạn (15 phút).
- * Chứa: id, role của user để Frontend có thể dùng ngay mà không cần query DB.
+ * Chứa: id, role, kèm thông tin chi nhánh (branchCode hoặc activeBranch/allowedBranches, isCentral).
  */
-const generateAccessToken = (userId, role) => {
-  return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
-  });
+const generateAccessToken = (userId, role, extraPayload = {}) => {
+  return jwt.sign(
+    {
+      id: userId,
+      role,
+      ...extraPayload,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "15m",
+    }
+  );
 };
 
 /**
  * Tạo Refresh Token dài hạn (7 ngày).
- * Chỉ chứa id, không chứa role để giảm rủi ro nếu bị lộ.
- * Sử dụng JWT_REFRESH_SECRET riêng biệt với JWT_SECRET.
+ * Chứa: id, isCentral, branchCode để định tuyến DB đúng khi refresh token.
  */
-const generateRefreshToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: "7d",
-  });
+const generateRefreshToken = (userId, extraPayload = {}) => {
+  return jwt.sign(
+    {
+      id: userId,
+      ...extraPayload,
+    },
+    process.env.JWT_REFRESH_SECRET,
+    {
+      expiresIn: "7d",
+    }
+  );
 };
 
 /**

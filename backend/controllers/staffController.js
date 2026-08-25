@@ -1,55 +1,72 @@
-const User = require("../models/User");
-const Schedule = require("../models/Schedule");
-const Customer = require("../models/Customer");
+/**
+ * backend/controllers/staffController.js
+ * Quản lý nhân viên chi nhánh với cơ chế Dual-Write (Branch DB User + Central LoginIndex)
+ */
+const bcrypt = require("bcryptjs");
 
-// Lấy tất cả nhân viên
+// Lấy tất cả nhân viên của chi nhánh
 const getAll = async (req, res) => {
   try {
+    const User = req.models.User;
+    const Customer = req.models.Customer;
+
     const staff = await User.find({
       role: { $in: ["manager", "pt", "sale", "reception", "accountant", "sm", "pm", "om"] },
     }).lean();
 
     const now = new Date();
-    // Đếm số KH phụ trách hiện tại (có endDate >= now)
-    const staffWithCounts = await Promise.all(staff.map(async (user) => {
-      const activeCustomersCount = await Customer.countDocuments({
-        assignedStaff: user._id,
-        endDate: { $gte: now }
-      });
-      return { ...user, activeCustomersCount };
-    }));
+    // Đếm số KH phụ trách hiện tại
+    const staffWithCounts = await Promise.all(
+      staff.map(async (user) => {
+        const activeCustomersCount = await Customer.countDocuments({
+          assignedStaff: user._id,
+          endDate: { $gte: now },
+        });
+        return { ...user, activeCustomersCount };
+      })
+    );
 
     res.json(staffWithCounts);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi lấy danh sách nhân viên" });
+    console.error("Lỗi getAll staff:", error);
+    res.status(500).json({ message: "Lỗi lấy danh sách nhân viên: " + error.message });
   }
 };
 
-// Tạo mới nhân viên (validate dữ liệu đầu vào)
+// Tạo mới nhân viên (Dual-Write: Branch User + Central LoginIndex)
 const create = async (req, res) => {
+  let createdUser = null;
   try {
-    const { username, password, fullName, role, dob, phone, specialty } =
-      req.body;
+    const { username, password, fullName, role, dob, phone, specialty, isActive = true } = req.body;
     const allowedRoles = ["sm", "pm", "om", "pt", "sale", "reception"];
+
     if (!username || !password || !role) {
       return res.status(400).json({
         message: "Thiếu thông tin bắt buộc (username, password, role)",
       });
     }
+
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         message: `Role không hợp lệ. Chỉ chấp nhận: ${allowedRoles.join(", ")}`,
       });
     }
-    const existing = await User.findOne({ username });
-    if (existing) {
-      return res.status(400).json({ message: "Username đã tồn tại" });
+
+    const User = req.models.User;
+    const centralModels = req.centralModels;
+
+    // 1. Kiểm tra trùng username trên Central LoginIndex và CentralUser
+    const existsInLoginIndex = await centralModels.LoginIndex.findOne({ username });
+    const existsInCentral = await centralModels.CentralUser.findOne({ username });
+    const existsInBranch = await User.findOne({ username });
+
+    if (existsInLoginIndex || existsInCentral || existsInBranch) {
+      return res.status(400).json({ message: "Tên đăng nhập (username) đã tồn tại trong hệ thống!" });
     }
-    const bcrypt = require("bcryptjs");
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Xử lý ngày sinh nếu là string
     let dobDate = dob;
     if (dob && typeof dob === "string") {
       dobDate = new Date(dob);
@@ -58,7 +75,8 @@ const create = async (req, res) => {
       }
     }
 
-    const staff = new User({
+    // 2. Ghi vào Branch DB (User)
+    createdUser = new User({
       username,
       password: hashedPassword,
       fullName: fullName || username,
@@ -66,9 +84,26 @@ const create = async (req, res) => {
       dob: dobDate,
       phone,
       specialty,
+      isActive,
     });
-    await staff.save();
-    res.status(201).json(staff);
+    await createdUser.save();
+
+    // 3. Ghi vào Central DB (LoginIndex)
+    try {
+      await centralModels.LoginIndex.create({
+        username,
+        branchCode: req.branchCode,
+        role,
+        userId: createdUser._id,
+      });
+    } catch (centralErr) {
+      // Rollback bước 2 nếu ghi Central DB thất bại
+      console.error("[DualWrite Rollback] Xóa Branch User do lỗi ghi LoginIndex:", centralErr);
+      await User.findByIdAndDelete(createdUser._id);
+      throw new Error(`Lỗi đồng bộ danh mục trung tâm: ${centralErr.message}`);
+    }
+
+    res.status(201).json(createdUser);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -78,8 +113,8 @@ const create = async (req, res) => {
 const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { password, fullName, role, dob, phone, specialty, ...otherData } =
-      req.body;
+    const { password, fullName, role, dob, phone, specialty, isActive } = req.body;
+    const User = req.models.User;
 
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
@@ -92,15 +127,13 @@ const update = async (req, res) => {
     }
     if (phone !== undefined) updateData.phone = phone;
     if (specialty !== undefined) updateData.specialty = specialty;
+    if (isActive !== undefined) updateData.isActive = isActive;
 
-    // Xử lý password nếu có
     if (password) {
-      const bcrypt = require("bcryptjs");
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(password, salt);
     }
 
-    // Xử lý ngày sinh
     if (dob !== undefined) {
       if (dob && typeof dob === "string") {
         const dobDate = new Date(dob);
@@ -116,28 +149,47 @@ const update = async (req, res) => {
     if (!staff) {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
     }
+
+    // Cập nhật role trong LoginIndex nếu có thay đổi
+    if (role && req.centralModels) {
+      await req.centralModels.LoginIndex.updateOne(
+        { username: staff.username },
+        { $set: { role } }
+      ).catch((e) => console.warn(`Lỗi cập nhật role LoginIndex: ${e.message}`));
+    }
+
     res.json(staff);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: error.message || "Lỗi cập nhật nhân viên" });
+    res.status(500).json({ message: error.message || "Lỗi cập nhật nhân viên" });
   }
 };
 
-// Xóa nhân viên
+// Xóa nhân viên (Xóa cả User ở Branch DB và LoginIndex ở Central DB)
 const remove = async (req, res) => {
   try {
     const { id } = req.params;
-    await User.findByIdAndDelete(id);
-    res.json({ message: "Đã xóa nhân viên" });
+    const User = req.models.User;
+    const staff = await User.findById(id);
+
+    if (staff) {
+      if (req.centralModels) {
+        await req.centralModels.LoginIndex.deleteOne({ username: staff.username }).catch((e) =>
+          console.warn(`Lỗi xóa LoginIndex: ${e.message}`)
+        );
+      }
+      await User.findByIdAndDelete(id);
+    }
+
+    res.json({ message: "Đã xóa nhân viên thành công" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi xóa nhân viên" });
+    res.status(500).json({ message: "Lỗi xóa nhân viên: " + error.message });
   }
 };
 
-// Lấy lịch làm việc của tất cả nhân viên (tuỳ chọn lọc theo date)
+// Lấy lịch làm việc của nhân viên
 const getSchedules = async (req, res) => {
   try {
+    const Schedule = req.models.Schedule;
     const { startDate, endDate, date } = req.query;
     let query = {};
     if (startDate && endDate) {
@@ -145,33 +197,33 @@ const getSchedules = async (req, res) => {
     } else if (date) {
       query.date = date;
     }
-    
-    const schedules = await Schedule.find(query).populate('staff', 'fullName name role').lean();
+
+    const schedules = await Schedule.find(query).populate("staff", "fullName name role").lean();
     res.json(schedules);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi lấy lịch làm việc" });
+    res.status(500).json({ message: "Lỗi lấy lịch làm việc: " + error.message });
   }
 };
 
-// Cập nhật/Thêm lịch làm việc cho 1 nhân viên
+// Cập nhật/Thêm lịch làm việc
 const updateSchedule = async (req, res) => {
   try {
-    const { id } = req.params; // Staff ID
+    const { id } = req.params;
     const { date, shiftType } = req.body;
-    
+    const User = req.models.User;
+    const Schedule = req.models.Schedule;
+
     if (!date || !shiftType) {
       return res.status(400).json({ message: "Thiếu ngày (date) hoặc ca làm (shiftType)" });
     }
 
-    // Lấy thông tin nhân viên được sửa lịch
     const targetStaff = await User.findById(id);
     if (!targetStaff) {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
     }
 
-    // Phân quyền sửa lịch làm việc theo đội quản lý
-    const currentUserRole = req.user.role;
-    const isSelf = req.user._id.toString() === id;
+    const currentUserRole = req.user ? req.user.role : null;
+    const isSelf = req.user && req.user._id.toString() === id;
     let hasPermission = false;
 
     if (isSelf) {
@@ -187,11 +239,11 @@ const updateSchedule = async (req, res) => {
     }
 
     if (!hasPermission) {
-      return res.status(403).json({ 
-        message: "Bạn không có quyền cập nhật lịch làm việc cho nhân viên thuộc bộ phận này!" 
+      return res.status(403).json({
+        message: "Bạn không có quyền cập nhật lịch làm việc cho nhân viên thuộc bộ phận này!",
       });
     }
-    
+
     const schedule = await Schedule.findOneAndUpdate(
       { staff: id, date: date },
       { shiftType: shiftType },
@@ -199,7 +251,7 @@ const updateSchedule = async (req, res) => {
     );
     res.json(schedule);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi cập nhật lịch làm việc" });
+    res.status(500).json({ message: "Lỗi cập nhật lịch làm việc: " + error.message });
   }
 };
 

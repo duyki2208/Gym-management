@@ -4,7 +4,9 @@
   "main": "server.js",
   "scripts": {
     "test": "jest --runInBand --detectOpenHandles --forceExit",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate:multibranch": "node scripts/migrate-to-multibranch.js",
+    "seed:hcm": "node scripts/seed-demo-branch.js"
   },
   "jest": {
     "testEnvironment": "node",
@@ -31,7 +33,6 @@
     "helmet": "^8.2.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
-    "mongodb": "4.1",
     "mongoose": "^9.0.0",
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0",

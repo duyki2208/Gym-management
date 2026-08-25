@@ -55,7 +55,8 @@ const auditLogger = (req, res, next) => {
           if (req.method === "POST" && req.path.includes("/checkout")) action = `Bán hàng lẻ tại POS`;
         }
 
-        await AuditLog.create({
+        const AuditLogModel = req.models?.AuditLog || AuditLog;
+        await AuditLogModel.create({
           user: userId,
           username,
           action,

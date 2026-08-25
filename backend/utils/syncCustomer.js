@@ -1,20 +1,22 @@
-const Customer = require("../models/Customer");
-const CustomerPackage = require("../models/CustomerPackage");
+const DefaultCustomer = require("../models/Customer");
+const DefaultCustomerPackage = require("../models/CustomerPackage");
 
 /**
  * Đồng bộ các field cached từ CustomerPackage (gói active nhất) vào Customer.
- * Hàm này được gọi sau mỗi thao tác create/update/freeze/unfreeze/cron để giữ
- * 2 collection nhất quán.
  *
  * @param {mongoose.Types.ObjectId|string} customerId
  * @param {object} [options] - Tùy chọn truyền vào như { session }
+ * @param {object} [models] - Branch models { Customer, CustomerPackage }
  */
-async function syncCustomerFields(customerId, options = {}) {
+async function syncCustomerFields(customerId, options = {}, models = null) {
   try {
     const session = options && options.session ? options.session : null;
 
+    const CustomerModel = models?.Customer || DefaultCustomer;
+    const CustomerPackageModel = models?.CustomerPackage || DefaultCustomerPackage;
+
     // Ưu tiên gói đang active, nếu không có thì lấy gói mới nhất
-    let activePackageQuery = CustomerPackage.findOne({
+    let activePackageQuery = CustomerPackageModel.findOne({
       customer: customerId,
       status: "active",
       isDeleted: { $ne: true },
@@ -26,7 +28,7 @@ async function syncCustomerFields(customerId, options = {}) {
     let activePackage = await activePackageQuery;
 
     if (!activePackage) {
-      let latestPackageQuery = CustomerPackage.findOne({
+      let latestPackageQuery = CustomerPackageModel.findOne({
         customer: customerId,
         isDeleted: { $ne: true },
       }).sort({ createdAt: -1 });
@@ -37,7 +39,7 @@ async function syncCustomerFields(customerId, options = {}) {
       activePackage = await latestPackageQuery;
     }
 
-    let customerQuery = Customer.findById(customerId);
+    let customerQuery = CustomerModel.findById(customerId);
     if (session) {
       customerQuery = customerQuery.session(session);
     }
@@ -76,8 +78,9 @@ async function syncCustomerFields(customerId, options = {}) {
     await customer.save({ session });
   } catch (err) {
     console.error("Lỗi đồng bộ hồ sơ khách hàng:", err);
-    throw err; // Re-throw để caller biết sync thất bại
+    throw err;
   }
 }
 
 module.exports = syncCustomerFields;
+
