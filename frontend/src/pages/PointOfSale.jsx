@@ -353,8 +353,8 @@ const PointOfSale = ({ onFinish, onClose }) => {
                          orderStatus === 'Chờ thanh toán' ? (
                             <div className="flex flex-col items-center">
                                <img 
-                                  src={`https://img.vietqr.io/image/970436-1031934220-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
-                                  alt="VietQR" 
+                                  src={`https://img.vietqr.io/image/970422-0344075790-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
+                                  alt="VietQR MBBank" 
                                   className="w-64 h-64 rounded-xl object-contain"
                                />
                                {/* Trạng thái chờ - tự động xác nhận */}
