@@ -5,6 +5,8 @@ const Customer = require('../models/Customer');
 const Transaction = require('../models/Transaction');
 const Invoice = require('../models/Invoice');
 const { isReplicaSetConnected } = require('../utils/dbTransaction');
+const { getBranchModels } = require('../db/branchConnectionManager');
+
 
 exports.createCheckout = async (req, res) => {
   let session = null;
@@ -183,9 +185,10 @@ exports.handleWebhook = async (req, res) => {
     console.log(`[Webhook SePay] [Chi nhánh ${branchCode}] Mã GD SePay: ${sepayTxId} | Nội dung: "${content}" | Số tiền: ${amount}`);
 
     // Sử dụng Regex tìm mã đơn hàng dạng GYM[OrderID_last8]
-    // Ví dụ: GYM50C1DB8C hoặc GYM7A9B1C2D
-    const match = content.match(/GYM([A-F0-9]{8})/i);
+    // Ví dụ: GYM50C1DB8C hoặc GYM 50C1DB8C hoặc GYM-50C1DB8C
+    const match = content.match(/GYM[\s\-_]*([A-Za-z0-9]{8})/i);
     if (!match) {
+      console.warn(`[Webhook SePay] Nội dung "${content}" không khớp định dạng GYMxxxxx`);
       return res.status(200).json({
         success: false,
         message: 'Nội dung chuyển khoản không khớp định dạng GYMxxxxx'
@@ -194,14 +197,49 @@ exports.handleWebhook = async (req, res) => {
 
     const orderCode = match[1].toLowerCase();
 
-    // Tìm tất cả đơn hàng khớp với 8 ký tự cuối
-    // Dùng $expr và $substrCP nếu có thể, hoặc query theo regex
-    const candidateOrders = await SaleOrder.find({}).sort({ createdAt: -1 }).limit(100).populate('customer');
-    const matchedOrder = candidateOrders.find(
+    // 1. Tìm đơn hàng trong chi nhánh hiện tại
+    let activeModels = req.models;
+    let targetSaleOrderModel = activeModels?.SaleOrder || SaleOrder;
+    let targetTransactionModel = activeModels?.Transaction || Transaction;
+    let targetInvoiceModel = activeModels?.Invoice || Invoice;
+    let targetProductModel = activeModels?.Product || Product;
+
+    const candidateOrders = await targetSaleOrderModel.find({}).sort({ createdAt: -1 }).limit(100).populate('customer');
+    let matchedOrder = candidateOrders.find(
       order => order._id.toString().slice(-8).toLowerCase() === orderCode
     );
 
+    // 2. Nếu không tìm thấy, quét tìm đơn hàng qua các chi nhánh khác (phòng trường hợp nhân viên đổi chi nhánh trên POS)
     if (!matchedOrder) {
+      const branchesToTry = ['HN01', 'HCM01', 'DN01'];
+      for (const bCode of branchesToTry) {
+        if (bCode === branchCode) continue;
+        try {
+          const bModels = await getBranchModels(bCode);
+          if (bModels?.SaleOrder) {
+            const bOrders = await bModels.SaleOrder.find({}).sort({ createdAt: -1 }).limit(100).populate('customer');
+            const found = bOrders.find(
+              order => order._id.toString().slice(-8).toLowerCase() === orderCode
+            );
+            if (found) {
+              matchedOrder = found;
+              activeModels = bModels;
+              targetSaleOrderModel = bModels.SaleOrder;
+              targetTransactionModel = bModels.Transaction;
+              targetInvoiceModel = bModels.Invoice;
+              targetProductModel = bModels.Product;
+              console.log(`[Webhook SePay] Đã tìm thấy đơn hàng ${matchedOrder._id} tại chi nhánh fallback: ${bCode}`);
+              break;
+            }
+          }
+        } catch (bErr) {
+          // Bỏ qua lỗi kết nối chi nhánh khác
+        }
+      }
+    }
+
+    if (!matchedOrder) {
+      console.warn(`[Webhook SePay] Không tìm thấy đơn hàng nào có 8 ký tự cuối là GYM${orderCode.toUpperCase()}`);
       return res.status(200).json({
         success: false,
         message: `Không tìm thấy đơn hàng tương ứng với mã GYM${orderCode.toUpperCase()}`
@@ -242,7 +280,7 @@ exports.handleWebhook = async (req, res) => {
     await matchedOrder.save();
 
     // 4. TẠO GIAO DỊCH (TRANSACTION)
-    await Transaction.create({
+    await targetTransactionModel.create({
       type: 'pos_sale',
       amount: matchedOrder.totalAmount,
       paymentMethod: 'Chuyển khoản QR',
@@ -255,7 +293,7 @@ exports.handleWebhook = async (req, res) => {
     // 5. TRUY VẤN SẢN PHẨM & TẠO HÓA ĐƠN (INVOICE)
     const invoiceItems = [];
     for (const item of matchedOrder.details) {
-      const product = await Product.findById(item.product);
+      const product = await targetProductModel.findById(item.product);
       invoiceItems.push({
         name: product ? product.name : 'Sản phẩm',
         quantity: item.quantity,
@@ -264,7 +302,7 @@ exports.handleWebhook = async (req, res) => {
       });
     }
 
-    const invoice = await Invoice.create({
+    const invoice = await targetInvoiceModel.create({
       customer: matchedOrder.customer ? matchedOrder.customer._id : null,
       customerName: matchedOrder.customer ? matchedOrder.customer.name : 'Khách Lẻ',
       customerPhone: matchedOrder.customer ? matchedOrder.customer.phone : '',
