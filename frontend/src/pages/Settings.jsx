@@ -3,16 +3,19 @@ import { settingsService } from '../services/settingsService';
 import toast from 'react-hot-toast';
 
 // Component NumberField được khai báo bên ngoài để tránh việc bị recreating type gây mất focus khi gõ dữ liệu
-const NumberField = ({ label, value, onChange, hint, suffix, disabled }) => {
+const NumberField = ({ label, value, onChange, hint, suffix, disabled, name }) => {
   const inputClass = "w-full h-11 px-4 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark";
   const labelClass = "block text-sm font-medium text-text-light dark:text-text-dark mb-2";
   const hintClass = "text-xs text-text-muted-light dark:text-text-muted-dark mt-1";
+  const fieldId = name || (label ? `field_${label.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : 'number_field');
 
   return (
     <div>
-      <label className={labelClass}>{label}</label>
+      <label htmlFor={fieldId} className={labelClass}>{label}</label>
       <div className="relative">
         <input
+          id={fieldId}
+          name={fieldId}
           type="number"
           className={inputClass}
           value={value}
@@ -154,12 +157,12 @@ const Settings = () => {
         </div>
         <div className="p-6 space-y-6">
           <div>
-            <label className={labelClass}>Tên phòng tập</label>
-            <input className={inputClass} value={gymName} onChange={(e) => setGymName(e.target.value)} disabled={!isAdmin} />
+            <label htmlFor="setting_gym_name" className={labelClass}>Tên phòng tập</label>
+            <input id="setting_gym_name" name="gymName" type="text" className={inputClass} value={gymName} onChange={(e) => setGymName(e.target.value)} disabled={!isAdmin} />
           </div>
           <div>
-            <label className={labelClass}>Địa chỉ</label>
-            <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} disabled={!isAdmin} />
+            <label htmlFor="setting_address" className={labelClass}>Địa chỉ</label>
+            <input id="setting_address" name="address" type="text" className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} disabled={!isAdmin} />
           </div>
           <NumberField label="Chỉ tiêu doanh thu tháng (VNĐ)" value={targetRevenue} onChange={setTargetRevenue} disabled={!isAdmin}
             hint="Mục tiêu doanh thu hàng tháng được sử dụng để hiển thị tỷ lệ % hoàn thành trên trang Tổng quan." />
@@ -248,8 +251,16 @@ const Settings = () => {
                 <p className="font-bold text-text-light dark:text-text-dark">{item}</p>
                 <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Tự động gửi thông báo đến khách hàng.</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked disabled={!isAdmin} />
+              <label htmlFor={`notif_toggle_${i}`} className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  id={`notif_toggle_${i}`}
+                  name={`notif_toggle_${i}`}
+                  aria-label={item}
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  defaultChecked 
+                  disabled={!isAdmin} 
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>

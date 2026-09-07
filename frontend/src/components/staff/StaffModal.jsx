@@ -113,27 +113,32 @@ const StaffModal = ({ staff, onSave, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Tên */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">
+            <label htmlFor="staff_name" className="block text-sm font-medium mb-1.5 text-gray-700">
               Họ và tên <span className="text-red-500">*</span>
             </label>
             <input
+              id="staff_name"
+              name="name"
+              type="text"
               required
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={formData.name}
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-gray-700">
+              <label htmlFor="staff_username" className="block text-sm font-medium mb-1.5 text-gray-700">
                 Tên đăng nhập <span className="text-red-500">*</span>
               </label>
               <input
+                id="staff_username"
+                name="username"
+                type="text"
                 required={!staff}
                 disabled={!!staff}
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500"
@@ -141,7 +146,6 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
                 }
-                
               />
               {staff && (
                 <p className="text-xs text-gray-500 mt-1">
@@ -152,12 +156,14 @@ const StaffModal = ({ staff, onSave, onClose }) => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-gray-700">
+              <label htmlFor="staff_password" className="block text-sm font-medium mb-1.5 text-gray-700">
                 {staff
                   ? "Mật khẩu mới"
                   : 'Mật khẩu '}
               </label>
               <input
+                id="staff_password"
+                name="password"
                 type="password"
                 required={!staff}
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
@@ -165,7 +171,6 @@ const StaffModal = ({ staff, onSave, onClose }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                
               />
             </div>
           </div>
@@ -173,10 +178,12 @@ const StaffModal = ({ staff, onSave, onClose }) => {
           <div className="grid grid-cols-2 gap-4">
             {/* Chức vụ */}
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-gray-700">
+              <label htmlFor="staff_role" className="block text-sm font-medium mb-1.5 text-gray-700">
                 Chức vụ <span className="text-red-500">*</span>
               </label>
               <select
+                id="staff_role"
+                name="role"
                 required
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
                 value={formData.role}
@@ -195,26 +202,30 @@ const StaffModal = ({ staff, onSave, onClose }) => {
 
             {/* SĐT */}
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-gray-700">
+              <label htmlFor="staff_phone" className="block text-sm font-medium mb-1.5 text-gray-700">
                 Số điện thoại
               </label>
               <input
+                id="staff_phone"
+                name="phone"
+                type="tel"
                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={formData.phone}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                
               />
             </div>
           </div>
 
           {/* Ngày sinh */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">
+            <label htmlFor="staff_dob" className="block text-sm font-medium mb-1.5 text-gray-700">
               Ngày sinh
             </label>
             <input
+              id="staff_dob"
+              name="dob"
               type="date"
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700"
               value={formData.dob}
@@ -226,16 +237,18 @@ const StaffModal = ({ staff, onSave, onClose }) => {
 
           {/* Chuyên môn */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">
+            <label htmlFor="staff_specialty" className="block text-sm font-medium mb-1.5 text-gray-700">
               Chuyên môn / Mô tả
             </label>
             <input
+              id="staff_specialty"
+              name="specialty"
+              type="text"
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={formData.specialty}
               onChange={(e) =>
                 setFormData({ ...formData, specialty: e.target.value })
               }
-              
             />
           </div>
 

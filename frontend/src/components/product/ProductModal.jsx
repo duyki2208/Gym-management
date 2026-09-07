@@ -70,8 +70,10 @@ const ProductModal = ({ product, onSave, onClose }) => {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Tên sản phẩm *</label>
+            <label htmlFor="prod_name" className="block text-sm font-semibold text-gray-700 mb-1">Tên sản phẩm *</label>
             <input
+              id="prod_name"
+              name="name"
               type="text"
               className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
               value={formData.name}
@@ -82,8 +84,10 @@ const ProductModal = ({ product, onSave, onClose }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Phân loại</label>
+              <label htmlFor="prod_category" className="block text-sm font-semibold text-gray-700 mb-1">Phân loại</label>
               <select
+                id="prod_category"
+                name="category"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none bg-white"
                 value={formData.category}
                 onChange={(e) => setFormData({...formData, category: e.target.value})}
@@ -95,8 +99,10 @@ const ProductModal = ({ product, onSave, onClose }) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Tồn kho ban đầu</label>
+              <label htmlFor="prod_stockQuantity" className="block text-sm font-semibold text-gray-700 mb-1">Tồn kho ban đầu</label>
               <input
+                id="prod_stockQuantity"
+                name="stockQuantity"
                 type="number"
                 min="0"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
@@ -109,8 +115,10 @@ const ProductModal = ({ product, onSave, onClose }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Giá nhập (VNĐ)</label>
+              <label htmlFor="prod_importPrice" className="block text-sm font-semibold text-gray-700 mb-1">Giá nhập (VNĐ)</label>
               <input
+                id="prod_importPrice"
+                name="importPrice"
                 type="number"
                 min="0"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"
@@ -119,8 +127,10 @@ const ProductModal = ({ product, onSave, onClose }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Giá bán (VNĐ) *</label>
+              <label htmlFor="prod_sellPrice" className="block text-sm font-semibold text-gray-700 mb-1">Giá bán (VNĐ) *</label>
               <input
+                id="prod_sellPrice"
+                name="sellPrice"
                 type="number"
                 min="0"
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none"

@@ -86,8 +86,11 @@ const ImportGoods = () => {
              <div className="relative mb-4">
                  <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                  <input 
+                    id="import_search_product"
+                    name="importSearchProduct"
                     type="text" 
                     placeholder="Tên sản phẩm..."
+                    aria-label="Tìm sản phẩm để nhập kho"
                     className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -116,8 +119,10 @@ const ImportGoods = () => {
          <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col h-[70vh]">
             <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                   <label className="text-sm font-semibold text-gray-700 block mb-1">Nhà cung cấp</label>
+                   <label htmlFor="import_supplier" className="text-sm font-semibold text-gray-700 block mb-1">Nhà cung cấp</label>
                    <input 
+                      id="import_supplier"
+                      name="supplier"
                       type="text" 
                       className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary bg-gray-50"
                       value={supplier} onChange={(e) => setSupplier(e.target.value)}
@@ -125,12 +130,14 @@ const ImportGoods = () => {
                    />
                 </div>
                 <div>
-                   <label className="text-sm font-semibold text-gray-700 block mb-1">Ghi chú</label>
+                   <label htmlFor="import_note" className="text-sm font-semibold text-gray-700 block mb-1">Ghi chú</label>
                    <input 
+                      id="import_note"
+                      name="note"
                       type="text" 
                       className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary bg-gray-50"
                       value={note} onChange={(e) => setNote(e.target.value)}
-                      
+                      placeholder="Ghi chú nhập hàng..."
                    />
                 </div>
             </div>
@@ -157,6 +164,9 @@ const ImportGoods = () => {
                                </td>
                                <td className="p-2">
                                    <input 
+                                      id={`import_qty_${idx}`}
+                                      name={`import_qty_${idx}`}
+                                      aria-label={`Số lượng nhập cho ${item.product.name}`}
                                       type="number" min="1"
                                       className="w-full p-1.5 border rounded focus:ring-1 focus:ring-primary outline-none"
                                       value={item.quantity}
@@ -165,6 +175,9 @@ const ImportGoods = () => {
                                </td>
                                <td className="p-2">
                                    <input 
+                                      id={`import_price_${idx}`}
+                                      name={`import_price_${idx}`}
+                                      aria-label={`Giá nhập cho ${item.product.name}`}
                                       type="number" min="0" step="1000"
                                       className="w-full p-1.5 border rounded focus:ring-1 focus:ring-primary outline-none"
                                       value={item.importPrice}

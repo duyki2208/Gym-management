@@ -9,6 +9,7 @@ const { sendRegistrationEmail } = require("../utils/emailService");
 const syncCustomerFields = require("../utils/syncCustomer");
 const faceClient = require("../utils/faceServiceClient");
 const { createSaleCommission } = require("./commissionController");
+const { isReplicaSetConnected } = require("../utils/dbTransaction");
 const mongoose = require("mongoose");
 const { sendZaloNotification } = require("../utils/zaloService");
 const queueService = require("../utils/queueService");
@@ -64,17 +65,6 @@ function flattenPackage(pkg) {
   };
 }
 
-function isReplicaSetConnected() {
-  try {
-    const conn = mongoose.connection;
-    if (!conn || !conn.client || !conn.client.topology) return false;
-    const type = conn.client.topology.description?.type;
-    return type === "ReplicaSetWithPrimary" || type === "Sharded" || type === "ReplicaSetNoPrimary";
-  } catch (err) {
-    return false;
-  }
-}
-
 const createCustomer = async (req, res) => {
   console.log("--- Executing: createCustomer controller ---");
   let session = null;
@@ -82,14 +72,21 @@ const createCustomer = async (req, res) => {
   let createdCustomerObj = null;
   let isNewCustomerCreated = false;
 
+  const conn = req.models?.connection || mongoose.connection;
+
   try {
-    if (isReplicaSetConnected()) {
+    if (isReplicaSetConnected(conn)) {
       try {
-        session = await mongoose.startSession();
+        session = await conn.startSession();
         session.startTransaction();
         isTransactionStarted = true;
       } catch (sessErr) {
+        console.warn("[createCustomer] Could not start transaction:", sessErr.message);
         isTransactionStarted = false;
+        if (session) {
+          try { session.endSession(); } catch (_) {}
+          session = null;
+        }
       }
     }
 
@@ -339,6 +336,13 @@ const createCustomer = async (req, res) => {
       }
     ], { session: isTransactionStarted ? session : undefined });
 
+    if (isTransactionStarted && session) {
+      await session.commitTransaction();
+      session.endSession();
+      isTransactionStarted = false;
+      session = null;
+    }
+
     // Tự động tạo hoa hồng Sale nếu có nhân viên bán gói
     if (customerPackage.assignedStaff) {
       await createSaleCommission({
@@ -374,12 +378,6 @@ const createCustomer = async (req, res) => {
         message: `Chúc mừng ${customer.name} đã đăng ký thành công gói tập ${customerPackage.packageName}. Thời hạn gói: từ ${new Date(customerPackage.startDate).toLocaleDateString("vi-VN")} đến ${new Date(customerPackage.endDate).toLocaleDateString("vi-VN")}. Hân hạnh được phục vụ quý khách!`,
         type: "package_purchase"
       });
-    }
-
-    if (isTransactionStarted && session) {
-      await session.commitTransaction();
-      session.endSession();
-      isTransactionStarted = false;
     }
 
     const populatedPackage = await CustomerPackage.findById(customerPackage._id)

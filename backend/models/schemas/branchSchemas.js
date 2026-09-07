@@ -114,10 +114,11 @@ customerSchema.pre("validate", async function () {
   if (this.isNew && !this.code) {
     try {
       const CounterModel = getCounterModel(this);
+      const session = this.$session ? this.$session() : undefined;
       const counter = await CounterModel.findByIdAndUpdate(
         { _id: "customerId" },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true }
+        { new: true, upsert: true, ...(session ? { session } : {}) }
       );
       this.code = "KH" + counter.seq.toString().padStart(4, "0");
     } catch (error) {
@@ -268,10 +269,11 @@ invoiceSchema.pre("validate", async function () {
   if (this.isNew && !this.code) {
     try {
       const CounterModel = getCounterModel(this);
+      const session = this.$session ? this.$session() : undefined;
       const counter = await CounterModel.findByIdAndUpdate(
         { _id: "invoiceId" },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true }
+        { new: true, upsert: true, ...(session ? { session } : {}) }
       );
       this.code = "INV" + counter.seq.toString().padStart(5, "0");
     } catch (error) {
@@ -309,10 +311,11 @@ transactionSchema.pre("validate", async function () {
   if (this.isNew && !this.code) {
     try {
       const CounterModel = getCounterModel(this);
+      const session = this.$session ? this.$session() : undefined;
       const counter = await CounterModel.findByIdAndUpdate(
         { _id: "transactionId" },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true }
+        { new: true, upsert: true, ...(session ? { session } : {}) }
       );
       this.code = "TXN" + counter.seq.toString().padStart(5, "0");
     } catch (error) {

@@ -150,7 +150,7 @@ const getRevenueChart = async (req, res) => {
       const d = r._id.date;
       if (!dayMap[d]) dayMap[d] = { total: 0, package: 0, pos: 0, service: 0 };
       dayMap[d].total += r.amount;
-      if (r._id.type === "package_purchase") dayMap[d].package += r.amount;
+      if (r._id.type === "package_purchase" || r._id.type === "pt_session") dayMap[d].package += r.amount;
       else if (r._id.type === "pos_sale") dayMap[d].pos += r.amount;
       else if (r._id.type === "service_fee") dayMap[d].service += r.amount;
     });
@@ -259,12 +259,20 @@ const getRevenueDetails = async (req, res) => {
       return "Gói tập";
     };
 
+    const getStreamCategory = (t) => {
+      if (t.type === "package_purchase" || t.type === "pt_session") return "Gói tập & PT";
+      if (t.type === "pos_sale") return "Bán lẻ (POS)";
+      if (t.type === "service_fee") return "Phí dịch vụ";
+      return "Khác";
+    };
+
     // Format để tương thích với frontend export Excel
     const details = transactions.map((t) => ({
       name: t.customer?.name || t.customerName,
       phone: t.customer?.phone || "",
       code: t.customer?.code || "",
       transactionCode: t.code,
+      streamCategory: getStreamCategory(t),
       price: t.amount, // Tiền thực thu
       paymentMethod: t.paymentMethod,
       startDate: t.createdAt,
@@ -559,15 +567,123 @@ const getRevenueAdvanced = async (req, res) => {
       });
     }
 
+    // 5. Thống kê phương thức thanh toán trong kỳ
+    const paymentMethodsAgg = await Transaction.aggregate([
+      {
+        $match: {
+          status: "success",
+          createdAt: { $gte: start, $lte: end },
+          type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] }
+        }
+      },
+      {
+        $group: {
+          _id: { $toLower: "$paymentMethod" },
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { total: -1 } }
+    ]);
+
+    const paymentMethods = paymentMethodsAgg.map(item => {
+      const raw = String(item._id || "").toLowerCase().trim();
+      let key = "other";
+      let name = "Khác";
+
+      if (raw.includes("qr") || raw.includes("vietqr") || raw.includes("chuyển khoản") || raw.includes("transfer")) {
+        key = "vietqr";
+        name = "VietQR (Chuyển khoản)";
+      } else if (raw.includes("tiền mặt") || raw.includes("cash")) {
+        key = "cash";
+        name = "Tiền mặt";
+      } else if (raw.includes("thẻ") || raw.includes("card") || raw.includes("pos")) {
+        key = "card";
+        name = "Thẻ POS / Quẹt thẻ";
+      } else if (item._id) {
+        name = item._id.toUpperCase();
+      }
+
+      return {
+        key,
+        name,
+        value: item.total || 0,
+        count: item.count || 0,
+        percentage: totalRevenueThisMonth > 0 ? Number(((item.total / totalRevenueThisMonth) * 100).toFixed(1)) : 0
+      };
+    });
+
+    // 6. Cơ cấu hợp đồng gói tập (Gói mới vs Tái ký vs Nâng cấp vs Chuyển nhượng)
+    const contractAgg = await CustomerPackage.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: start, $lte: end }
+        }
+      },
+      {
+        $group: {
+          _id: "$contractType",
+          total: { $sum: { $cond: [{ $gt: ["$paidAmount", 0] }, "$paidAmount", "$price"] } },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const contractLabels = {
+      new: "Hợp đồng mới",
+      renew: "Tái ký / Gia hạn",
+      upgrade: "Nâng cấp gói",
+      transfer: "Chuyển nhượng"
+    };
+
+    const totalContractRevenue = contractAgg.reduce((sum, item) => sum + (item.total || 0), 0);
+    const contractBreakdown = contractAgg.map(item => {
+      const type = item._id || "new";
+      return {
+        type,
+        name: contractLabels[type] || "Hợp đồng mới",
+        revenue: item.total || 0,
+        count: item.count || 0,
+        percentage: totalContractRevenue > 0 ? Number(((item.total / totalContractRevenue) * 100).toFixed(1)) : 0
+      };
+    });
+
+    // 7. Công nợ cần thu (Hợp đồng đang cọc hoặc chưa thanh toán hết)
+    const receivablesAgg = await CustomerPackage.aggregate([
+      {
+        $match: {
+          paymentStatus: { $in: ["deposit", "unpaid"] },
+          status: { $in: ["active", "pending"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnpaid: { $sum: { $subtract: ["$price", "$paidAmount"] } },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const receivables = {
+      totalAmount: (receivablesAgg[0]?.totalUnpaid && receivablesAgg[0].totalUnpaid > 0) ? receivablesAgg[0].totalUnpaid : 0,
+      count: receivablesAgg[0]?.count || 0
+    };
+
+    // 8. Mục tiêu doanh thu từ Setting
+    const setting = await Setting.findOne().lean();
+    const targetRevenue = setting?.targetRevenue || 100000000;
+    const targetProgress = targetRevenue > 0 ? Math.round((totalRevenueThisMonth / targetRevenue) * 100) : 0;
+
     res.json({
       success: true,
       data: {
         month: m,
         year: y,
         sources: [
-          { name: "Gói tập", value: sources.package_purchase },
+          { name: "Gói tập & PT", value: sources.package_purchase + sources.pt_session },
           { name: "Cửa hàng (POS)", value: sources.pos_sale },
-          { name: "Buổi PT lẻ", value: sources.pt_session }
+          { name: "Phí dịch vụ", value: sources.service_fee }
         ],
         totalRevenue: totalRevenueThisMonth,
         compareLastMonth: {
@@ -578,7 +694,12 @@ const getRevenueAdvanced = async (req, res) => {
           value: totalRevenueLastYear,
           growthPercent: yoyGrowth
         },
-        trend: trendData
+        trend: trendData,
+        paymentMethods,
+        contractBreakdown,
+        receivables,
+        targetRevenue,
+        targetProgress
       }
     });
   } catch (error) {
@@ -587,7 +708,7 @@ const getRevenueAdvanced = async (req, res) => {
   }
 };
 
-// @desc    Báo cáo nhân sự tổng hợp lương, KPI, hoa hồng
+// @desc    Báo cáo nhân sự tổng hợp lương, KPI, hoa hồng, doanh số
 // @route   GET /api/reports/hr-summary
 // @access  Private
 const getHRSummary = async (req, res) => {
@@ -597,8 +718,10 @@ const getHRSummary = async (req, res) => {
     const m = parseInt(month) || today.getMonth() + 1;
     const y = parseInt(year) || today.getFullYear();
 
-    const start = startOfMonth(new Date(y, m - 1, 1));
-    const end = endOfMonth(new Date(y, m - 1, 1));
+    const firstDay = 1;
+    const lastDay = new Date(y, m, 0).getDate();
+    const start = new Date(Date.UTC(y, m - 1, firstDay, -7, 0, 0, 0));
+    const end = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // Lấy danh sách nhân viên PT và Sale
     const staffList = await User.find({
@@ -628,11 +751,82 @@ const getHRSummary = async (req, res) => {
       ]);
       const totalCommission = commissionAgg[0]?.total || 0;
 
-      // 2. Tính hiệu suất KPI đạt được
+      // 2. Tính hiệu suất KPI & Doanh số đem về
       const target = await KPITarget.findOne({ staff: staff._id, month: m, year: y });
       const setting = await Setting.findOne();
 
       let kpiPercentage = 0;
+      let revenueGenerated = 0;
+
+      // Doanh số từ CustomerPackage (Hợp đồng được gán tư vấn hoặc PT)
+      const cpRevenueAgg = await CustomerPackage.aggregate([
+        {
+          $match: {
+            $or: [
+              { assignedStaff: staff._id },
+              { trainer: staff._id }
+            ],
+            createdAt: { $gte: start, $lte: end }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalPaid: { $sum: "$paidAmount" },
+            totalPrice: { $sum: "$price" }
+          }
+        }
+      ]);
+      const cpRevenue = Math.max(cpRevenueAgg[0]?.totalPaid || 0, cpRevenueAgg[0]?.totalPrice || 0);
+
+      // Doanh số từ Transaction
+      const packagesSold = await CustomerPackage.find({
+        $or: [{ assignedStaff: staff._id }, { trainer: staff._id }],
+        createdAt: { $gte: start, $lte: end }
+      }).select("_id");
+      const packageIds = packagesSold.map(p => p._id);
+
+      const revenueAgg = await Transaction.aggregate([
+        {
+          $match: {
+            status: "success",
+            $or: [
+              { staff: staff._id },
+              { customerPackage: { $in: packageIds } }
+            ],
+            createdAt: { $gte: start, $lte: end }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" }
+          }
+        }
+      ]);
+      const txRevenue = revenueAgg[0]?.total || 0;
+
+      // Doanh số từ Commission baseAmount
+      const commBaseAgg = await Commission.aggregate([
+        {
+          $match: {
+            staff: staff._id,
+            month: m,
+            year: y,
+            status: "active"
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalBase: { $sum: "$baseAmount" }
+          }
+        }
+      ]);
+      const commBaseRevenue = commBaseAgg[0]?.totalBase || 0;
+
+      revenueGenerated = Math.max(cpRevenue, txRevenue, commBaseRevenue);
+
       if (staff.role === "pt" || staff.role === "pm") {
         const sessionTarget = target?.ptSessionTarget !== undefined
           ? target.ptSessionTarget
@@ -645,38 +839,12 @@ const getHRSummary = async (req, res) => {
         });
         kpiPercentage = sessionTarget > 0 ? Math.round((actualSessions / sessionTarget) * 100) : 100;
       } else {
-        // Sale/SM
+        // Sale / SM
         const revenueTarget = target?.saleRevenueTarget !== undefined
           ? target.saleRevenueTarget
           : setting?.saleMonthlyRevenueTarget || 100000000;
 
-        // Doanh số thực đạt
-        const packagesSold = await CustomerPackage.find({
-          assignedStaff: staff._id,
-          createdAt: { $gte: start, $lte: end }
-        }).select("_id");
-        const packageIds = packagesSold.map(p => p._id);
-
-        const revenueAgg = await Transaction.aggregate([
-          {
-            $match: {
-              status: "success",
-              $or: [
-                { staff: staff._id },
-                { customerPackage: { $in: packageIds } }
-              ],
-              createdAt: { $gte: start, $lte: end }
-            }
-          },
-          {
-            $group: {
-              _id: null,
-              total: { $sum: "$amount" }
-            }
-          }
-        ]);
-        const actualRevenue = revenueAgg[0]?.total || 0;
-        kpiPercentage = revenueTarget > 0 ? Math.round((actualRevenue / revenueTarget) * 100) : 100;
+        kpiPercentage = revenueTarget > 0 ? Math.round((revenueGenerated / revenueTarget) * 100) : 100;
       }
 
       const totalSalary = defaultBasicSalary + totalCommission;
@@ -687,10 +855,29 @@ const getHRSummary = async (req, res) => {
         role: staff.role,
         basicSalary: defaultBasicSalary,
         commission: totalCommission,
+        revenueGenerated,
         kpiProgress: kpiPercentage,
         totalSalary
       };
     }));
+
+    // Sắp xếp theo thứ tự nghiệp vụ: Sale (SM đứng đầu, rồi đến Sale) -> PT (PM đứng đầu, rồi đến PT)
+    const rolePriority = {
+      sm: 1,
+      sale: 2,
+      pm: 3,
+      pt: 4
+    };
+
+    hrData.sort((a, b) => {
+      const pA = rolePriority[a.role] || 99;
+      const pB = rolePriority[b.role] || 99;
+      if (pA !== pB) return pA - pB;
+      return (b.revenueGenerated || 0) - (a.revenueGenerated || 0);
+    });
+    hrData.forEach((item, index) => {
+      item.rank = index + 1;
+    });
 
     res.json({
       success: true,

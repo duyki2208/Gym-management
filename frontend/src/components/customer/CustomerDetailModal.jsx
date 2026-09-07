@@ -692,6 +692,9 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                             {canDeduct && isSessionPackage && customer.remainingSessions > 0 && (
                                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
                                     <select
+                                        id="cdm_ptSelect"
+                                        name="ptSelect"
+                                        aria-label="Chọn Huấn Luyện Viên PT"
                                         className="text-sm border-gray-300 rounded-lg px-3 py-2 w-full sm:w-40 focus:ring-blue-500 focus:border-blue-500 outline-none border bg-white dark:bg-gray-800"
                                         value={ptId}
                                         onChange={(e) => {
@@ -709,7 +712,11 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                         ))}
                                     </select>
                                     <input 
+                                        id="cdm_sessionNote"
+                                        name="sessionNote"
                                         type="text" 
+                                        aria-label="Ghi chú buổi tập"
+                                        placeholder="Ghi chú buổi tập..."
                                         className="text-sm border-gray-300 rounded-lg px-3 py-2 w-full sm:w-40 focus:ring-blue-500 focus:border-blue-500 outline-none border"
                                         value={note}
                                         onChange={(e) => setNote(e.target.value)}
@@ -985,8 +992,10 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                      
                      <div className="space-y-4">
                          <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-1">Lý do bảo lưu <span className="text-red-500">*</span></label>
+                             <label htmlFor="freezeReason" className="block text-sm font-medium text-gray-700 mb-1">Lý do bảo lưu <span className="text-red-500">*</span></label>
                              <input 
+                                 id="freezeReason"
+                                 name="freezeReason"
                                  type="text" 
                                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                  value={freezeData.reason}
@@ -995,8 +1004,10 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          </div>
                          <div className="grid grid-cols-2 gap-4">
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu</label>
+                                 <label htmlFor="freezeStartDate" className="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu</label>
                                  <input 
+                                     id="freezeStartDate"
+                                     name="freezeStartDate"
                                      type="date" 
                                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                      value={freezeData.startDate}
@@ -1004,8 +1015,10 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                  />
                              </div>
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">Ngày kết thúc dự kiến</label>
+                                 <label htmlFor="freezeEndDate" className="block text-sm font-medium text-gray-700 mb-1">Ngày kết thúc dự kiến</label>
                                  <input 
+                                     id="freezeEndDate"
+                                     name="freezeEndDate"
                                      type="date" 
                                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                      value={freezeData.endDate}
@@ -1073,8 +1086,10 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                      </div>
 
                                      <div>
-                                         <label className="block text-sm font-medium text-gray-700 mb-1">Ngày kích hoạt lại thực tế</label>
+                                         <label htmlFor="actualUnfreezeDate" className="block text-sm font-medium text-gray-700 mb-1">Ngày kích hoạt lại thực tế</label>
                                          <input 
+                                             id="actualUnfreezeDate"
+                                             name="actualUnfreezeDate"
                                              type="date" 
                                              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                              value={unfreezeData.actualUnfreezeDate}

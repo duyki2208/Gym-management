@@ -266,6 +266,9 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                           <td className="py-2 px-3">
                             {isAdmin ? (
                               <select
+                                id={`shift_select_${dateStr}`}
+                                name={`shift_${dateStr}`}
+                                aria-label={`Chọn ca làm việc cho ngày ${dateStr}`}
                                 className={`w-40 p-2 rounded-lg text-sm font-bold border transition-colors outline-none cursor-pointer ${
                                   shift === "Nghỉ"
                                     ? "bg-white text-gray-500 border-gray-200"

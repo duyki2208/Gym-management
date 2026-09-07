@@ -24,7 +24,12 @@ const app = express();
 app.set("trust proxy", 1);
 
 // --- SECURITY HEADERS ---
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // --- CORS ---
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -66,7 +71,19 @@ app.use("/api/v1/auth/login", authLimiter);
 app.use("/api/v1", apiLimiter);
 
 app.use(cookieParser());
-app.use(express.json({ limit: "5mb" }));
+app.use(
+  express.json({
+    limit: "5mb",
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
+);
+
+// Health check endpoint cho UptimeRobot / Render keep-alive (không qua rate limit nặng)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
 
 // --- ROUTES ---
 // Tất cả routes được gom qua prefix /api/v1/

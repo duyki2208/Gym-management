@@ -46,12 +46,15 @@ const Login = () => {
                   )}
 
                   <div className="flex flex-col gap-4">
-                    <label className="flex flex-col w-full flex-1">
-                      <p className="text-[#0d1b14] dark:text-gray-300 text-base font-medium leading-normal pb-2">Tên đăng nhập</p>
+                    <div className="flex flex-col w-full flex-1">
+                      <label htmlFor="username" className="text-[#0d1b14] dark:text-gray-300 text-base font-medium leading-normal pb-2 cursor-pointer">Tên đăng nhập</label>
                       <div className="flex w-full flex-1 items-stretch rounded-lg">
                         <input 
+                          id="username"
+                          name="username"
+                          type="text"
+                          autoComplete="username"
                           className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b14] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-700/50 bg-white dark:bg-[#102219] focus:border-primary h-14 placeholder:text-gray-500 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" 
-                          
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
                         />
@@ -59,15 +62,17 @@ const Login = () => {
                           <span className="material-symbols-outlined">person</span>
                         </div>
                       </div>
-                    </label>
+                    </div>
 
-                    <label className="flex flex-col w-full flex-1">
-                      <p className="text-[#0d1b14] dark:text-gray-300 text-base font-medium leading-normal pb-2">Mật khẩu</p>
+                    <div className="flex flex-col w-full flex-1">
+                      <label htmlFor="password" className="text-[#0d1b14] dark:text-gray-300 text-base font-medium leading-normal pb-2 cursor-pointer">Mật khẩu</label>
                       <div className="flex w-full flex-1 items-stretch rounded-lg">
                         <input 
+                          id="password"
+                          name="password"
+                          type="password"
+                          autoComplete="current-password"
                           className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b14] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-700/50 bg-white dark:bg-[#102219] focus:border-primary h-14 placeholder:text-gray-500 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" 
-                          
-                          type="password" 
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                         />
@@ -75,7 +80,7 @@ const Login = () => {
                           <span className="material-symbols-outlined">lock</span>
                         </div>
                       </div>
-                    </label>
+                    </div>
                   </div>
 
                   <button 

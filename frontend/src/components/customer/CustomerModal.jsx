@@ -525,10 +525,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
             </h3>
             <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_name" className="block text-sm font-medium text-gray-700 mb-1">
                     Họ và tên <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="cust_name"
+                    name="name"
                     type="text"
                     required
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
@@ -539,13 +541,14 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_identityCard" className="block text-sm font-medium text-gray-700 mb-1">
                     Số CCCD
                   </label>
                   <input
+                    id="cust_identityCard"
+                    name="identityCard"
                     type="text"
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                    
                     value={formData.identityCard}
                     onChange={(e) =>
                       setFormData({ ...formData, identityCard: e.target.value })
@@ -553,10 +556,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_phone" className="block text-sm font-medium text-gray-700 mb-1">
                     Số điện thoại <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="cust_phone"
+                    name="phone"
                     type="tel"
                     required
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
@@ -567,10 +572,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </label>
                   <input
+                    id="cust_email"
+                    name="email"
                     type="email"
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formData.email}
@@ -580,10 +587,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_dob" className="block text-sm font-medium text-gray-700 mb-1">
                     Ngày sinh <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="cust_dob"
+                    name="dob"
                     type="date"
                     required
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
@@ -594,10 +603,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_gender" className="block text-sm font-medium text-gray-700 mb-1">
                     Giới tính
                   </label>
                   <select
+                    id="cust_gender"
+                    name="gender"
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formData.gender}
                     onChange={(e) =>
@@ -610,10 +621,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_address" className="block text-sm font-medium text-gray-700 mb-1">
                     Địa chỉ
                   </label>
                   <input
+                    id="cust_address"
+                    name="address"
                     type="text"
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formData.address}
@@ -624,13 +637,14 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                 </div>
 
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold text-red-600">
+                  <label htmlFor="cust_emergencyContactName" className="block text-sm font-medium text-gray-700 mb-1 font-bold text-red-600">
                     Người liên hệ khẩn cấp
                   </label>
                   <input
+                    id="cust_emergencyContactName"
+                    name="emergencyContactName"
                     type="text"
                     className="w-full p-2 border rounded border-red-200 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none font-semibold text-gray-800"
-                    
                     value={formData.emergencyContactName}
                     onChange={(e) =>
                       setFormData({ ...formData, emergencyContactName: e.target.value })
@@ -638,13 +652,14 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold text-red-600">
+                  <label htmlFor="cust_emergencyContactPhone" className="block text-sm font-medium text-gray-700 mb-1 font-bold text-red-600">
                     SĐT liên hệ khẩn cấp
                   </label>
                   <input
+                    id="cust_emergencyContactPhone"
+                    name="emergencyContactPhone"
                     type="tel"
                     className="w-full p-2 border rounded border-red-200 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none font-semibold text-gray-800"
-                    
                     value={formData.emergencyContactPhone}
                     onChange={(e) =>
                       setFormData({ ...formData, emergencyContactPhone: e.target.value })
@@ -662,10 +677,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
             <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
               {/* Row 1 */}
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_packageType" className="block text-sm font-medium text-gray-700 mb-1">
                   Loại gói <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="cust_packageType"
+                  name="packageType"
                   required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.packageType}
@@ -682,10 +699,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               </div>
 
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_price" className="block text-sm font-medium text-gray-700 mb-1">
                   Giá gói (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="cust_price"
+                  name="price"
                   type="number"
                   required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-600"
@@ -698,10 +717,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
 
               {/* Row 2: Trạng thái thanh toán & Nhân viên tư vấn */}
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_paymentStatus" className="block text-sm font-medium text-gray-700 mb-1">
                   Trạng thái thanh toán <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="cust_paymentStatus"
+                  name="paymentStatus"
                   required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.paymentStatus}
@@ -713,10 +734,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               </div>
 
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_assignedStaff" className="block text-sm font-medium text-gray-700 mb-1">
                   Nhân viên tư vấn <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="cust_assignedStaff"
+                  name="assignedStaff"
                   required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.assignedStaff}
@@ -743,10 +766,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               {/* Row 3: Số tiền đặt cọc */}
               {formData.paymentStatus === "deposit" && (
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="cust_paidAmount" className="block text-sm font-medium text-gray-700 mb-1">
                     Số tiền cọc (VNĐ)
                   </label>
                   <input
+                    id="cust_paidAmount"
+                    name="paidAmount"
                     type="number"
                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-orange-600 font-bold"
                     value={formData.paidAmount}
@@ -757,10 +782,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
 
               {/* Row 4: Ngày bắt đầu & Ngày hết hạn */}
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_startDate" className="block text-sm font-medium text-gray-700 mb-1">
                   Ngày bắt đầu
                 </label>
                 <input
+                  id="cust_startDate"
+                  name="startDate"
                   type="date"
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.startDate}
@@ -769,10 +796,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               </div>
 
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_endDate" className="block text-sm font-medium text-gray-700 mb-1">
                   Ngày hết hạn
                 </label>
                 <input
+                  id="cust_endDate"
+                  name="endDate"
                   type="date"
                   className="w-full p-2 border rounded bg-white text-gray-500"
                   value={formData.endDate}
@@ -782,10 +811,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
 
               {/* Row 5: Nguồn hợp đồng & Mã hợp đồng */}
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_contractType" className="block text-sm font-medium text-gray-700 mb-1">
                   Loại hợp đồng
                 </label>
                 <select
+                  id="cust_contractType"
+                  name="contractType"
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.contractType}
                   onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
@@ -797,10 +828,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               </div>
 
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_contractCode" className="block text-sm font-medium text-gray-700 mb-1">
                   Mã hợp đồng <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="cust_contractCode"
+                  name="contractCode"
                   type="text"
                   required
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
@@ -811,10 +844,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
 
               {/* Row 6: Nguồn khách hàng & Hội viên giới thiệu (Được chuyển từ phần 1) */}
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_source" className="block text-sm font-medium text-gray-700 mb-1">
                   Nguồn khách hàng
                 </label>
                 <select
+                  id="cust_source"
+                  name="source"
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.source}
                   onChange={(e) =>
@@ -830,7 +865,7 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
               </div>
 
               <div className="col-span-2 md:col-span-1 relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_referralSearch" className="block text-sm font-medium text-gray-700 mb-1">
                   Hội viên giới thiệu
                 </label>
                 {formData.referredBy ? (
@@ -859,7 +894,11 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
                 ) : (
                   <div>
                     <input
+                      id="cust_referralSearch"
+                      name="referralSearch"
                       type="text"
+                      placeholder="Tìm tên, SĐT hoặc mã hội viên..."
+                      aria-label="Tìm kiếm hội viên giới thiệu"
                       className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                       value={referralSearch}
                       onChange={(e) => setReferralSearch(e.target.value)}
@@ -891,10 +930,12 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
 
               {/* Row 7: Ghi chú gói tập (Phần ghi chú gói tập để 1 dòng -> col-span-2) */}
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="cust_packageNote" className="block text-sm font-medium text-gray-700 mb-1">
                   Ghi chú gói tập
                 </label>
                 <input
+                  id="cust_packageNote"
+                  name="packageNote"
                   type="text"
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                   value={formData.packageNote}

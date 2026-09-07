@@ -437,6 +437,10 @@ const History = () => {
               search
             </span>
             <input
+              id="historySearchInput"
+              name="historySearch"
+              type="text"
+              aria-label="Tìm kiếm nhật ký theo tên khách hàng"
               className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm rounded-lg border border-border-light bg-background-light dark:bg-background-dark focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Tìm tên khách hàng..."
               value={search}

@@ -76,6 +76,10 @@ const ProductList = () => {
             search
           </span>
           <input
+            id="productListSearchInput"
+            name="productListSearch"
+            type="text"
+            aria-label="Tìm theo tên sản phẩm"
             className="w-full pl-10 pr-4 h-10 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white text-gray-800 transition-colors"
             placeholder="Tìm theo tên sản phẩm..."
             value={search}

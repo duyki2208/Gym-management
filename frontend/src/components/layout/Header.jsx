@@ -27,7 +27,7 @@ const BREADCRUMB_MAP = {
   '/staff':                       [{ label: 'Nhân sự', path: '/staff' }, { label: 'Nhân viên', path: '/staff' }],
   '/commissions':                 [{ label: 'Nhân sự', path: '/staff' }, { label: 'Hoa hồng', path: '/commissions' }],
   '/reports':                     [{ label: 'Báo cáo', path: '/reports/revenue' }],
-  '/reports/revenue':             [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Doanh thu', path: '/reports/revenue' }],
+  '/reports/revenue':             [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Doanh thu cơ sở', path: '/reports/revenue' }],
   '/reports/pt-sessions':         [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Buổi tập PT', path: '/reports/pt-sessions' }],
   '/reports/sales-funnel':        [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Hợp đồng', path: '/reports/sales-funnel' }],
   '/reports/customer-analytics':  [{ label: 'Báo cáo', path: '/reports/revenue' }, { label: 'Phân tích khách hàng', path: '/reports/customer-analytics' }],

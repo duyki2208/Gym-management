@@ -91,7 +91,7 @@ const menuStructure = [
         icon: BarChart3,
         label: 'Báo cáo ',
         children: [
-          { path: '/reports/revenue', icon: TrendingUp, label: 'Doanh thu', roles: MANAGER_ROLES },
+          { path: '/reports/revenue', icon: TrendingUp, label: 'Doanh thu cơ sở', roles: MANAGER_ROLES },
           { path: '/reports/pt-sessions', icon: Dumbbell, label: 'Buổi tập PT', roles: ALL_ROLES },
           { path: '/reports/sales-funnel', icon: Target, label: 'Hợp đồng', roles: MANAGER_ROLES },
           { path: '/reports/customer-analytics', icon: UserSearch, label: 'Phân tích khách hàng', roles: MANAGER_ROLES },

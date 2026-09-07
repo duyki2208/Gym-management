@@ -52,19 +52,23 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
         
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">Tên gói tập</label>
+            <label htmlFor="pkg_name" className="block text-sm font-medium mb-1.5 text-gray-700">Tên gói tập</label>
             <input 
+              id="pkg_name"
+              name="name"
+              type="text"
               required 
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
               value={formData.name} 
               onChange={e => setFormData({...formData, name: e.target.value})} 
-              
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">Loại gói</label>
+            <label htmlFor="pkg_type" className="block text-sm font-medium mb-1.5 text-gray-700">Loại gói</label>
             <select
+              id="pkg_type"
+              name="type"
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
               value={formData.type || 'monthly'}
               onChange={e => setFormData({...formData, type: e.target.value})}
@@ -76,8 +80,10 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
           
           {formData.type === 'session' && (
             <div className="animate-fade-in-up">
-              <label className="block text-sm font-medium mb-1.5 text-gray-700">Tổng số buổi tập <span className="text-red-500">*</span></label>
+              <label htmlFor="pkg_sessions" className="block text-sm font-medium mb-1.5 text-gray-700">Tổng số buổi tập <span className="text-red-500">*</span></label>
               <input 
+                id="pkg_sessions"
+                name="sessions"
                 type="number" 
                 required 
                 min="1"
@@ -90,8 +96,10 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">Thời hạn sử dụng gói (tính theo ngày)</label>
+            <label htmlFor="pkg_duration" className="block text-sm font-medium mb-1.5 text-gray-700">Thời hạn sử dụng gói (tính theo ngày)</label>
             <input 
+              id="pkg_duration"
+              name="duration"
               type="number" 
               required 
               min="1"
@@ -103,8 +111,10 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-gray-700">Giá bán (VNĐ)</label>
+            <label htmlFor="pkg_price" className="block text-sm font-medium mb-1.5 text-gray-700">Giá bán (VNĐ)</label>
             <input 
+              id="pkg_price"
+              name="price"
               type="number" 
               required 
               min="0"

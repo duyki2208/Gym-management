@@ -270,6 +270,10 @@ const CustomerList = () => {
           <div className="relative flex-1 min-w-[240px] max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-500 text-xl">search</span>
             <input
+              id="customerListSearchInput"
+              name="customerListSearch"
+              type="text"
+              aria-label="Tìm kiếm hội viên theo tên hoặc số điện thoại"
               className="w-full pl-10 pr-4 h-10 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white dark:bg-gray-800 dark:text-gray-100 transition-colors"
               placeholder="Tìm tên, SĐT..."
               value={searchTerm}
@@ -560,19 +564,19 @@ const CustomerList = () => {
               <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-4 min-w-[320px]">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Ngày bắt đầu gói</label>
+                    <label htmlFor="filterStartDateFrom" className="block text-xs font-bold text-gray-700 mb-1">Ngày bắt đầu gói</label>
                     <div className="flex items-center gap-2">
-                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateFrom} onChange={e=>setFilterStartDateFrom(e.target.value)} title="Từ ngày"/>
+                      <input id="filterStartDateFrom" name="filterStartDateFrom" aria-label="Ngày bắt đầu từ ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateFrom} onChange={e=>setFilterStartDateFrom(e.target.value)} title="Từ ngày"/>
                       <span className="text-gray-400 font-bold">-</span>
-                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateTo} onChange={e=>setFilterStartDateTo(e.target.value)} title="Đến ngày"/>
+                      <input id="filterStartDateTo" name="filterStartDateTo" aria-label="Ngày bắt đầu đến ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateTo} onChange={e=>setFilterStartDateTo(e.target.value)} title="Đến ngày"/>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Ngày hết hạn gói</label>
+                    <label htmlFor="filterEndDateFrom" className="block text-xs font-bold text-gray-700 mb-1">Ngày hết hạn gói</label>
                     <div className="flex items-center gap-2">
-                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateFrom} onChange={e=>setFilterEndDateFrom(e.target.value)} title="Từ ngày"/>
+                      <input id="filterEndDateFrom" name="filterEndDateFrom" aria-label="Ngày hết hạn từ ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateFrom} onChange={e=>setFilterEndDateFrom(e.target.value)} title="Từ ngày"/>
                       <span className="text-gray-400 font-bold">-</span>
-                      <input type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateTo} onChange={e=>setFilterEndDateTo(e.target.value)} title="Đến ngày"/>
+                      <input id="filterEndDateTo" name="filterEndDateTo" aria-label="Ngày hết hạn đến ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateTo} onChange={e=>setFilterEndDateTo(e.target.value)} title="Đến ngày"/>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">

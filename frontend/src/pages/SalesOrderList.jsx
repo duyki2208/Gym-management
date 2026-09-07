@@ -234,7 +234,10 @@ const SalesOrderList = () => {
         <div className="relative flex-1 max-w-lg min-w-[260px]">
           <Search className="absolute left-3.5 top-2.5 text-gray-400" size={17} />
           <input
+            id="sales_search_input"
+            name="salesSearch"
             type="text"
+            aria-label="Tìm kiếm theo tên sản phẩm"
             className="w-full pl-9 pr-3 h-9 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 text-xs bg-white text-gray-800"
             placeholder="Tìm tên sản phẩm..."
             value={search}
@@ -292,10 +295,13 @@ const SalesOrderList = () => {
 
                 {/* Khoảng ngày tùy chọn */}
                 <div className="pt-2 border-t border-gray-100">
-                  <label className="block text-xs font-bold text-gray-700 mb-2">Lọc theo ngày chọn</label>
+                  <label htmlFor="salesStartDate" className="block text-xs font-bold text-gray-700 mb-2">Lọc theo ngày chọn</label>
                   <div className="flex items-center gap-2">
                     <input 
+                      id="salesStartDate"
+                      name="salesStartDate"
                       type="date" 
+                      aria-label="Từ ngày"
                       className="w-full text-xs p-2 border border-gray-200 rounded-xl outline-none focus:border-primary bg-gray-50 font-medium" 
                       value={startDate} 
                       onChange={e => {
@@ -306,7 +312,10 @@ const SalesOrderList = () => {
                     />
                     <span className="text-gray-400 font-bold text-xs">-</span>
                     <input 
+                      id="salesEndDate"
+                      name="salesEndDate"
                       type="date" 
+                      aria-label="Đến ngày"
                       className="w-full text-xs p-2 border border-gray-200 rounded-xl outline-none focus:border-primary bg-gray-50 font-medium" 
                       value={endDate} 
                       onChange={e => {

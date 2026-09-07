@@ -75,7 +75,7 @@ async function syncCustomerFields(customerId, options = {}, models = null) {
       customer.packageNote     = "";
     }
 
-    await customer.save({ session });
+    await customer.save({ session: session || undefined });
   } catch (err) {
     console.error("Lỗi đồng bộ hồ sơ khách hàng:", err);
     throw err;

@@ -21,14 +21,16 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
         </div>
         
         <div className="flex-1">
-          <label className="block text-xs font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
+          <label htmlFor="customerAvatarInput" className="block text-xs font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
             Ảnh đại diện (Tải ảnh từ máy tính ➔ Cloudinary)
           </label>
           <div className="flex items-center gap-2">
-            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium rounded-lg transition-colors">
+            <label htmlFor="customerAvatarInput" className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium rounded-lg transition-colors">
               <Upload size={14} />
               <span>Chọn ảnh mới</span>
               <input 
+                id="customerAvatarInput"
+                name="avatar"
                 type="file" 
                 accept="image/*" 
                 onChange={onAvatarFileChange} 
@@ -42,10 +44,11 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
+          <label htmlFor="cf_code" className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
             Mã Khách Hàng <span className="text-rose-500">*</span>
           </label>
           <input
+            id="cf_code"
             type="text"
             name="code"
             value={formData.code}
@@ -57,10 +60,11 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
+          <label htmlFor="cf_name" className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
             Họ và Tên <span className="text-rose-500">*</span>
           </label>
           <input
+            id="cf_name"
             type="text"
             name="name"
             value={formData.name}
@@ -72,10 +76,11 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
+          <label htmlFor="cf_phone" className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
             Số Điện Thoại <span className="text-rose-500">*</span>
           </label>
           <input
+            id="cf_phone"
             type="tel"
             name="phone"
             value={formData.phone}
@@ -87,10 +92,11 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
+          <label htmlFor="cf_email" className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
             Email
           </label>
           <input
+            id="cf_email"
             type="email"
             name="email"
             value={formData.email}
@@ -101,10 +107,11 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
+          <label htmlFor="cf_dob" className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
             Ngày Sinh
           </label>
           <input
+            id="cf_dob"
             type="date"
             name="dob"
             value={formData.dob}
@@ -114,10 +121,11 @@ const CustomerFormBasicInfo = ({ formData, handleChange, isEdit, onAvatarFileCha
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
+          <label htmlFor="cf_gender" className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1">
             Giới Tính
           </label>
           <select
+            id="cf_gender"
             name="gender"
             value={formData.gender}
             onChange={handleChange}

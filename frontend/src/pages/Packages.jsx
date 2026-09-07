@@ -67,6 +67,10 @@ const Packages = () => {
             search
           </span>
           <input
+            id="pkgSearchInput"
+            name="pkgSearch"
+            type="text"
+            aria-label="Tìm kiếm gói tập theo tên"
             className="w-full pl-10 pr-4 h-10 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white dark:bg-gray-800 dark:text-gray-100 transition-colors"
             placeholder="Tìm tên gói tập..."
           />

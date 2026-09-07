@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dumbbell, Search, Calendar, Filter, Download, ChevronDown,
   CheckCircle2, XCircle, AlertTriangle, TrendingUp,
-  Award, RefreshCw, UserCheck
+  Award, RefreshCw, UserCheck, ClipboardCheck
 } from 'lucide-react';
 import reportService from '../../services/reportService';
 import { staffService } from '../../services/customerService';
 import toast from 'react-hot-toast';
+import PTSessionReportModal from './PTSessionReportModal';
 
 const STATUS_MAP = {
   completed: { label: 'Hoàn thành', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800', icon: CheckCircle2 },
@@ -40,6 +41,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
   const [ptList, setPtList] = useState([]);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPTList();
@@ -123,9 +125,43 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
           <div className="flex items-center gap-2.5">
             <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100">Buổi Tập PT</h2>
           </div>
+          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Theo dõi lịch sử buổi tập và đối soát phiên dạy PT</p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Chọn tháng / năm */}
+          {setSelectedMonth && setSelectedYear && (
+            <div className="flex items-center gap-2">
+              <select
+                aria-label="Chọn tháng"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>Tháng {m}</option>
+                ))}
+              </select>
+              <select
+                aria-label="Chọn năm"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsAuditModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white text-xs font-bold shadow-sm shrink-0 transition"
+          >
+            <ClipboardCheck size={15} /> Đối Soát Buổi Tập PT
+          </button>
+
           <button
             onClick={handleExportExcel}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm hover:bg-emerald-700 shrink-0 transition"
@@ -141,28 +177,27 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
           icon={Dumbbell}
           label={`Tổng buổi đã dạy (${selectedMonth}/${selectedYear})`}
           value={completedCount.toLocaleString('vi-VN')}
-          sub="Đã hoàn thành chuẩn"
+          
           tone="primary"
         />
         <KPICard
           icon={TrendingUp}
           label="TB buổi hoàn thành / PT"
           value={avgPerPT}
-          sub={`${activePTCount} PT đang hoạt động`}
+          
           tone="emerald"
         />
         <KPICard
           icon={XCircle}
           label="Buổi bị huỷ / Vi phạm"
           value={cancelledCount}
-          sub="Không tính hoàn thành"
           tone="red"
         />
         <KPICard
           icon={AlertTriangle}
           label="Khách sắp hết buổi"
           value={atRiskCount}
-          sub="Còn ≤ 2 buổi trong gói"
+
           tone="amber"
         />
       </div>
@@ -315,6 +350,16 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
           ))}
         </div>
       </div>
+
+      {/* Modal Đối Soát Buổi Tập PT */}
+      <PTSessionReportModal
+        isOpen={isAuditModalOpen}
+        onClose={() => {
+          setIsAuditModalOpen(false);
+          fetchReportData();
+        }}
+        userRole={userRole}
+      />
     </div>
   );
 };

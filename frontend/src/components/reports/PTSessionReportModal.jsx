@@ -337,9 +337,7 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
 
         {/* Footer Workflow Action Controls */}
         <div className="p-4 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900 flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-xs text-gray-500">
-            Quy trình: Draft ➔ Sent for review ➔ PT Confirmed / Disputed ➔ Approved ➔ Paid
-          </div>
+          
 
           <div className="flex items-center gap-2 flex-wrap">
             <button

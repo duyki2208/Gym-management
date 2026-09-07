@@ -110,6 +110,10 @@ const CheckIn = () => {
         <div className="relative flex-1 max-w-2xl">
           <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-500 text-xl">search</span>
           <input
+            id="checkInSearchInput"
+            name="checkInSearch"
+            type="text"
+            aria-label="Tìm kiếm hội viên để check in theo tên hoặc số điện thoại"
             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-gray-100"
             placeholder="Tìm tên, SĐT..."
             value={searchTerm}

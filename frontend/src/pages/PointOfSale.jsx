@@ -183,9 +183,25 @@ const PointOfSale = ({ onFinish, onClose }) => {
             <div className="flex gap-4 mb-5">
                <div className="relative flex-1">
                    <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-                   <input type="text" placeholder="Tìm tên..." className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                   <input 
+                      id="pos_search_input"
+                      name="posSearch"
+                      type="text" 
+                      placeholder="Tìm tên..." 
+                      aria-label="Tìm kiếm sản phẩm"
+                      className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary" 
+                      value={searchTerm} 
+                      onChange={(e) => setSearchTerm(e.target.value)} 
+                   />
                </div>
-               <select className="border border-gray-200 rounded-xl px-4 py-2.5 outline-none bg-gray-50 focus:ring-2 focus:ring-primary" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+               <select 
+                 id="pos_category_filter"
+                 name="posCategory"
+                 aria-label="Lọc theo danh mục sản phẩm"
+                 className="border border-gray-200 rounded-xl px-4 py-2.5 outline-none bg-gray-50 focus:ring-2 focus:ring-primary" 
+                 value={categoryFilter} 
+                 onChange={(e) => setCategoryFilter(e.target.value)}
+               >
                    <option value="All">Tất cả danh mục</option>
                    <option value="Đồ uống">Đồ uống</option>
                    <option value="Thực phẩm bổ sung">Thực phẩm bổ sung</option>
@@ -234,6 +250,9 @@ const PointOfSale = ({ onFinish, onClose }) => {
                </div>
                {!isWalkIn && (
                   <select 
+                     id="pos_customer_select"
+                     name="posCustomer"
+                     aria-label="Chọn hội viên mua hàng"
                      className="w-full mt-3 p-2.5 border border-gray-200 rounded-xl outline-none text-sm bg-white focus:ring-2 focus:ring-primary"
                      onChange={(e) => setSelectedCustomer(customers.find(c => c._id === e.target.value))}
                   >
