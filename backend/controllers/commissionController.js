@@ -4,6 +4,7 @@ const WorkoutSession = require("../models/WorkoutSession");
 const CustomerPackage = require("../models/CustomerPackage");
 const Setting = require("../models/Setting");
 const User = require("../models/User");
+const AuditLog = require("../models/AuditLog");
 const { startOfMonth, endOfMonth } = require("date-fns");
 
 /**
@@ -456,9 +457,40 @@ const createSaleCommission = async ({ staffId, customerPackageId, customerId, pa
       year: now.getFullYear(),
     });
 
+    // Lưu snapshot tỷ lệ hoa hồng áp dụng trực tiếp vào hợp đồng gốc (CustomerPackage)
+    if (customerPackageId) {
+      await CustomerPackage.findByIdAndUpdate(customerPackageId, {
+        appliedCommissionRate: rate
+      }).catch(() => {});
+    }
+
     return commission;
   } catch (error) {
-    console.error("Lỗi tạo hoa hồng Sale:", error);
+    const errorDetails = {
+      staffId,
+      customerPackageId,
+      customerId,
+      packagePrice,
+      contractType,
+      error: error.message,
+      timestamp: new Date()
+    };
+    console.error("[CRITICAL_COMMISSION_FAILED]", JSON.stringify(errorDetails));
+
+    // Lưu vết bền vững vào MongoDB AuditLog chống mất log khi Render Free spin-down/restart
+    try {
+      await AuditLog.create({
+        action: "COMMISSION_FAILED",
+        method: "SYSTEM",
+        path: "/commissions/createSaleCommission",
+        severity: "critical",
+        details: errorDetails,
+        timestamp: new Date()
+      });
+    } catch (auditErr) {
+      console.error("Lỗi ghi AuditLog thất bại:", auditErr.message);
+    }
+
     return null; // Không block flow chính
   }
 };
@@ -582,7 +614,30 @@ const handleUpgradeCommission = async ({
       }
     }
   } catch (error) {
-    console.error("Lỗi xử lý hoa hồng nâng cấp:", error);
+    const errorDetails = {
+      oldPackageId: oldPackage?._id,
+      newPackageId,
+      newCustomerPackageId,
+      customerId,
+      upgradeSaleStaffId,
+      priceDiff,
+      error: error.message,
+      timestamp: new Date()
+    };
+    console.error("[CRITICAL_COMMISSION_FAILED] [UPGRADE]", JSON.stringify(errorDetails));
+
+    try {
+      await AuditLog.create({
+        action: "COMMISSION_UPGRADE_FAILED",
+        method: "SYSTEM",
+        path: "/commissions/handleUpgradeCommission",
+        severity: "critical",
+        details: errorDetails,
+        timestamp: new Date()
+      });
+    } catch (auditErr) {
+      console.error("Lỗi ghi AuditLog nâng cấp:", auditErr.message);
+    }
     return null;
   }
 };

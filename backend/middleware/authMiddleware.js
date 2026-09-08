@@ -75,7 +75,10 @@ const protect = async (req, res, next) => {
       req.user = user;
       req.user.isCentral = isCentral || user.role === "admin" || user.role === "accountant";
       req.user.activeBranch = req.branchCode || decoded.activeBranch || "HN01";
-      req.user.allowedBranches = user.allowedBranches || ["*"];
+      req.user.allowedBranches =
+        Array.isArray(user.allowedBranches) && user.allowedBranches.length > 0
+          ? user.allowedBranches
+          : (req.user.isCentral && user.role === "admin" ? ["*"] : []);
       req.user.branchCode = req.branchCode || decoded.branchCode || "HN01";
 
       return next();

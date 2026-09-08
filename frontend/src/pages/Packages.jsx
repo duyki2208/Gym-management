@@ -119,9 +119,14 @@ const Packages = () => {
                     {p.name || "N/A"}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-sm font-medium ${p.type === 'session' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {p.type === 'session' ? 'Theo buổi' : 'Theo tháng'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${p.type === 'session' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'}`}>
+                          {p.type === 'session' ? 'Theo buổi' : 'Theo tháng'}
+                      </span>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${p.category === 'trial' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/60' : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'}`}>
+                          {p.category === 'trial' ? 'Trải nghiệm' : 'Duy trì'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 font-medium text-subtle-light dark:text-subtle-dark">
                     {p.price ? p.price.toLocaleString() : "0"}

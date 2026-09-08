@@ -347,21 +347,28 @@ const getInventoryReport = async (req, res) => {
 
 
 // @desc    Get Churn Prediction list
+// @desc    Get Churn Prediction list
 // @route   GET /api/v1/reports/churn-prediction
 // @access  Private
 const getChurnPrediction = async (req, res) => {
   try {
     const today = new Date();
     
-    // 1. Lấy tất cả khách hàng có gói tập chưa hết hạn
+    // 1. Lấy tất cả khách hàng có gói tập chưa hết hạn hoặc cần kiểm tra ngày hết hạn
+    // Loại trừ các gói trải nghiệm / kích cầu (packageCategory === 'trial')
     const activeCustomers = await Customer.find({
-      endDate: { $gte: today }
-    }).select("name code phone endDate packageType email avatar").lean();
+      $or: [
+        { endDate: { $gte: today } },
+        { endDate: null },
+        { endDate: { $exists: false } }
+      ],
+      packageCategory: { $ne: "trial" }
+    }).select("name code phone startDate endDate createdAt packageType packageCategory remainingSessions trainer assignedStaff email avatar").lean();
 
     if (!activeCustomers || activeCustomers.length === 0) {
       return res.status(200).json({
         success: true,
-        data: { highRisk: [], mediumRisk: [], lowRisk: [] },
+        data: { highRisk: [], mediumRisk: [], lowRisk: [], missingData: [] },
         message: "Không có khách hàng nào đang active"
       });
     }
@@ -383,34 +390,115 @@ const getChurnPrediction = async (req, res) => {
     const highRisk = [];
     const mediumRisk = [];
     const lowRisk = [];
+    const missingData = [];
 
-    // 3. Phân loại theo Risk Logic
+    // 3. Phân loại theo Risk Logic & Phân biệt Dữ liệu hỏng vs Khách mới
     activeCustomers.forEach(customer => {
+      const endDateParsed = customer.endDate ? new Date(customer.endDate) : null;
+      const isEndDateInvalid = !endDateParsed || isNaN(endDateParsed.getTime());
+
+      // startDate làm chuẩn, chỉ fallback sang createdAt khi startDate thiếu hoặc invalid
+      const startDateRaw = customer.startDate ? new Date(customer.startDate) : null;
+      const isStartDateValid = startDateRaw && !isNaN(startDateRaw.getTime());
+      const createdAtRaw = customer.createdAt ? new Date(customer.createdAt) : null;
+      const isCreatedAtValid = createdAtRaw && !isNaN(createdAtRaw.getTime());
+      const startDate = isStartDateValid ? startDateRaw : (isCreatedAtValid ? createdAtRaw : null);
+
+      // Nếu dữ liệu ngày cốt lõi bị hỏng/thiếu bất thường -> Gom vào nhóm missingData (Cần rà soát hồ sơ)
+      if (isEndDateInvalid || !startDate) {
+        missingData.push({
+          ...customer,
+          issue: isEndDateInvalid ? "Thiếu hoặc sai ngày hết hạn" : "Thiếu ngày bắt đầu gói",
+          daysUntilExpiration: null,
+          daysSinceLastCheckIn: null,
+          lastCheckInDate: null,
+          riskLevel: "missing"
+        });
+        return;
+      }
+
       const lastCheckIn = checkInMap.get(customer._id.toString()) || null;
+      const daysUntilExpiration = Math.ceil((endDateParsed - today) / (1000 * 60 * 60 * 24));
       
-      const daysUntilExpiration = Math.ceil((new Date(customer.endDate) - today) / (1000 * 60 * 60 * 24));
-      
+      const isNeverCheckedIn = !lastCheckIn;
+      const daysSinceStart = Math.max(0, Math.floor((today - startDate) / (1000 * 60 * 60 * 24)));
       const daysSinceLastCheckIn = lastCheckIn 
-        ? Math.floor((today - lastCheckIn) / (1000 * 60 * 60 * 24))
-        : 999;
+        ? Math.max(0, Math.floor((today - lastCheckIn) / (1000 * 60 * 60 * 24)))
+        : null;
+
+      // Trục 1: Rủi ro thời hạn gói (expirationRisk)
+      let expirationRisk = 'low';
+      if (daysUntilExpiration <= 7) {
+        expirationRisk = 'high';
+      } else if (daysUntilExpiration <= 14) {
+        expirationRisk = 'medium';
+      }
+
+      // Trục 2: Rủi ro chuyên cần / kích hoạt tập (engagementRisk)
+      let engagementRisk = 'low';
+      let engagementNote = '';
+
+      if (isNeverCheckedIn) {
+        // Khách chưa từng check-in
+        if (daysSinceStart <= 14) {
+          engagementRisk = 'low'; // Khách mới trong ân hạn 14 ngày
+          engagementNote = 'Hội viên mới - Chưa có buổi tập đầu';
+        } else if (daysSinceStart <= 30) {
+          engagementRisk = 'medium';
+          engagementNote = `Chưa kích hoạt tập sau ${daysSinceStart} ngày`;
+        } else {
+          engagementRisk = 'high';
+          engagementNote = `Không đi tập quá ${daysSinceStart} ngày từ khi mở gói`;
+        }
+      } else {
+        // Khách đã từng check-in
+        if (daysSinceLastCheckIn > 21) {
+          engagementRisk = 'high';
+          engagementNote = `Đã nghỉ tập ${daysSinceLastCheckIn} ngày`;
+        } else if (daysSinceLastCheckIn > 14) {
+          engagementRisk = 'medium';
+          engagementNote = `Đã nghỉ tập ${daysSinceLastCheckIn} ngày`;
+        } else {
+          engagementRisk = 'low';
+          engagementNote = `Vừa tập ${daysSinceLastCheckIn} ngày trước`;
+        }
+      }
+
+      // Riêng khách PT: Đã hết số buổi mà sắp hết hạn gói
+      if (customer.remainingSessions !== undefined && customer.remainingSessions === 0 && daysUntilExpiration <= 14) {
+        expirationRisk = 'high';
+        engagementNote = (engagementNote ? engagementNote + ' | ' : '') + 'Đã học hết số buổi PT';
+      }
+
+      // Luật MAX RISK: Rủi ro cao hơn sẽ quyết định phân loại cuối cùng
+      let finalRisk = 'low';
+      if (expirationRisk === 'high' || engagementRisk === 'high') {
+        finalRisk = 'high';
+      } else if (expirationRisk === 'medium' || engagementRisk === 'medium') {
+        finalRisk = 'medium';
+      }
 
       const customerData = {
         ...customer,
         daysUntilExpiration,
-        daysSinceLastCheckIn,
-        lastCheckInDate: lastCheckIn
+        daysSinceLastCheckIn: daysSinceLastCheckIn !== null ? daysSinceLastCheckIn : daysSinceStart,
+        isNeverCheckedIn,
+        daysSinceStart,
+        lastCheckInDate: lastCheckIn,
+        engagementNote,
+        riskLevel: finalRisk
       };
 
-      if ((daysUntilExpiration < 14 && daysSinceLastCheckIn > 7) || daysSinceLastCheckIn > 21) {
+      if (finalRisk === 'high') {
         highRisk.push(customerData);
-      } else if (daysUntilExpiration < 30 || daysSinceLastCheckIn > 14) {
+      } else if (finalRisk === 'medium') {
         mediumRisk.push(customerData);
       } else {
         lowRisk.push(customerData);
       }
     });
 
-    // Sắp xếp người rủi ro nhất (bỏ tập lâu nhất) lên đầu
+    // Sắp xếp: Ưu tiên người bỏ tập lâu nhất / sắp hết hạn nhất lên đầu
     highRisk.sort((a, b) => b.daysSinceLastCheckIn - a.daysSinceLastCheckIn);
     mediumRisk.sort((a, b) => b.daysSinceLastCheckIn - a.daysSinceLastCheckIn);
 
@@ -419,7 +507,8 @@ const getChurnPrediction = async (req, res) => {
       data: {
         highRisk,
         mediumRisk,
-        lowRisk
+        lowRisk,
+        missingData
       },
       message: "Lấy dữ liệu Churn Prediction thành công"
     });

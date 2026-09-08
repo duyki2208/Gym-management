@@ -106,10 +106,24 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Mật khẩu không đúng!" });
     }
 
-    const allowedBranches = centralUser.allowedBranches || ["*"];
-    const activeBranch =
-      reqBranchCode ||
-      (allowedBranches.includes("*") ? "HN01" : allowedBranches[0] || "HN01");
+    const allowedBranches =
+      Array.isArray(centralUser.allowedBranches) && centralUser.allowedBranches.length > 0
+        ? centralUser.allowedBranches
+        : (centralUser.role === "admin" ? ["*"] : []);
+
+    let activeBranch = "HN01";
+    if (reqBranchCode) {
+      const normalizedReqBranch = String(reqBranchCode).trim().toUpperCase();
+      if (!allowedBranches.includes("*") && !allowedBranches.includes(normalizedReqBranch)) {
+        return res.status(403).json({
+          code: "BRANCH_ACCESS_DENIED",
+          message: `Bạn không có quyền đăng nhập vào chi nhánh ${normalizedReqBranch}`,
+        });
+      }
+      activeBranch = normalizedReqBranch;
+    } else {
+      activeBranch = allowedBranches.includes("*") ? "HN01" : (allowedBranches[0] || "HN01");
+    }
 
     const accessToken = generateAccessToken(centralUser._id, centralUser.role, {
       allowedBranches,
@@ -192,8 +206,12 @@ const refreshToken = async (req, res) => {
       }
 
       const activeBranch = decoded.activeBranch || "HN01";
+      const userAllowedBranches =
+        Array.isArray(user.allowedBranches) && user.allowedBranches.length > 0
+          ? user.allowedBranches
+          : (user.role === "admin" ? ["*"] : []);
       const newAccessToken = generateAccessToken(user._id, user.role, {
-        allowedBranches: user.allowedBranches || ["*"],
+        allowedBranches: userAllowedBranches,
         activeBranch,
         isCentral: true,
       });
@@ -289,7 +307,10 @@ const switchBranch = async (req, res) => {
     }
 
     // Kiểm tra quyền truy cập chi nhánh của user
-    const allowedBranches = req.user.allowedBranches || ["*"];
+    const allowedBranches =
+      Array.isArray(req.user.allowedBranches) && req.user.allowedBranches.length > 0
+        ? req.user.allowedBranches
+        : (req.user.role === "admin" ? ["*"] : []);
     if (!allowedBranches.includes("*") && !allowedBranches.includes(normalizedCode)) {
       return res.status(403).json({ message: `Bạn không có quyền truy cập chi nhánh ${normalizedCode}` });
     }

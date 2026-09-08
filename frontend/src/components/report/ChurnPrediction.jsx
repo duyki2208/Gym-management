@@ -36,8 +36,9 @@ const ChurnPrediction = () => {
   // Kết hợp tất cả danh sách để dễ filter
   const allCustomers = useMemo(() => {
     return [
-      ...data.highRisk.map(c => ({ ...c, riskLevel: 'high' })),
-      ...data.mediumRisk.map(c => ({ ...c, riskLevel: 'medium' }))
+      ...(data.highRisk || []).map(c => ({ ...c, riskLevel: 'high' })),
+      ...(data.mediumRisk || []).map(c => ({ ...c, riskLevel: 'medium' })),
+      ...(data.missingData || []).map(c => ({ ...c, riskLevel: 'missing' }))
     ];
   }, [data]);
 
@@ -45,8 +46,8 @@ const ChurnPrediction = () => {
   const filteredList = useMemo(() => {
     return allCustomers.filter(customer => {
       const matchFilter = filter === 'all' ? true : customer.riskLevel === filter;
-      const matchSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          customer.phone.includes(searchTerm);
+      const matchSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (customer.phone || '').includes(searchTerm);
       return matchFilter && matchSearch;
     });
   }, [allCustomers, filter, searchTerm]);
@@ -79,7 +80,7 @@ const ChurnPrediction = () => {
             <AlertTriangle className="text-amber-500" size={20} />
             Cảnh báo khách hàng rời bỏ (Churn)
           </h2>
-          <p className="text-xs text-gray-400 mt-0.5">Dự đoán hội viên có nguy cơ không gia hạn dựa trên tần suất check-in và hạn gói tập</p>
+          <p className="text-xs text-gray-400 mt-0.5">Dự đoán hội viên gói duy trì có nguy cơ không gia hạn dựa trên tần suất check-in và hạn gói tập</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -110,22 +111,23 @@ const ChurnPrediction = () => {
               setCurrentPage(1);
             }}
           >
-            <option value="all">Tất cả nguy cơ ({allCustomers.length})</option>
-            <option value="high">Nguy cơ Cao ({data.highRisk.length})</option>
-            <option value="medium">Nguy cơ Vừa ({data.mediumRisk.length})</option>
+            <option value="all">Tất cả ({allCustomers.length})</option>
+            <option value="high">Nguy cơ Cao ({data.highRisk?.length || 0})</option>
+            <option value="medium">Nguy cơ Vừa ({data.mediumRisk?.length || 0})</option>
+            <option value="missing">Cần rà soát hồ sơ ({data.missingData?.length || 0})</option>
           </select>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-6 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700/60">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700/60">
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nguy cơ cao</p>
             <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight break-words">
-              {data.highRisk.length} <span className="text-sm font-semibold text-gray-400">hội viên</span>
+              {data.highRisk?.length || 0} <span className="text-sm font-semibold text-gray-400">hội viên</span>
             </p>
-            <p className="text-xs text-gray-400 mt-2">Nghỉ tập &gt; 14 ngày hoặc sắp hết hạn</p>
+            <p className="text-xs text-gray-400 mt-2">Nghỉ &gt; 21 ngày hoặc hạn &le; 7 ngày</p>
           </div>
           <div className="w-11 h-11 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/30">
             <AlertCircle size={22} />
@@ -136,9 +138,9 @@ const ChurnPrediction = () => {
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nguy cơ trung bình</p>
             <p className="text-2xl md:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight break-words">
-              {data.mediumRisk.length} <span className="text-sm font-semibold text-gray-400">hội viên</span>
+              {data.mediumRisk?.length || 0} <span className="text-sm font-semibold text-gray-400">hội viên</span>
             </p>
-            <p className="text-xs text-gray-400 mt-2">Tần suất tập giảm đột ngột</p>
+            <p className="text-xs text-gray-400 mt-2">Nghỉ &gt; 14 ngày hoặc hạn &le; 14 ngày</p>
           </div>
           <div className="w-11 h-11 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/30">
             <Clock size={22} />
@@ -147,9 +149,22 @@ const ChurnPrediction = () => {
 
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cần rà soát hồ sơ</p>
+            <p className="text-2xl md:text-3xl font-extrabold text-purple-600 dark:text-purple-400 tracking-tight break-words">
+              {data.missingData?.length || 0} <span className="text-sm font-semibold text-gray-400">hồ sơ</span>
+            </p>
+            <p className="text-xs text-gray-400 mt-2">Thiếu hoặc sai ngày hết hạn gói</p>
+          </div>
+          <div className="w-11 h-11 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/30">
+            <AlertTriangle size={22} />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tỷ lệ an toàn</p>
             <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
-              {Math.round((data.lowRisk.length / (allCustomers.length + data.lowRisk.length || 1)) * 100)}%
+              {Math.round(((data.lowRisk?.length || 0) / ((allCustomers.length + (data.lowRisk?.length || 0)) || 1)) * 100)}%
             </p>
             <p className="text-xs text-gray-400 mt-2">Hội viên duy trì tập luyện đều đặn</p>
           </div>
@@ -185,34 +200,55 @@ const ChurnPrediction = () => {
                   </div>
                 </td>
                 <td className="p-4">
-                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1.5 border ${
-                    customer.riskLevel === 'high' 
-                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/50' 
-                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/50'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${customer.riskLevel === 'high' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
-                    {customer.riskLevel === 'high' ? 'Nguy cơ Cao' : 'Cần chú ý'}
-                  </span>
-                </td>
-                <td className="p-4">
-                  {customer.daysSinceLastCheckIn === 999 ? (
-                    <span className="text-gray-400 text-xs italic">Chưa từng check-in</span>
+                  {customer.riskLevel === 'missing' ? (
+                    <span className="px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1.5 border bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border-purple-200/50">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                      Cần rà soát
+                    </span>
                   ) : (
-                    <span className={`font-bold ${customer.daysSinceLastCheckIn > 14 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                      {customer.daysSinceLastCheckIn} ngày
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1.5 border ${
+                      customer.riskLevel === 'high' 
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/50' 
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/50'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${customer.riskLevel === 'high' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+                      {customer.riskLevel === 'high' ? 'Nguy cơ Cao' : 'Cần chú ý'}
                     </span>
-                  )}
-                  {customer.lastCheckInDate && (
-                    <p className="text-[11px] text-gray-400 mt-0.5">Lần cuối: {new Date(customer.lastCheckInDate).toLocaleDateString('vi-VN')}</p>
                   )}
                 </td>
                 <td className="p-4">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                    <span className={`font-semibold ${customer.daysUntilExpiration <= 14 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                      {customer.daysUntilExpiration} ngày
-                    </span>
-                  </div>
+                  {customer.riskLevel === 'missing' ? (
+                    <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">{customer.issue || 'Thiếu ngày hết hạn'}</span>
+                  ) : customer.isNeverCheckedIn ? (
+                    <div>
+                      <span className="text-amber-600 dark:text-amber-400 text-xs font-semibold">Chưa có buổi tập đầu</span>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Mở gói: {customer.daysSinceStart} ngày trước</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className={`font-bold ${customer.daysSinceLastCheckIn > 14 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {customer.daysSinceLastCheckIn} ngày
+                      </span>
+                      {customer.lastCheckInDate && (
+                        <p className="text-[11px] text-gray-400 mt-0.5">Lần cuối: {new Date(customer.lastCheckInDate).toLocaleDateString('vi-VN')}</p>
+                      )}
+                    </div>
+                  )}
+                  {customer.engagementNote && customer.riskLevel !== 'missing' && (
+                    <p className="text-[10px] text-gray-400 mt-0.5 italic">{customer.engagementNote}</p>
+                  )}
+                </td>
+                <td className="p-4">
+                  {customer.daysUntilExpiration !== null && customer.daysUntilExpiration !== undefined ? (
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                      <span className={`font-semibold ${customer.daysUntilExpiration <= 7 ? 'text-rose-600 dark:text-rose-400' : customer.daysUntilExpiration <= 14 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {customer.daysUntilExpiration} ngày
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Chưa xác định</span>
+                  )}
                 </td>
                 <td className="p-4 text-right">
                   <button 

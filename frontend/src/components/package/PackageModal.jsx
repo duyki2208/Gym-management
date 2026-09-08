@@ -15,9 +15,9 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
   const [formData, setFormData] = useState(pkg || { 
     name: '', 
     type: 'monthly',
+    category: 'maintenance',
     duration: 30, 
     price: 0 
-    // sessions không cần init ở đây, sẽ tính khi save
   });
 
   const handleSubmit = (e) => {
@@ -28,6 +28,7 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
     onSave({
       ...formData,
       type: formData.type,
+      category: formData.category || 'maintenance',
       duration: duration,
       price: parseInt(formData.price) || 0,
       sessions: formData.type === 'session' ? sessions : 0 
@@ -56,7 +57,7 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
             <input 
               id="pkg_name"
               name="name"
-              type="text"
+              type="text" 
               required 
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
               value={formData.name} 
@@ -64,18 +65,34 @@ const PackageModal = ({ pkg, onSave, onClose }) => {
             />
           </div>
 
-          <div>
-            <label htmlFor="pkg_type" className="block text-sm font-medium mb-1.5 text-gray-700">Loại gói</label>
-            <select
-              id="pkg_type"
-              name="type"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-              value={formData.type || 'monthly'}
-              onChange={e => setFormData({...formData, type: e.target.value})}
-            >
-              <option value="monthly">Theo tháng</option>
-              <option value="session">Theo buổi</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="pkg_type" className="block text-sm font-medium mb-1.5 text-gray-700">Hình thức tập</label>
+              <select
+                id="pkg_type"
+                name="type"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                value={formData.type || 'monthly'}
+                onChange={e => setFormData({...formData, type: e.target.value})}
+              >
+                <option value="monthly">Theo ngày</option>
+                <option value="session">Theo buổi</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="pkg_category" className="block text-sm font-medium mb-1.5 text-gray-700">Mục đích gói</label>
+              <select
+                id="pkg_category"
+                name="category"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm font-medium"
+                value={formData.category || 'maintenance'}
+                onChange={e => setFormData({...formData, category: e.target.value})}
+              >
+                <option value="maintenance">Gói duy trì </option>
+                <option value="trial">Gói trải nghiệm</option>
+              </select>
+            </div>
           </div>
           
           {formData.type === 'session' && (

@@ -65,6 +65,7 @@ const customerSchema = new mongoose.Schema(
     avatarUrl: { type: String, default: "" },
 
     packageType: { type: String, required: true },
+    packageCategory: { type: String, enum: ["maintenance", "trial"], default: "maintenance" },
     startDate: { type: Date, default: Date.now },
     endDate: { type: Date, required: true },
     activePackage: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage" },
@@ -140,6 +141,8 @@ const customerPackageSchema = new mongoose.Schema(
     customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
     package: { type: mongoose.Schema.Types.ObjectId, ref: "Package" },
     packageName: { type: String, required: true },
+    category: { type: String, enum: ["maintenance", "trial"], default: "maintenance" },
+    appliedCommissionRate: { type: Number, default: null },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     price: { type: Number, required: true, default: 0 },
@@ -303,6 +306,7 @@ const transactionSchema = new mongoose.Schema(
     workoutSession: { type: mongoose.Schema.Types.ObjectId, ref: "WorkoutSession" },
     status: { type: String, enum: ["success", "failed"], default: "success" },
     staff: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    paymentPhase: { type: String, enum: ["full", "deposit", "installment"], default: "full" },
   },
   { timestamps: true }
 );
@@ -327,6 +331,7 @@ transactionSchema.pre("validate", async function () {
 transactionSchema.index({ customer: 1 });
 transactionSchema.index({ staff: 1 });
 transactionSchema.index({ createdAt: -1, status: 1 });
+transactionSchema.index({ saleOrder: 1, paymentPhase: 1 }, { unique: true, sparse: true });
 
 // 8. SaleOrder Schema
 const saleOrderSchema = new mongoose.Schema(
@@ -406,6 +411,7 @@ const packageSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     type: { type: String, enum: ["monthly", "session"], default: "monthly" },
+    category: { type: String, enum: ["maintenance", "trial"], default: "maintenance" },
     duration: { type: Number, required: true },
     sessions: { type: Number, default: 0 },
     price: { type: Number, required: true },
@@ -477,6 +483,7 @@ commissionSchema.index({ type: 1, month: 1, year: 1 });
 commissionSchema.index({ period: 1 });
 commissionSchema.index({ customerPackage: 1 });
 commissionSchema.index({ workoutSession: 1 });
+commissionSchema.index({ customerPackage: 1, type: 1 }, { unique: true, sparse: true });
 
 // 13. CommissionPeriod Schema
 const commissionPeriodSchema = new mongoose.Schema(
@@ -734,16 +741,20 @@ const auditLogSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     username: { type: String, default: "Hệ thống" },
     action: { type: String, required: true },
-    method: { type: String, required: true },
-    path: { type: String, required: true },
+    method: { type: String, default: "SYSTEM" },
+    path: { type: String, default: "INTERNAL" },
+    severity: { type: String, enum: ["info", "warning", "critical"], default: "info" },
     details: { type: mongoose.Schema.Types.Mixed },
     ipAddress: { type: String },
+    timestamp: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
 auditLogSchema.index({ user: 1 });
 auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ timestamp: -1 });
+auditLogSchema.index({ action: 1 });
 
 module.exports = {
   userSchema,

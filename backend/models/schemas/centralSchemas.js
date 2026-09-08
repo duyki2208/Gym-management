@@ -75,7 +75,9 @@ const centralUserSchema = new mongoose.Schema(
     },
     allowedBranches: {
       type: [String],
-      default: ["*"], // '*' nghĩa là toàn quyền truy cập tất cả chi nhánh
+      default: function () {
+        return this.role === "admin" ? ["*"] : [];
+      },
     },
     phone: {
       type: String,

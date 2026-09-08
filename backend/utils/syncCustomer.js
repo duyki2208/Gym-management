@@ -50,6 +50,7 @@ async function syncCustomerFields(customerId, options = {}, models = null) {
       const isTransferred = activePackage.status === "transferred";
       customer.activePackage   = activePackage._id;
       customer.packageType     = activePackage.packageName;
+      customer.packageCategory = activePackage.category || "maintenance";
       customer.startDate       = activePackage.startDate;
       customer.endDate         = isTransferred ? new Date() : activePackage.endDate;
       customer.remainingSessions = isTransferred ? 0 : (activePackage.remainingSessions || 0);

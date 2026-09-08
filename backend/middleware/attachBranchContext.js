@@ -32,13 +32,36 @@ const attachBranchContext = async (req, res, next) => {
         if (decoded) {
           if (decoded.isCentral || decoded.role === "admin" || decoded.role === "accountant") {
             // Với Central User: Cho phép chọn chi nhánh qua header X-Branch-Code, fallback về activeBranch trong token hoặc mặc định
-            resolvedBranchCode =
+            const targetBranch =
               req.headers["x-branch-code"] ||
               req.query.branchCode ||
               decoded.activeBranch ||
               DEFAULT_BRANCH_CODE;
+
+            const normalizedTarget = String(targetBranch).trim().toUpperCase();
+
+            // Kiểm tra phân quyền: Nếu không phải superadmin có "*", phải nằm trong allowedBranches
+            const allowedBranches = Array.isArray(decoded.allowedBranches)
+              ? decoded.allowedBranches
+              : (decoded.role === "admin" ? ["*"] : []);
+
+            if (!allowedBranches.includes("*") && !allowedBranches.includes(normalizedTarget)) {
+              return res.status(403).json({
+                code: "BRANCH_ACCESS_DENIED",
+                message: `Bạn không có quyền truy cập dữ liệu chi nhánh ${normalizedTarget}`,
+              });
+            }
+
+            resolvedBranchCode = normalizedTarget;
           } else if (decoded.branchCode) {
             // Với Branch User: Bị khóa chặt với branchCode trong token (chống can thiệp chéo)
+            const headerBranch = req.headers["x-branch-code"] || req.query.branchCode;
+            if (headerBranch && String(headerBranch).trim().toUpperCase() !== decoded.branchCode) {
+              return res.status(403).json({
+                code: "BRANCH_ACCESS_DENIED",
+                message: `Tài khoản chi nhánh ${decoded.branchCode} không được phép truy cập chi nhánh ${String(headerBranch).trim().toUpperCase()}`,
+              });
+            }
             resolvedBranchCode = decoded.branchCode;
           }
         }

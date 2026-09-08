@@ -234,10 +234,15 @@ const createCustomer = async (req, res) => {
     }
 
     const formattedNote = packageNote || "";
+    const PackageModel = require("../models/Package");
+    const foundPkg = await PackageModel.findOne({ name: packageType });
+    const resolvedCategory = foundPkg?.category || "maintenance";
 
     const customerPackage = new CustomerPackage({
       customer: customer._id,
+      package: foundPkg?._id || undefined,
       packageName: packageType,
+      category: resolvedCategory,
       startDate: startDate ? new Date(startDate) : new Date(),
       endDate: new Date(endDate),
       price: price || 0,

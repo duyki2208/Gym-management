@@ -111,11 +111,13 @@ api.interceptors.response.use(
       }
     }
 
-    // Xử lý khi Token không hợp lệ hoàn toàn (không phải hết hạn, là token giả)
-    if (error.response?.status === 401 && code === "INVALID_TOKEN") {
+    // Xử lý các trường hợp 401 khác (Token không hợp lệ, User không tìm thấy, chưa có token, v.v.)
+    if (error.response?.status === 401) {
       localStorage.removeItem("gym_token");
       localStorage.removeItem("gym_user");
       if (window.location.pathname !== "/login") {
+        const msg = error.response?.data?.message || "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.";
+        toast.error(msg);
         window.location.href = "/login";
       }
       return Promise.reject(error);

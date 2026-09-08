@@ -12,9 +12,13 @@ const cacheMiddleware = (ttlSeconds = 300, keyPrefix = "") => {
       return next();
     }
 
-    // Đặt tên key theo URL và query parameters
+    // Đặt tên key theo prefix, mã chi nhánh và URL để cô lập cache giữa các chi nhánh
+    const branchCode =
+      req.branchCode ||
+      (req.user && (req.user.branchCode || req.user.activeBranch)) ||
+      "global";
     const prefix = keyPrefix ? `${keyPrefix}:` : "";
-    const cacheKey = `api:${prefix}${req.originalUrl || req.url}`;
+    const cacheKey = `api:${prefix}${branchCode}:${req.originalUrl || req.url}`;
 
     try {
       const cachedData = await cacheService.get(cacheKey);
