@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Users } from "lucide-react";
 import { staffService } from "../services/customerService";
 import StaffModal from "../components/staff/StaffModal";
 import StaffDetailModal from "../components/staff/StaffDetailModal";
@@ -115,9 +116,9 @@ const Staff = () => {
         {isAdmin && (
           <button
             onClick={() => { setEdit(null); setModal(true); }}
-            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-primary text-text-light text-xs md:text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
           >
-            <span className="material-symbols-outlined font-bold">add</span>
+            <Plus size={18} />
             Thêm mới
           </button>
         )}
@@ -126,7 +127,7 @@ const Staff = () => {
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white text-xs uppercase font-bold tracking-wider border-b border-gray-300 dark:border-gray-700">
+            <thead className="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-xs uppercase font-bold tracking-wider border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="px-6 py-4">HỌ TÊN</th>
                 <th className="px-6 py-4">CHỨC VỤ</th>
@@ -226,18 +227,14 @@ const Staff = () => {
                             className="p-2 hover:bg-blue-50 text-blue-600 rounded-full transition-colors"
                             title="Sửa"
                           >
-                            <span className="material-symbols-outlined text-xl">
-                              edit
-                            </span>
+                            <Pencil size={18} />
                           </button>
                           <button
                             onClick={() => del(s._id || s.id)}
                             className="p-2 hover:bg-red-50 text-red-600 rounded-full transition-colors"
                             title="Xóa"
                           >
-                            <span className="material-symbols-outlined text-xl">
-                              delete
-                            </span>
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
@@ -253,9 +250,7 @@ const Staff = () => {
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <span className="material-symbols-outlined text-4xl text-gray-300">
-                        group_off
-                      </span>
+                      <Users size={36} className="text-gray-300" />
                       <p>Chưa có nhân viên nào.</p>
                     </div>
                   </td>

@@ -73,14 +73,14 @@ const ChurnPrediction = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden font-display">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-700/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden font-display">
+      <div className="p-5 border-b border-border-light dark:border-border-dark flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
             <AlertTriangle className="text-amber-500" size={20} />
             Cảnh báo khách hàng rời bỏ (Churn)
           </h2>
-          <p className="text-xs text-gray-400 mt-0.5">Dự đoán hội viên gói duy trì có nguy cơ không gia hạn dựa trên tần suất check-in và hạn gói tập</p>
+          <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Dự đoán hội viên gói duy trì có nguy cơ không gia hạn dựa trên tần suất check-in và hạn gói tập</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -163,7 +163,7 @@ const ChurnPrediction = () => {
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tỷ lệ an toàn</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+            <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
               {Math.round(((data.lowRisk?.length || 0) / ((allCustomers.length + (data.lowRisk?.length || 0)) || 1)) * 100)}%
             </p>
             <p className="text-xs text-gray-400 mt-2">Hội viên duy trì tập luyện đều đặn</p>
@@ -177,7 +177,7 @@ const ChurnPrediction = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
+            <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
               <th className="p-4">Khách hàng</th>
               <th className="p-4">Mức độ nguy cơ</th>
               <th className="p-4">Thời gian vắng mặt</th>
@@ -185,7 +185,7 @@ const ChurnPrediction = () => {
               <th className="p-4 text-right">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+          <tbody className="divide-y divide-border-light dark:divide-border-dark">
             {currentItems.length > 0 ? currentItems.map((customer) => (
               <tr key={customer._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
                 <td className="p-4">
@@ -194,8 +194,8 @@ const ChurnPrediction = () => {
                       {customer.name?.charAt(0) || 'K'}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">{customer.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{customer.phone}</p>
+                      <p className="font-semibold text-text-light dark:text-text-dark">{customer.name}</p>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark font-medium">{customer.phone}</p>
                     </div>
                   </div>
                 </td>

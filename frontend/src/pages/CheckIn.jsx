@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { checkInService } from "../services/customerService";
 import { getCustomerStatus } from "../utils/dateUtils";
-import { LogIn, CheckCircle, XCircle, ScanFace } from "lucide-react";
+import { LogIn, CheckCircle, XCircle, ScanFace, Search } from "lucide-react";
 import AutoCheckIn from "../components/customer/AutoCheckIn";
 import CheckInSuccessPopup from "../components/customer/CheckInSuccessPopup";
 
@@ -108,7 +108,7 @@ const CheckIn = () => {
       {/* ── Card: Search + FaceID ── */}
       <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
         <div className="relative flex-1 max-w-2xl">
-          <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-500 text-xl">search</span>
+          <Search size={18} className="absolute left-3 top-2.5 text-gray-500" />
           <input
             id="checkInSearchInput"
             name="checkInSearch"
@@ -156,10 +156,10 @@ const CheckIn = () => {
           isCheckingIn={checkingIn !== null}
         />
       ) : (
-        <div className="bg-white dark:bg-surface-dark rounded-xl border overflow-hidden">
+        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-200/80 dark:bg-gray-800 uppercase text-sm font-bold text-black dark:text-white border-b border-gray-300 dark:border-gray-700">
+              <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
                 <tr>
                   <th className="p-4">TÊN KHÁCH HÀNG</th>
                   <th className="p-4">SỐ ĐIỆN THOẠI</th>
@@ -174,10 +174,10 @@ const CheckIn = () => {
                     const status = getCustomerStatus(c.startDate, c.endDate, c.activePackage?.status || c.status);
                     const isCheckingIn = checkingIn === c._id;
                     return (
-                      <tr key={c._id || c.id} className="border-t hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td className="p-4 font-medium text-base text-gray-900 dark:text-gray-100">{c.name || 'N/A'}</td>
-                        <td className="p-4 text-base font-medium text-gray-900 dark:text-gray-100">{c.phone || 'N/A'}</td>
-                        <td className="p-4 text-base font-medium text-gray-900 dark:text-gray-100">{c.packageType || 'N/A'}</td>
+                      <tr key={c._id || c.id} className="border-t border-border-light dark:border-border-dark hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
+                        <td className="p-4 font-medium text-base text-text-light dark:text-text-dark">{c.name || 'N/A'}</td>
+                        <td className="p-4 text-base font-medium text-text-light dark:text-text-dark">{c.phone || 'N/A'}</td>
+                        <td className="p-4 text-base font-medium text-text-light dark:text-text-dark">{c.packageType || 'N/A'}</td>
                         <td className="p-4">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${status.color}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${

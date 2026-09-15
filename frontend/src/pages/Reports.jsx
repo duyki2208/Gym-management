@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import reportService from '../services/reportService';
+import { CHART_THEME } from '../utils/theme';
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
@@ -14,7 +15,7 @@ import * as XLSX from 'xlsx';
 import ChurnPrediction from '../components/report/ChurnPrediction';
 import PTSessionReportView from '../components/reports/PTSessionReportView';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#ef4444'];
+const COLORS = CHART_THEME.palette;
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -317,10 +318,10 @@ const Reports = () => {
 
       {/* Header controls: Kỳ báo cáo & Nút thao tác */}
       {!["audit", "customer-analytics", "notifications-report", "leads-funnel", "contract-status", "sales-funnel", "pt-sessions"].includes(activeTab) && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Doanh thu cơ sở</h1>
-            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Theo dõi và phân tích hiệu quả kinh doanh của phòng gym</p>
+            <h1 className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight">Doanh thu cơ sở</h1>
+            <p className="text-xs md:text-sm text-subtle-light dark:text-subtle-dark mt-0.5">Theo dõi và phân tích hiệu quả kinh doanh của phòng gym</p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
@@ -356,9 +357,9 @@ const Reports = () => {
             <div className="flex items-center gap-2">
               <button 
                 onClick={exportToExcel}
-                className="flex items-center gap-2 bg-primary text-background-dark font-bold px-3.5 py-1.5 rounded-lg hover:bg-primary/90 transition text-xs shadow-xs"
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-text-light font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-sm transition-all cursor-pointer"
               >
-                <Download size={15} /> Xuất Excel
+                <Download size={16} /> Xuất Excel
               </button>
             </div>
           </div>
@@ -407,17 +408,17 @@ const Reports = () => {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
                   {/* Card 1: Doanh thu thực tế */}
-                  <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-3">
+                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng thực thu</p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng thực thu</p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                         {formatCurrency(summary.totalRevenue || 0)}
                       </p>
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         {renderGrowthBadge(momGrowth, "so T.trước")}
                       </div>
                       <p className="text-[11px] text-gray-400 mt-2">
-                        Doanh thu tháng trước: <span className="font-semibold text-gray-600 dark:text-gray-300">{formatCurrency(lastMonthValue)}</span>
+                        Doanh thu tháng trước: <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(lastMonthValue)}</span>
                       </p>
                     </div>
                     <div className="w-10 h-10 sm:w-11 sm:h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
@@ -426,18 +427,18 @@ const Reports = () => {
                   </div>
 
                   {/* Card 2: Trung bình / ngày & Dự kiến */}
-                  <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-3">
+                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Trung bình / ngày</p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Trung bình / ngày</p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                         {formatCurrency(avgDailyRevenue)}
                       </p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium">
+                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-2 font-medium">
                         {isCurrentMonth ? `Tính trên ${elapsedDays} ngày qua` : `Tính trên ${daysInMonth} ngày`}
                       </p>
                       {isCurrentMonth && projectedRevenue > 0 && (
                         <p className="text-[11px] text-gray-400 mt-0.5">
-                          Dự kiến tháng  <span className="font-semibold text-gray-700 dark:text-gray-300">≈ {formatCurrency(projectedRevenue)}</span>
+                          Dự kiến tháng  <span className="font-semibold text-text-light dark:text-text-dark">≈ {formatCurrency(projectedRevenue)}</span>
                         </p>
                       )}
                     </div>
@@ -447,12 +448,12 @@ const Reports = () => {
                   </div>
 
                   {/* Card 3: Tiến độ mục tiêu tháng */}
-                  <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-3">
+                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Tiến độ mục tiêu</p>
+                        <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Tiến độ mục tiêu</p>
                       </div>
-                      <p className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+                      <p className="text-xl sm:text-2xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                         {targetProgress}%
                       </p>
                       <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mt-2">
@@ -464,7 +465,7 @@ const Reports = () => {
                         />
                       </div>
                       <p className="text-[11px] text-gray-400 mt-1.5">
-                        Chỉ tiêu: <span className="font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(targetRevenue)}</span>
+                        Chỉ tiêu: <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(targetRevenue)}</span>
                       </p>
                     </div>
                     <div className="w-10 h-10 sm:w-11 sm:h-11 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
@@ -473,9 +474,9 @@ const Reports = () => {
                   </div>
 
                   {/* Card 4: Công nợ cần thu */}
-                  <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-3">
+                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Công nợ</p>
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Công nợ</p>
                       <p className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight break-words">
                         {formatCurrency(receivables.totalAmount)}
                       </p>
@@ -493,82 +494,82 @@ const Reports = () => {
                 </div>
 
                 {/* Card Phân Rạch Ròi 3 Dòng Doanh Thu theo Nguồn */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-4">
+                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Cơ cấu luồng doanh thu cơ sở</h3>
+                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Cơ cấu luồng doanh thu cơ sở</h3>
                     </div>
-                    <span className="text-xs font-medium text-gray-400 bg-gray-50 dark:bg-gray-700 px-2.5 py-1 rounded-lg">
+                    <span className="text-xs font-medium text-subtle-light dark:text-subtle-dark bg-border-light/40 dark:bg-border-dark/40 px-2.5 py-1 rounded-lg">
                       Tháng {selectedMonth}/{selectedYear}
                     </span>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-emerald-50/40 dark:bg-emerald-950/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                    <div className="p-4 bg-emerald-50/50 dark:bg-surface-dark rounded-xl border border-emerald-200 dark:border-border-dark">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-text-light dark:text-text-dark flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           Gói tập
                         </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300">
                           {pkgPct}%
                         </span>
                       </div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                      <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                         {formatCurrency(pkgVal)}
                       </p>
-                      <p className="text-[11px] text-gray-400 mt-1">Bao gồm thẻ hội viên & hợp đồng PT</p>
+                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-1">Bao gồm thẻ hội viên & hợp đồng PT</p>
                     </div>
 
-                    <div className="p-4 bg-blue-50/40 dark:bg-blue-950/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                    <div className="p-4 bg-blue-50/50 dark:bg-surface-dark rounded-xl border border-blue-200 dark:border-border-dark">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-text-light dark:text-text-dark flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-blue-500" />
                           Bán lẻ 
                         </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
                           {posPct}%
                         </span>
                       </div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                      <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                         {formatCurrency(posVal)}
                       </p>
-                      <p className="text-[11px] text-gray-400 mt-1">Nước uống, thực phẩm bổ sung, phụ kiện</p>
+                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-1">Nước uống, thực phẩm bổ sung, phụ kiện</p>
                     </div>
 
-                    <div className="p-4 bg-purple-50/40 dark:bg-purple-950/10 rounded-xl border border-purple-100 dark:border-purple-900/30">
+                    <div className="p-4 bg-purple-50/50 dark:bg-surface-dark rounded-xl border border-purple-200 dark:border-border-dark">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-text-light dark:text-text-dark flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-purple-500" />
                           Phí dịch vụ 
                         </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300">
                           {feePct}%
                         </span>
                       </div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                      <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                         {formatCurrency(feeVal)}
                       </p>
-                      <p className="text-[11px] text-gray-400 mt-1">Phí chuyển nhượng, nâng cấp, bảo lưu</p>
+                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-1">Phí chuyển nhượng, nâng cấp, bảo lưu</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Biểu Đồ Doanh Thu Theo Ngày: BIỂU ĐỒ DIỄN BIẾN 3 LUỒNG DOANH THU (Độc lập, đúng quy ước giá trị thực) */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
-                      <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Diễn biến doanh thu theo ngày</h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Biểu đồ đường & vùng phản ánh giá trị thực tế của từng luồng doanh thu theo từng ngày</p>
+                      <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Diễn biến doanh thu theo ngày</h2>
+                      
                     </div>
                     <div className="flex items-center gap-3 sm:gap-4 text-xs font-semibold flex-wrap">
-                      <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
+                      <span className="flex items-center gap-1.5 text-text-light dark:text-text-dark">
                         <span className="w-3 h-3 rounded-sm bg-emerald-500" /> Gói tập ({pkgPct}%)
                       </span>
-                      <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
+                      <span className="flex items-center gap-1.5 text-text-light dark:text-text-dark">
                         <span className="w-3 h-3 rounded-sm bg-blue-500" /> Bán lẻ ({posPct}%)
                       </span>
-                      <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
+                      <span className="flex items-center gap-1.5 text-text-light dark:text-text-dark">
                         <span className="w-3 h-3 rounded-sm bg-purple-500" /> Phí dịch vụ ({feePct}%)
                       </span>
                     </div>
@@ -579,23 +580,23 @@ const Reports = () => {
                         <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                           <defs>
                             <linearGradient id="colorPkgArea" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                              <stop offset="5%" stopColor={CHART_THEME.positive} stopOpacity={0.25}/>
+                              <stop offset="95%" stopColor={CHART_THEME.positive} stopOpacity={0.0}/>
                             </linearGradient>
                             <linearGradient id="colorPosArea" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                              <stop offset="5%" stopColor={CHART_THEME.secondary} stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor={CHART_THEME.secondary} stopOpacity={0.0}/>
                             </linearGradient>
                             <linearGradient id="colorFeeArea" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0}/>
+                              <stop offset="5%" stopColor={CHART_THEME.tertiary} stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor={CHART_THEME.tertiary} stopOpacity={0.0}/>
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-light dark:text-border-dark" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11, fill: "currentColor" }} axisLine={{ stroke: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" tickLine={false} />
                           <YAxis 
                             domain={[0, 'auto']}
-                            tick={{ fontSize: 11, fill: '#64748b' }}
+                            tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark"
                             tickFormatter={(value) => {
                               if (value >= 1000000) return `${(value / 1000000).toLocaleString('vi-VN')} Tr`;
                               if (value >= 1000) return `${(value / 1000).toLocaleString('vi-VN')} K`;
@@ -614,36 +615,36 @@ const Reports = () => {
                                 const total = Number(currentData.revenue ?? (pkg + pos + fee));
 
                                 return (
-                                  <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-lg text-xs space-y-2 min-w-[210px]">
-                                    <p className="font-bold text-gray-900 dark:text-white border-b pb-1.5 border-gray-100 dark:border-gray-700">
+                                  <div className="bg-surface-light dark:bg-surface-dark p-3.5 rounded-xl border border-border-light dark:border-border-dark shadow-lg text-xs space-y-2 min-w-[210px]">
+                                    <p className="font-bold text-text-light dark:text-text-dark border-b pb-1.5 border-border-light dark:border-border-dark">
                                       Ngày {label}
                                     </p>
                                     <div className="space-y-1.5">
                                       <div className="flex items-center justify-between gap-3">
-                                        <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                        <span className="flex items-center gap-1.5 text-subtle-light dark:text-subtle-dark">
                                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                           Gói tập & PT
                                         </span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(pkg)}</span>
+                                        <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(pkg)}</span>
                                       </div>
                                       <div className="flex items-center justify-between gap-3">
-                                        <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                        <span className="flex items-center gap-1.5 text-subtle-light dark:text-subtle-dark">
                                           <span className="w-2 h-2 rounded-full bg-blue-500" />
                                           Bán lẻ (POS)
                                         </span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(pos)}</span>
+                                        <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(pos)}</span>
                                       </div>
                                       <div className="flex items-center justify-between gap-3">
-                                        <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                        <span className="flex items-center gap-1.5 text-subtle-light dark:text-subtle-dark">
                                           <span className="w-2 h-2 rounded-full bg-purple-500" />
                                           Phí dịch vụ
                                         </span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(fee)}</span>
+                                        <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(fee)}</span>
                                       </div>
                                     </div>
-                                    <div className="border-t pt-1.5 border-gray-100 dark:border-gray-700 flex items-center justify-between font-bold text-gray-900 dark:text-white">
+                                    <div className="border-t pt-1.5 border-border-light dark:border-border-dark flex items-center justify-between font-bold text-text-light dark:text-text-dark">
                                       <span>Tổng cộng:</span>
-                                      <span className="text-blue-600 dark:text-blue-400">{formatCurrency(total)}</span>
+                                      <span className="text-text-light dark:text-text-dark">{formatCurrency(total)}</span>
                                     </div>
                                   </div>
                                 );
@@ -691,13 +692,13 @@ const Reports = () => {
                 {/* Grid 2 Cột (50/50): TỶ LỆ MỚI VS TÁI KÝ & TỶ TRỌNG THANH TOÁN VIETQR */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Cột 1: Tỷ lệ Hợp đồng Mới vs Tái ký / Gia hạn (Donut Chart Độc Lập) */}
-                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+                  <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Cơ cấu hợp đồng gói tập</h3>
-                        <span className="text-xs text-gray-400 font-normal">Mới vs Tái ký</span>
+                        <h3 className="text-base font-bold text-text-light dark:text-text-dark">Cơ cấu hợp đồng gói tập</h3>
+                        
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Tỷ trọng doanh số giữa khách hàng mới và hội viên gia hạn / nâng cấp</p>
+
 
                       {contractBreakdown && contractBreakdown.length > 0 ? (
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -720,12 +721,12 @@ const Reports = () => {
                                     />
                                   ))}
                                 </Pie>
-                                <Tooltip formatter={(v) => [formatCurrency(v), "Doanh số"]} />
+                                <Tooltip formatter={(v) => [formatCurrency(v), "Doanh số"]} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl" />
                               </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                               <span className="text-[10px] text-gray-400 font-medium">Doanh số gói</span>
-                              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                              <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
                                 {formatCurrency(totalContractRev)}
                               </span>
                             </div>
@@ -735,7 +736,7 @@ const Reports = () => {
                             {contractBreakdown.map((entry, index) => {
                               const color = contractColors[entry.type] || COLORS[index % COLORS.length];
                               return (
-                                <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 text-xs">
+                                <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-background-light dark:bg-background-dark/50 border border-border-light dark:border-border-dark text-xs">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                                     <div>
@@ -744,8 +745,8 @@ const Reports = () => {
                                     </div>
                                   </div>
                                   <div className="text-right ml-2 shrink-0">
-                                    <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(entry.revenue)}</span>
-                                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 block">{entry.percentage}%</span>
+                                    <span className="font-bold text-text-light dark:text-text-dark">{formatCurrency(entry.revenue)}</span>
+                                    <span className="text-[10px] font-semibold text-text-light dark:text-text-dark block">{entry.percentage}%</span>
                                   </div>
                                 </div>
                               );
@@ -760,24 +761,24 @@ const Reports = () => {
                     </div>
 
                     {/* Thẻ Insight: Tỷ lệ Tái ký / Giữ chân hội viên */}
-                    <div className="mt-5 pt-3.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-900/30 p-2.5 rounded-lg">
+                    <div className="mt-5 pt-3.5 border-t border-border-light dark:border-border-dark flex items-center justify-between text-xs text-subtle-light dark:text-subtle-dark bg-gray-50/50 dark:bg-gray-900/30 p-2.5 rounded-lg">
                       <span className="flex items-center gap-1.5 font-medium">
                         <TrendingUp size={15} className="text-blue-500" /> Tỷ lệ khách tái ký / gia hạn
                       </span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                      <span className="font-bold text-text-light dark:text-text-dark">
                         {renewPct}% doanh số gói
                       </span>
                     </div>
                   </div>
 
                   {/* Cột 2: Tỷ trọng hình thức thanh toán (VietQR vs Tiền mặt vs Thẻ) */}
-                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+                  <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Phương thức thanh toán</h3>
-                        <span className="text-xs text-gray-400 font-normal">Kênh thu</span>
+                        <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phương thức thanh toán</h3>
+
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Tỷ trọng các hình thức thanh toán</p>
+
 
                 {revenueAdvanced?.paymentMethods && revenueAdvanced.paymentMethods.length > 0 ? (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -794,11 +795,11 @@ const Reports = () => {
                             dataKey="value"
                           >
                             {revenueAdvanced.paymentMethods.map((entry, index) => {
-                              const paymentColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#64748b'];
+                              const paymentColors = CHART_THEME.palette;
                               return <Cell key={`cell-pay-${index}`} fill={paymentColors[index % paymentColors.length]} />;
                             })}
                           </Pie>
-                          <Tooltip formatter={(v) => formatCurrency(v)} />
+                          <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl" />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -809,9 +810,9 @@ const Reports = () => {
 
                     <div className="w-full sm:w-1/2 space-y-2">
                       {revenueAdvanced.paymentMethods.map((entry, index) => {
-                        const paymentColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#64748b'];
+                        const paymentColors = CHART_THEME.palette;
                         return (
-                          <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 text-xs">
+                          <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-background-light dark:bg-background-dark/50 border border-border-light dark:border-border-dark text-xs">
                             <div className="flex items-center gap-2 min-w-0">
                               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: paymentColors[index % paymentColors.length] }} />
                               <div>
@@ -820,8 +821,8 @@ const Reports = () => {
                               </div>
                             </div>
                             <div className="text-right ml-2 shrink-0">
-                              <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(entry.value)}</span>
-                              <span className="text-[10px] font-semibold text-primary block">{entry.percentage}%</span>
+                              <span className="font-bold text-text-light dark:text-text-dark">{formatCurrency(entry.value)}</span>
+                              <span className="text-[10px] font-semibold text-text-light dark:text-text-dark block">{entry.percentage}%</span>
                             </div>
                           </div>
                         );
@@ -836,11 +837,11 @@ const Reports = () => {
               </div>
 
               {/* Thông tin chuyển đổi số thanh toán */}
-              <div className="mt-5 pt-3.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-900/30 p-2.5 rounded-lg">
+              <div className="mt-5 pt-3.5 border-t border-border-light dark:border-border-dark flex items-center justify-between text-xs text-subtle-light dark:text-subtle-dark bg-gray-50/50 dark:bg-gray-900/30 p-2.5 rounded-lg">
                 <span className="flex items-center gap-1.5 font-medium">
                   <CreditCard size={15} className="text-emerald-500" /> Thanh toán số hoá (VietQR / Thẻ)
                 </span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-text-light dark:text-text-dark">
                   {(() => {
                     const list = revenueAdvanced?.paymentMethods || [];
                     const digitalTotal = list.filter(p => p.key === 'vietqr' || p.key === 'card' || p.key === 'transfer').reduce((s, x) => s + (x.value || 0), 0);
@@ -853,13 +854,13 @@ const Reports = () => {
           </div>
 
           {/* Bar Chart: Doanh thu 6 tháng gần nhất */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+          <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Doanh thu 6 tháng gần đây</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">So sánh quy mô và tốc độ tăng trưởng doanh thu qua từng tháng</p>
+                <h3 className="text-base font-bold text-text-light dark:text-text-dark">Doanh thu 6 tháng gần đây</h3>
+
               </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-lg">6 Tháng</span>
+
             </div>
             <div className="h-[240px] w-full relative my-auto pt-2">
               {revenueAdvanced?.trend && revenueAdvanced.trend.length > 0 ? (
@@ -867,14 +868,14 @@ const Reports = () => {
                   <BarChart data={revenueAdvanced.trend} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="barTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} />
-                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.7} />
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-gray-700/50" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-light dark:text-border-dark" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: "currentColor" }} axisLine={{ stroke: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" />
                     <YAxis 
-                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark"
                       tickFormatter={(val) => {
                         if (val >= 1000000000) return `${(val / 1000000000).toLocaleString('vi-VN')} Tỷ`;
                         if (val >= 1000000) return `${(val / 1000000).toLocaleString('vi-VN')} Tr`;
@@ -886,7 +887,7 @@ const Reports = () => {
                     />
                     <Tooltip 
                       formatter={(v) => [formatCurrency(v), "Doanh thu"]}
-                      contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                      contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                       labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
                     />
                     <Bar 
@@ -908,63 +909,60 @@ const Reports = () => {
 
           {/* Bảng Hiệu quả kinh doanh & Hoa hồng nhân sự (LEADERBOARD) */}
           {hrSummary.length > 0 && (
-            <div className="space-y-4 pt-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                     Doanh số & hoa hồng nhân sự
-                  </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Theo dõi doanh số đem về, hoa hồng và mức lương thực nhận của từng nhân viên</p>
-                </div>
-                <span className="text-xs text-gray-400 font-normal self-start sm:self-auto">Tháng {selectedMonth}/{selectedYear}</span>
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+                  Doanh số & hoa hồng nhân sự
+                </h2>
+                <span className="text-xs font-medium text-subtle-light dark:text-subtle-dark bg-border-light/40 dark:bg-border-dark/40 px-2.5 py-1 rounded-lg self-start sm:self-auto">
+                  Tháng {selectedMonth}/{selectedYear}
+                </span>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        <th className="p-4">Nhân viên</th>
-                        <th className="p-4">Chức vụ</th>
-                        <th className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400">Doanh số đem về</th>
-                        <th className="p-4 text-right">Lương cơ bản</th>
-                        <th className="p-4 text-right">Hoa hồng</th>
-                        <th className="p-4 text-center">Tiến độ KPI</th>
-                        <th className="p-4 text-right font-bold text-gray-900 dark:text-white">Thực nhận</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                      {hrSummary.map((staff) => (
-                        <tr key={staff._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                          <td className="p-4 font-semibold text-gray-900 dark:text-white">{staff.fullName}</td>
-                          <td className="p-4">
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
-                              ['pt', 'pm'].includes(staff.role) ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            }`}>
-                              {staff.role}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(staff.revenueGenerated || 0)}
-                          </td>
-                          <td className="p-4 text-right text-gray-600 dark:text-gray-300">{formatCurrency(staff.basicSalary)}</td>
-                          <td className="p-4 text-right text-indigo-600 dark:text-indigo-400 font-medium">{formatCurrency(staff.commission)}</td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2 justify-center max-w-[140px] mx-auto">
-                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div
-                                  className={`h-2 rounded-full ${staff.kpiProgress >= 100 ? 'bg-emerald-500' : staff.kpiProgress >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                                  style={{ width: `${Math.min(staff.kpiProgress, 100)}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">{staff.kpiProgress}%</span>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                      <th className="p-4">Nhân viên</th>
+                      <th className="p-4">Chức vụ</th>
+                      <th className="p-4 text-right">Doanh số đem về</th>
+                      <th className="p-4 text-right">Lương cơ bản</th>
+                      <th className="p-4 text-right">Hoa hồng</th>
+                      <th className="p-4 text-center">Tiến độ KPI</th>
+                      <th className="p-4 text-right">Thực nhận</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                    {hrSummary.map((staff) => (
+                      <tr key={staff._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                        <td className="p-4 font-semibold text-text-light dark:text-text-dark">{staff.fullName}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                            ['pt', 'pm'].includes(staff.role) ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                          }`}>
+                            {staff.role}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right font-medium text-text-light dark:text-text-dark">
+                          {formatCurrency(staff.revenueGenerated || 0)}
+                        </td>
+                        <td className="p-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(staff.basicSalary)}</td>
+                        <td className="p-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(staff.commission)}</td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2 justify-center max-w-[140px] mx-auto">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${staff.kpiProgress >= 100 ? 'bg-emerald-500' : staff.kpiProgress >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                style={{ width: `${Math.min(staff.kpiProgress, 100)}%` }}
+                              />
                             </div>
-                          </td>
-                          <td className="p-4 text-right font-extrabold text-blue-600 dark:text-blue-400 text-base">{formatCurrency(staff.totalSalary)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                            <span className="text-xs font-medium text-text-light dark:text-text-dark shrink-0">{staff.kpiProgress}%</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(staff.totalSalary)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -984,10 +982,10 @@ const Reports = () => {
               {/* KPI 3 Cards: ARPU | PT Riêng | Solo */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* Card 1: Chi tiêu trung bình */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Chi tiêu trung bình / KH</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight break-words">
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Chi tiêu trung bình / KH</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                       {formatCurrency(customerAnalytics.arpu)}
                     </p>
                     <p className="text-xs text-gray-400 mt-2">Doanh thu trung bình trọn đời mỗi hội viên</p>
@@ -998,14 +996,14 @@ const Reports = () => {
                 </div>
 
                 {/* Card 2: Hội viên có PT riêng */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hội viên có PT riêng</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight break-words">
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên có PT riêng</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                       {customerAnalytics.trainerRatio?.withTrainer || 0} <span className="text-sm font-semibold text-gray-400">người</span>
                     </p>
                     <div className="mt-2">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark border border-gray-200 dark:border-gray-700">
                         {customerAnalytics.trainerRatio ? Math.round((customerAnalytics.trainerRatio.withTrainer / (customerAnalytics.trainerRatio.withTrainer + customerAnalytics.trainerRatio.solo || 1)) * 100) : 0}% tổng hội viên
                       </span>
                     </div>
@@ -1016,10 +1014,10 @@ const Reports = () => {
                 </div>
 
                 {/* Card 3: Hội viên tự tập (Solo) */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hội viên tự tập (Solo)</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên tự tập (Solo)</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                       {customerAnalytics.trainerRatio?.solo || 0} <span className="text-sm font-semibold text-gray-400">người</span>
                     </p>
                     <p className="text-xs text-gray-400 mt-2">Hội viên tập luyện tự do tại phòng</p>
@@ -1032,10 +1030,10 @@ const Reports = () => {
 
               {/* Hàng 2 Cards: Tỷ lệ giữ chân & Tỷ lệ rời bỏ */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tỷ lệ giữ chân hội viên</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ giữ chân hội viên</p>
+                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight">
                       {summary.retentionRate}%
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -1050,18 +1048,18 @@ const Reports = () => {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tỷ lệ rời bỏ (Churn rate)</p>
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ rời bỏ (Churn rate)</p>
                     <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
                       {summary.churnRate}%
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50">
-                        <ArrowDownRight size={14} /> Cần chú ý
+                        <ArrowDownRight size={14} /> Cần lưu ý
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">Phần trăm khách hàng hết hạn chưa gia hạn</p>
+                    <p className="text-xs text-gray-400 mt-2">Tỷ lệ khách hàng không gia hạn / rời bỏ</p>
                   </div>
                   <div className="w-11 h-11 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/30">
                     <AlertTriangle size={22} />
@@ -1069,54 +1067,57 @@ const Reports = () => {
                 </div>
               </div>
 
-              {/* Bảng thống kê PT phụ trách */}
+              {/* Churn Prediction Component */}
+              <ChurnPrediction />
+
+              {/* Phân bổ theo Huấn luyện viên */}
               {customerAnalytics.trainerStats && customerAnalytics.trainerStats.length > 0 && (
-                <div className="space-y-4 pt-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Thống kê khách hàng theo PT phụ trách</h3>
-                    <span className="text-xs text-gray-400 font-normal">Phân bổ nhân sự</span>
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+                  <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân bổ hội viên theo huấn luyện viên (PT)</h3>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Danh sách PT và khối lượng khách phụ trách</p>
+                    </div>
                   </div>
                   
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                            <th className="p-4">Huấn luyện viên (PT)</th>
-                            <th className="p-4">Chức vụ</th>
-                            <th className="p-4 text-right">Số hội viên</th>
-                            <th className="p-4 text-center">Tỷ trọng phụ trách</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                          {customerAnalytics.trainerStats.map((pt) => {
-                            const total = customerAnalytics.trainerRatio?.withTrainer || 1;
-                            const pct = Math.round((pt.count / total) * 100);
-                            return (
-                              <tr key={String(pt._id)} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                                <td className="p-4 font-semibold text-gray-900 dark:text-white">{pt.name}</td>
-                                <td className="p-4">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
-                                    ['pt', 'pm'].includes(pt.role) ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                  }`}>
-                                    {pt.role}
-                                  </span>
-                                </td>
-                                <td className="p-4 text-right font-extrabold text-indigo-600 dark:text-indigo-400">{pt.count} KH</td>
-                                <td className="p-4 w-56">
-                                  <div className="flex items-center gap-2 justify-center max-w-[180px] mx-auto">
-                                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                      <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${pct}%` }} />
-                                    </div>
-                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-8 shrink-0">{pct}%</span>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                          <th className="p-4">Huấn luyện viên</th>
+                          <th className="p-4">Vai trò</th>
+                          <th className="p-4 text-right">Số hội viên kèm</th>
+                          <th className="p-4 text-center">Tỷ trọng</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                        {customerAnalytics.trainerStats.map((pt) => {
+                          const total = customerAnalytics.trainerRatio?.withTrainer || 1;
+                          const pct = Math.round((pt.count / total) * 100);
+                          return (
+                            <tr key={String(pt._id)} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                              <td className="p-4 font-semibold text-text-light dark:text-text-dark">{pt.name}</td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                                  ['pt', 'pm'].includes(pt.role) ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                }`}>
+                                  {pt.role}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right font-medium text-text-light dark:text-text-dark">{pt.count} KH</td>
+                              <td className="p-4 w-56">
+                                <div className="flex items-center gap-2 justify-center max-w-[180px] mx-auto">
+                                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${pct}%` }} />
                                   </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                                  <span className="text-xs font-medium text-text-light dark:text-text-dark w-8 shrink-0">{pct}%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
@@ -1124,9 +1125,9 @@ const Reports = () => {
               {/* Hàng biểu đồ 1: Giới tính & Độ tuổi */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Donut Chart Giới tính */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Cơ cấu giới tính hội viên</h3>
+                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Cơ cấu giới tính hội viên</h3>
                     <span className="text-xs text-gray-400 font-normal">Tỷ trọng</span>
                   </div>
                   <div className="h-[250px] flex items-center justify-center relative my-auto">
@@ -1147,14 +1148,14 @@ const Reports = () => {
                         </Pie>
                         <Tooltip 
                           formatter={(v, name) => [`${v} KH`, name]} 
-                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                         />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
                       <span className="text-[11px] text-gray-400 font-medium">Tổng</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                      <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
                         {customerAnalytics.gender.reduce((a, b) => a + (b.value || 0), 0)} KH
                       </span>
                     </div>
@@ -1162,20 +1163,20 @@ const Reports = () => {
                 </div>
 
                 {/* Bar Chart Độ tuổi */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Phân bổ độ tuổi hội viên</h3>
+                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân bổ độ tuổi hội viên</h3>
                     <span className="text-xs text-gray-400 font-normal">Nhóm tuổi</span>
                   </div>
                   <div className="h-[250px] relative my-auto">
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={customerAnalytics.age} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-light dark:text-border-dark" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "currentColor" }} axisLine={{ stroke: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" />
+                        <YAxis tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" axisLine={false} tickLine={false} />
                         <Tooltip 
                           formatter={(v) => [`${v} hội viên`, "Số lượng"]}
-                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                         />
                         <Bar dataKey="value" fill="#2563eb" radius={[4, 4, 0, 0]} name="Số lượng" barSize={32} />
                       </BarChart>
@@ -1185,9 +1186,9 @@ const Reports = () => {
               </div>
 
               {/* Phân bổ gói tập - full width, layout Side-by-side lớn */}
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm">
+              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Gói tập đang hoạt động</h3>
+                  <h3 className="text-base font-bold text-text-light dark:text-text-dark">Gói tập đang hoạt động</h3>
                   <span className="text-xs text-gray-400 font-normal">Mức độ phổ biến</span>
                 </div>
                 <div className="flex flex-col lg:flex-row items-center gap-6">
@@ -1196,13 +1197,13 @@ const Reports = () => {
                       const total = customerAnalytics.packagePopularity.reduce((a, b) => a + (b.value || 0), 0) || 1;
                       const pct = ((entry.value / total) * 100).toFixed(1);
                       return (
-                        <div key={index} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 text-xs">
+                        <div key={index} className="flex items-center justify-between p-2.5 rounded-xl bg-background-light dark:bg-background-dark/50 border border-border-light dark:border-border-dark text-xs">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[(index + 2) % COLORS.length] }} />
-                            <span className="font-medium text-gray-700 dark:text-gray-300 truncate">{entry.name}</span>
+                            <span className="font-medium text-subtle-light dark:text-subtle-dark truncate">{entry.name}</span>
                           </div>
                           <div className="text-right ml-2 shrink-0">
-                            <span className="font-bold text-gray-900 dark:text-white block">{entry.value} KH</span>
+                            <span className="font-bold text-text-light dark:text-text-dark block">{entry.value} KH</span>
                             <span className="text-[10px] text-gray-400 font-medium">{pct}%</span>
                           </div>
                         </div>
@@ -1228,7 +1229,7 @@ const Reports = () => {
                           </Pie>
                           <Tooltip 
                             formatter={(v, name) => [`${v} khách hàng`, name]} 
-                            contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                            contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -1237,7 +1238,7 @@ const Reports = () => {
                     )}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-[11px] text-gray-400 font-medium">Tổng</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                      <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
                         {customerAnalytics.packagePopularity.reduce((a, b) => a + (b.value || 0), 0)} KH
                       </span>
                     </div>
@@ -1247,9 +1248,9 @@ const Reports = () => {
 
               {/* Kênh tiếp cận & Tần suất tập luyện */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Kênh tiếp cận</h3>
+                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Kênh tiếp cận</h3>
                     <span className="text-xs text-gray-400 font-normal">Nguồn hội viên</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1257,9 +1258,9 @@ const Reports = () => {
                       <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-800 text-xs">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[(index + 4) % COLORS.length] }} />
-                          <span className="text-gray-700 dark:text-gray-300 truncate">{entry.name}</span>
+                          <span className="text-subtle-light dark:text-subtle-dark truncate">{entry.name}</span>
                         </div>
-                        <span className="font-bold text-gray-900 dark:text-white ml-2 shrink-0">{entry.value} KH</span>
+                        <span className="font-bold text-text-light dark:text-text-dark ml-2 shrink-0">{entry.value} KH</span>
                       </div>
                     ))}
                   </div>
@@ -1273,17 +1274,17 @@ const Reports = () => {
                         </Pie>
                         <Tooltip 
                           formatter={(v, name) => [`${v} KH`, name]} 
-                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                         />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Phân khúc tần suất tập luyện</h3>
+                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân khúc tần suất tập luyện</h3>
                       <span className="text-xs text-gray-400 font-normal">30 ngày qua</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-3">Gom nhóm hội viên dựa trên số ngày đi tập (check-in)</p>
@@ -1291,12 +1292,12 @@ const Reports = () => {
                   <div className="h-[210px] relative">
                     <ResponsiveContainer width="100%" height={210}>
                       <BarChart data={customerAnalytics.intensity} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-light dark:text-border-dark" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "currentColor" }} axisLine={{ stroke: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" />
+                        <YAxis tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" axisLine={false} tickLine={false} />
                         <Tooltip 
                           formatter={(v) => [`${v} hội viên`, "Số lượng"]}
-                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                         />
                         <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} name="Số hội viên" barSize={32} />
                       </BarChart>
@@ -1313,40 +1314,40 @@ const Reports = () => {
                   inactivePage * INACTIVE_PAGE_SIZE
                 );
                 return (
-                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+                    <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                       <div>
-                        <h3 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Khách hàng lâu chưa đi tập</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">Còn hạn gói tập nhưng không có check-in trong 30 ngày qua</p>
+                        <h3 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Khách hàng lâu chưa đi tập</h3>
+                        <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Còn hạn gói tập nhưng không có check-in trong 30 ngày qua</p>
                       </div>
                       <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50">
                         {customerAnalytics.inactive?.length || 0} hội viên
                       </span>
                     </div>
-                    <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700/60">
+                    <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-sm">
                         <thead>
-                          <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                            <th className="p-3.5">Khách hàng</th>
-                            <th className="p-3.5">Mã KH</th>
-                            <th className="p-3.5">Số điện thoại</th>
-                            <th className="p-3.5">Gói tập</th>
-                            <th className="p-3.5 text-right">Ngày hết hạn</th>
+                          <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                            <th className="p-4">Khách hàng</th>
+                            <th className="p-4">Mã KH</th>
+                            <th className="p-4">Số điện thoại</th>
+                            <th className="p-4">Gói tập</th>
+                            <th className="p-4 text-right">Ngày hết hạn</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                        <tbody className="divide-y divide-border-light dark:divide-border-dark">
                           {paginatedInactive.length > 0 ? (
                             paginatedInactive.map((cust) => (
                               <tr key={cust._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                                <td className="p-3.5 font-semibold text-gray-900 dark:text-white">{cust.name}</td>
-                                <td className="p-3.5 text-gray-500 dark:text-gray-400 font-mono text-xs">{cust.code}</td>
-                                <td className="p-3.5 text-gray-600 dark:text-gray-300">{cust.phone}</td>
-                                <td className="p-3.5">
-                                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded text-xs font-semibold">
+                                <td className="p-4 font-semibold text-text-light dark:text-text-dark">{cust.name}</td>
+                                <td className="p-4 text-subtle-light dark:text-subtle-dark font-mono text-xs">{cust.code}</td>
+                                <td className="p-4 font-medium text-text-light dark:text-text-dark">{cust.phone}</td>
+                                <td className="p-4">
+                                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700/60 text-subtle-light dark:text-subtle-dark rounded text-xs font-semibold">
                                     {cust.packageType}
                                   </span>
                                 </td>
-                                <td className="p-3.5 text-right text-rose-600 dark:text-rose-400 font-bold">
+                                <td className="p-4 text-right font-medium text-rose-600 dark:text-rose-400">
                                   {new Date(cust.endDate).toLocaleDateString("vi-VN")}
                                 </td>
                               </tr>
@@ -1362,7 +1363,7 @@ const Reports = () => {
                       </table>
                     </div>
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700/60">
+                      <div className="p-4 flex items-center justify-between border-t border-border-light dark:border-border-dark">
                         <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                           Trang {inactivePage} / {totalPages}
                         </div>
@@ -1370,14 +1371,14 @@ const Reports = () => {
                           <button
                             onClick={() => setInactivePage(p => Math.max(p - 1, 1))}
                             disabled={inactivePage === 1}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
                             Trang trước
                           </button>
                           <button
                             onClick={() => setInactivePage(p => Math.min(p + 1, totalPages))}
                             disabled={inactivePage >= totalPages}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
                             Trang sau
                           </button>
@@ -1390,41 +1391,41 @@ const Reports = () => {
 
               {/* Hội viên sắp hết hạn */}
               {expiringMembers.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+                  <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <div>
-                      <h3 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Hội viên sắp hết hạn (14 ngày tới)</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">Danh sách cần liên hệ chăm sóc và gia hạn</p>
+                      <h3 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Hội viên sắp hết hạn (14 ngày tới)</h3>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Danh sách cần liên hệ chăm sóc và gia hạn</p>
                     </div>
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50">
                       {expiringMembers.length} hội viên
                     </span>
                   </div>
-                  <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700/60">
+                  <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                          <th className="p-3.5">Khách hàng</th>
-                          <th className="p-3.5">Số điện thoại</th>
-                          <th className="p-3.5">Gói tập</th>
-                          <th className="p-3.5">Ngày hết hạn</th>
-                          <th className="p-3.5 text-center">Buổi còn</th>
-                          <th className="p-3.5 text-right">Liên hệ</th>
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                          <th className="p-4">Khách hàng</th>
+                          <th className="p-4">Số điện thoại</th>
+                          <th className="p-4">Gói tập</th>
+                          <th className="p-4">Ngày hết hạn</th>
+                          <th className="p-4 text-center">Buổi còn</th>
+                          <th className="p-4 text-right">Liên hệ</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 text-sm">
+                      <tbody className="divide-y divide-border-light dark:divide-border-dark text-sm">
                         {expiringMembers.map((member) => (
                           <tr key={member._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                            <td className="p-3.5 font-semibold text-gray-900 dark:text-white">{member.name}</td>
-                            <td className="p-3.5 text-gray-600 dark:text-gray-300">{member.phone}</td>
-                            <td className="p-3.5">
-                              <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-md text-xs font-semibold">
+                            <td className="p-4 font-semibold text-text-light dark:text-text-dark">{member.name}</td>
+                            <td className="p-4 font-medium text-text-light dark:text-text-dark">{member.phone}</td>
+                            <td className="p-4">
+                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md text-xs font-semibold">
                                 {member.packageType}
                               </span>
                             </td>
-                            <td className="p-3.5 text-rose-600 dark:text-rose-400 font-bold">{new Date(member.endDate).toLocaleDateString("vi-VN")}</td>
-                            <td className="p-3.5 text-center font-semibold text-gray-800 dark:text-gray-200">{member.remainingSessions}</td>
-                            <td className="p-3.5 text-right">
+                            <td className="p-4 font-medium text-rose-600 dark:text-rose-400">{new Date(member.endDate).toLocaleDateString("vi-VN")}</td>
+                            <td className="p-4 text-center font-medium text-text-light dark:text-text-dark">{member.remainingSessions}</td>
+                            <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <a 
                                   href={`tel:${member.phone}`} 
@@ -1467,8 +1468,8 @@ const Reports = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
                 {/* 1. Cảnh báo tồn kho */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col overflow-hidden h-[380px]">
-                  <div className="p-4 bg-rose-50/60 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/40 flex items-center justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px]">
+                  <div className="p-4 bg-rose-50/60 dark:bg-rose-950/30 border-b border-rose-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-sm">
                       <Package size={18} />
                       <span>Sản phẩm sắp hết hàng</span>
@@ -1477,12 +1478,12 @@ const Reports = () => {
                       {notificationsSummary.lowStockProductsCount}
                     </span>
                   </div>
-                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-700/60 text-xs">
+                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-border-light dark:divide-border-dark text-xs">
                     {notificationsSummary.lowStockProducts.length > 0 ? (
                       notificationsSummary.lowStockProducts.map(p => (
                         <div key={p._id} className="py-3 flex items-center justify-between">
                           <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">{p.name}</p>
+                            <p className="font-semibold text-text-light dark:text-text-dark">{p.name}</p>
                             <p className="text-gray-400 mt-0.5">Ngưỡng cảnh báo: {p.minStockAlert || 5} SP</p>
                           </div>
                           <span className="px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50 rounded-md font-bold text-[11px]">
@@ -1497,8 +1498,8 @@ const Reports = () => {
                 </div>
 
                 {/* 2. Hội viên sắp hết hạn */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col overflow-hidden h-[380px]">
-                  <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/40 flex items-center justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px]">
+                  <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 border-b border-amber-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
                       <Users size={18} />
                       <span>Hội viên sắp hết hạn (14 ngày)</span>
@@ -1507,12 +1508,12 @@ const Reports = () => {
                       {notificationsSummary.expiringCustomersCount}
                     </span>
                   </div>
-                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-700/60 text-xs">
+                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-border-light dark:divide-border-dark text-xs">
                     {notificationsSummary.expiringCustomers.length > 0 ? (
                       notificationsSummary.expiringCustomers.map(c => (
                         <div key={c._id} className="py-3 flex items-center justify-between">
                           <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">{c.name}</p>
+                            <p className="font-semibold text-text-light dark:text-text-dark">{c.name}</p>
                             <p className="text-gray-400 mt-0.5">{c.phone} • {c.packageType}</p>
                           </div>
                           <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 rounded-md font-bold text-[11px]">
@@ -1527,9 +1528,9 @@ const Reports = () => {
                 </div>
 
                 {/* 3. Công việc ca trực hôm nay chưa làm */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col overflow-hidden h-[380px]">
-                  <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/40 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-bold text-sm">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px]">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800/40 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-bold text-sm">
                       <Calendar size={18} />
                       <span>Ca trực chưa hoàn thành hôm nay</span>
                     </div>
@@ -1537,15 +1538,15 @@ const Reports = () => {
                       {notificationsSummary.pendingTasksCount}
                     </span>
                   </div>
-                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-700/60 text-xs">
+                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-border-light dark:divide-border-dark text-xs">
                     {notificationsSummary.pendingTasks.length > 0 ? (
                       notificationsSummary.pendingTasks.map(t => (
                         <div key={t._id} className="py-3 flex items-center justify-between">
                           <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">{t.title}</p>
+                            <p className="font-semibold text-text-light dark:text-text-dark">{t.title}</p>
                             <p className="text-gray-400 mt-0.5">Nhân viên: {t.staffName}</p>
                           </div>
-                          <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 rounded-md font-bold text-[11px]">
+                          <span className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark border border-gray-200 dark:border-gray-700 rounded-md font-bold text-[11px]">
                             Ca: {t.timeSlot}
                           </span>
                         </div>
@@ -1557,8 +1558,8 @@ const Reports = () => {
                 </div>
 
                 {/* 4. Kỳ lương hoa hồng chờ duyệt */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col overflow-hidden h-[380px] lg:col-span-1">
-                  <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 border-b border-purple-100 dark:border-purple-900/40 flex items-center justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px] lg:col-span-1">
+                  <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 border-b border-purple-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 font-bold text-sm">
                       <DollarSign size={18} />
                       <span>Hoa hồng chờ duyệt</span>
@@ -1567,12 +1568,12 @@ const Reports = () => {
                       {notificationsSummary.pendingCommissionsCount}
                     </span>
                   </div>
-                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-700/60 text-xs">
+                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-border-light dark:divide-border-dark text-xs">
                     {notificationsSummary.pendingCommissions.length > 0 ? (
                       notificationsSummary.pendingCommissions.map((c, idx) => (
                         <div key={idx} className="py-3 flex items-center justify-between">
                           <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">Chu kỳ hoa hồng T{c.month}/{c.year}</p>
+                            <p className="font-semibold text-text-light dark:text-text-dark">Chu kỳ hoa hồng T{c.month}/{c.year}</p>
                             <p className="text-gray-400 mt-0.5">Loại: {c.type === 'pt' ? 'Huấn luyện viên (PT)' : 'Nhân viên Sale'}</p>
                           </div>
                           <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/50 rounded-md font-bold text-[11px]">
@@ -1587,8 +1588,8 @@ const Reports = () => {
                 </div>
 
                 {/* 5. Cảnh báo KPI yếu */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm flex flex-col overflow-hidden h-[380px] md:col-span-2 lg:col-span-2">
-                  <div className="p-4 bg-yellow-50/60 dark:bg-yellow-950/30 border-b border-yellow-100 dark:border-yellow-900/40 flex items-center justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px] md:col-span-2 lg:col-span-2">
+                  <div className="p-4 bg-yellow-50/60 dark:bg-yellow-950/30 border-b border-yellow-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-400 font-bold text-sm">
                       <AlertTriangle size={18} />
                       <span>Cảnh báo nhân viên KPI yếu (&lt;50% cuối tháng)</span>
@@ -1597,12 +1598,12 @@ const Reports = () => {
                       {notificationsSummary.lowKPIStaffCount}
                     </span>
                   </div>
-                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-700/60 text-xs">
+                  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar divide-y divide-border-light dark:divide-border-dark text-xs">
                     {notificationsSummary.lowKPIStaff.length > 0 ? (
                       notificationsSummary.lowKPIStaff.map(s => (
                         <div key={s._id} className="py-3 flex items-center justify-between">
                           <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">{s.fullName} ({s.role.toUpperCase()})</p>
+                            <p className="font-semibold text-text-light dark:text-text-dark">{s.fullName} ({s.role.toUpperCase()})</p>
                             <p className="text-gray-400 mt-0.5">
                               Thực tế: {s.role === 'pt' ? `${s.actual} buổi` : formatCurrency(s.actual)} / Mục tiêu: {s.role === 'pt' ? `${s.target} buổi` : formatCurrency(s.target)}
                             </p>
@@ -1631,10 +1632,10 @@ const Reports = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Card 1: Doanh thu POS */}
-            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+            <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Doanh thu bán lẻ </p>
-                <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+                <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Doanh thu bán lẻ </p>
+                <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                   {formatCurrency(inventoryData.posRevenue || 0)}
                 </p>
                 <p className="text-xs text-gray-400 mt-2">Tổng doanh số bán lẻ trực tiếp tại quầy</p>
@@ -1645,10 +1646,10 @@ const Reports = () => {
             </div>
 
             {/* Card 2: Tổng giá trị tồn kho */}
-            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+            <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng giá trị tồn kho</p>
-                <p className="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight break-words">
+                <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng giá trị tồn kho</p>
+                <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                   {formatCurrency(inventoryData.totalStockValue || 0)}
                 </p>
                 <p className="text-xs text-gray-400 mt-2">Giá trị ước tính toàn bộ sản phẩm hiện có trong kho</p>
@@ -1660,44 +1661,44 @@ const Reports = () => {
           </div>
           
           {/* Bảng sản phẩm sắp hết hàng */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+            <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
               <div>
-                <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
                   <AlertTriangle className="text-amber-500" size={20} />
                   Sản phẩm sắp hết hàng (Tồn kho &le; 10)
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">Danh sách mặt hàng cần chuẩn bị nhập kho bổ sung</p>
+                <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Danh sách mặt hàng cần chuẩn bị nhập kho bổ sung</p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50">
                 {inventoryData.lowStockProducts.length} sản phẩm
               </span>
             </div>
             
-            <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700/60">
+            <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    <th className="p-3.5">Mã SP</th>
-                    <th className="p-3.5">Tên sản phẩm</th>
-                    <th className="p-3.5">Danh mục</th>
-                    <th className="p-3.5 text-right">Giá bán</th>
-                    <th className="p-3.5 text-center">Tồn kho</th>
+                  <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                    <th className="p-4">Mã SP</th>
+                    <th className="p-4">Tên sản phẩm</th>
+                    <th className="p-4">Danh mục</th>
+                    <th className="p-4 text-right">Giá bán</th>
+                    <th className="p-4 text-center">Tồn kho</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
                   {inventoryData.lowStockProducts.length > 0 ? (
                     inventoryData.lowStockProducts.map((product) => (
                       <tr key={product._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                        <td className="p-3.5 font-mono text-xs text-gray-500 dark:text-gray-400">{product.productCode}</td>
-                        <td className="p-3.5 text-gray-900 dark:text-white font-semibold">{product.name}</td>
-                        <td className="p-3.5 text-gray-600 dark:text-gray-300">
-                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded text-xs font-medium">
+                        <td className="p-4 font-mono text-xs text-subtle-light dark:text-subtle-dark">{product.productCode}</td>
+                        <td className="p-4 text-text-light dark:text-text-dark font-semibold">{product.name}</td>
+                        <td className="p-4 text-subtle-light dark:text-subtle-dark">
+                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700/60 text-subtle-light dark:text-subtle-dark rounded text-xs font-medium">
                             {product.category}
                           </span>
                         </td>
-                        <td className="p-3.5 text-right font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(product.sellPrice)}</td>
-                        <td className="p-3.5 text-center">
+                        <td className="p-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(product.sellPrice)}</td>
+                        <td className="p-4 text-center">
                           <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
                             product.stockQuantity === 0 
                               ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50' 
@@ -1730,7 +1731,7 @@ const Reports = () => {
       {/* Nhật ký Tab */}
       {activeTab === 'audit' && (
         <div className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div className="relative flex-1 max-w-md w-full">
               <input
                 id="audit_search_input"
@@ -1746,12 +1747,12 @@ const Reports = () => {
                 }}
               />
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 font-medium">
+            <div className="flex items-center gap-2 text-xs text-subtle-light dark:text-subtle-dark font-medium">
               <span>Trang {auditPage} / {auditTotalPages}</span>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden shadow-sm">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
             {auditLoading ? (
               <div className="p-8 text-center text-gray-400 text-sm">Đang tải nhật ký hệ thống...</div>
             ) : (
@@ -1759,7 +1760,7 @@ const Reports = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
                         <th className="p-4 w-[15%]">Thời gian</th>
                         <th className="p-4 w-[18%]">Nhân viên</th>
                         <th className="p-4 w-[32%]">Hành động</th>
@@ -1767,17 +1768,17 @@ const Reports = () => {
                         <th className="p-4 w-[23%]">Chi tiết</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
                       {auditLogs.length > 0 ? (
                         auditLogs.map((log) => (
                           <tr key={log._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                            <td className="p-4 text-gray-500 dark:text-gray-400 font-mono text-[11px]">
+                            <td className="p-4 text-subtle-light dark:text-subtle-dark font-mono text-[11px]">
                               {new Date(log.createdAt).toLocaleString("vi-VN")}
                             </td>
                             <td className="p-4">
-                              <span className="font-bold text-gray-900 dark:text-white">{log.username}</span>
+                              <span className="font-bold text-text-light dark:text-text-dark">{log.username}</span>
                               {log.user?.role && (
-                                <span className="ml-1.5 px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                <span className="ml-1.5 px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-gray-100 dark:bg-gray-700 text-subtle-light dark:text-subtle-dark">
                                   {log.user.role}
                                 </span>
                               )}
@@ -1797,7 +1798,7 @@ const Reports = () => {
                             <td className="p-4 text-xs font-mono text-gray-500 max-w-xs truncate">
                               <details className="cursor-pointer">
                                 <summary className="text-primary hover:underline font-sans font-bold">Xem chi tiết</summary>
-                                <pre className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-[10px] overflow-x-auto whitespace-pre-wrap max-h-32">
+                                <pre className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 text-subtle-light dark:text-subtle-dark rounded text-[10px] overflow-x-auto whitespace-pre-wrap max-h-32">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>
                               </details>
@@ -1815,7 +1816,7 @@ const Reports = () => {
                   </table>
                 </div>
 
-                <div className="p-4 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-900/40 flex justify-between items-center">
+                <div className="p-4 border-t border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/40 flex justify-between items-center">
                   <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                     Trang {auditPage} / {auditTotalPages}
                   </div>
@@ -1823,14 +1824,14 @@ const Reports = () => {
                     <button
                       onClick={() => setAuditPage((prev) => Math.max(prev - 1, 1))}
                       disabled={auditPage === 1 || auditLoading}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Trang trước
                     </button>
                     <button
                       onClick={() => setAuditPage((prev) => Math.min(prev + 1, auditTotalPages))}
                       disabled={auditPage >= auditTotalPages || auditLoading}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Trang sau
                     </button>
@@ -1848,16 +1849,16 @@ const Reports = () => {
           {/* Phân khúc 1: Chuyển đổi khách tiềm năng (Lead Funnel) */}
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Chuyển đổi khách tiềm năng</h2>
+              <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Chuyển đổi khách tiềm năng</h2>
             
             </div>
 
             {/* 4 Cards KPI Cân Bằng Baseline */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng lead tiềm năng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight break-words">
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng lead tiềm năng</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                     {leadReportData?.totalLeads || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Dữ liệu ghi nhận từ các kênh</p>
@@ -1867,10 +1868,10 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tỷ lệ chuyển đổi</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ chuyển đổi</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                     {leadReportData?.conversionRateOverall || 0}%
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tỷ lệ chuyển thành hợp đồng</p>
@@ -1880,10 +1881,10 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Đã chốt hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Đã chốt hợp đồng</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                     {leadReportData?.statusCounts?.converted || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Khách hàng kích hoạt thành công</p>
@@ -1893,9 +1894,9 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hủy / Từ chối</p>
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hủy / Từ chối</p>
                   <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight break-words">
                     {leadReportData?.statusCounts?.lost || 0}
                   </p>
@@ -1909,9 +1910,9 @@ const Reports = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Biểu đồ trạng thái Lead (Auto-scale Y axis) */}
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Tình trạng lead theo giai đoạn</h3>
+                  <h3 className="text-base font-bold text-text-light dark:text-text-dark">Tình trạng lead theo giai đoạn</h3>
                   
                 </div>
                 <div className="h-[240px] w-full relative">
@@ -1926,18 +1927,18 @@ const Reports = () => {
                       ]}
                       margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-light dark:text-border-dark" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "currentColor" }} axisLine={{ stroke: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" />
                       <YAxis 
                         domain={[0, (dataMax) => Math.max(dataMax + 1, 2)]} 
                         allowDecimals={false} 
-                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark"
                         axisLine={false}
                         tickLine={false}
                       />
                       <Tooltip 
                         formatter={(value) => [`${value} Lead`, "Số lượng"]}
-                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                        contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
                       />
                       <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={36} />
                     </BarChart>
@@ -1946,42 +1947,43 @@ const Reports = () => {
               </div>
 
               {/* Hiệu suất Chuyển đổi theo Sale (Co giãn tự nhiên + Empty state) */}
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between overflow-x-auto">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Hiệu suất chuyển đổi theo sale</h3>
-                    
+                  <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Hiệu suất chuyển đổi theo sale</h3>
                   </div>
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        <th className="p-3">Nhân viên sale</th>
-                        <th className="p-3 text-center">Tổng lead</th>
-                        <th className="p-3 text-center">Chốt</th>
-                        <th className="p-3 text-center">Từ chối</th>
-                        <th className="p-3 text-right">Tỷ lệ</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                      {leadReportData?.salePerformance && leadReportData.salePerformance.length > 0 ? (
-                        leadReportData.salePerformance.map((sp, i) => (
-                          <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                            <td className="p-3 font-semibold text-gray-900 dark:text-white">{sp.saleName}</td>
-                            <td className="p-3 text-center font-medium text-gray-700 dark:text-gray-300">{sp.total}</td>
-                            <td className="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">{sp.converted}</td>
-                            <td className="p-3 text-center text-rose-500 font-medium">{sp.lost}</td>
-                            <td className="p-3 text-right font-extrabold text-blue-600 dark:text-blue-400">{sp.conversionRate}%</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="p-8 text-center text-gray-400 text-xs">
-                            Chưa có dữ liệu hiệu suất chuyển đổi theo sale
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                          <th className="p-3.5">Nhân viên sale</th>
+                          <th className="p-3.5 text-center">Tổng lead</th>
+                          <th className="p-3.5 text-center">Chốt</th>
+                          <th className="p-3.5 text-center">Từ chối</th>
+                          <th className="p-3.5 text-right">Tỷ lệ</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                        {leadReportData?.salePerformance && leadReportData.salePerformance.length > 0 ? (
+                          leadReportData.salePerformance.map((sp, i) => (
+                            <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                              <td className="p-3.5 font-semibold text-text-light dark:text-text-dark">{sp.saleName}</td>
+                              <td className="p-3.5 text-center font-medium text-text-light dark:text-text-dark">{sp.total}</td>
+                              <td className="p-3.5 text-center font-medium text-text-light dark:text-text-dark">{sp.converted}</td>
+                              <td className="p-3.5 text-center text-rose-500 font-medium">{sp.lost}</td>
+                              <td className="p-3.5 text-right font-medium text-text-light dark:text-text-dark">{sp.conversionRate}%</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" className="p-8 text-center text-gray-400 text-xs">
+                              Chưa có dữ liệu hiệu suất chuyển đổi theo sale
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1990,16 +1992,16 @@ const Reports = () => {
           {/* Phân khúc 2: Tình trạng Hợp đồng */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Cơ cấu & giá trị hợp đồng</h2>
+              <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Cơ cấu & giá trị hợp đồng</h2>
              
             </div>
 
             {/* 3 KPI Cards Màu Ngữ Nghĩa */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight break-words">
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng hợp đồng</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                     {contractBreakdownData?.totalContracts || 0} HĐ
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tổng số hợp đồng đã phát sinh</p>
@@ -2009,10 +2011,10 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng giá trị tiền hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight break-words">
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng giá trị tiền hợp đồng</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                     {formatCurrency(contractBreakdownData?.grandTotalValue)}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tổng giá trị quy đổi tất cả hợp đồng</p>
@@ -2022,10 +2024,10 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
+              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Đang hoạt động (Active)</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight break-words">
+                  <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Đang hoạt động (Active)</p>
+                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
                     {contractBreakdownData?.breakdown?.active?.count || 0} HĐ
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Hợp đồng đang có hiệu lực tập luyện</p>
@@ -2038,9 +2040,9 @@ const Reports = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Donut Chart Tỷ lệ trạng thái (Bỏ label leader-line bị đè chữ + Center Total) */}
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Phân bổ trạng thái hợp đồng</h3>
+                  <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân bổ trạng thái hợp đồng</h3>
                 </div>
 
                 <div className="h-[240px] w-full relative flex items-center justify-center my-auto">
@@ -2060,13 +2062,13 @@ const Reports = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value, name, item) => [`${value} HĐ (${formatCurrency(item.payload.value)})`, name]} />
+                      <Tooltip formatter={(value, name, item) => [`${value} HĐ (${formatCurrency(item.payload.value)})`, name]} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl" />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
                     <span className="text-[11px] text-gray-400 font-medium">Tổng hợp đồng</span>
-                    <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                    <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
                       {contractBreakdownData?.totalContracts || 0} HĐ
                     </span>
                   </div>
@@ -2074,35 +2076,36 @@ const Reports = () => {
               </div>
 
               {/* Bảng chi tiết trạng thái hợp đồng */}
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-x-auto flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Bảng thống kê chi tiết trạng thái  hợp đồng</h3>
-                    
+                  <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Bảng thống kê chi tiết trạng thái hợp đồng</h3>
                   </div>
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        <th className="p-3">Trạng thái</th>
-                        <th className="p-3 text-center">Số lượng</th>
-                        <th className="p-3 text-center">Tỷ lệ</th>
-                        <th className="p-3 text-right">Tổng giá trị</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                      {(contractBreakdownData?.statusChartData || []).map((row, i) => (
-                        <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                          <td className="p-3 font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
-                            {row.name}
-                          </td>
-                          <td className="p-3 text-center font-medium text-gray-700 dark:text-gray-300">{row.count}</td>
-                          <td className="p-3 text-center font-bold text-gray-800 dark:text-gray-200">{row.percentage}%</td>
-                          <td className="p-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400">{formatCurrency(row.value)}</td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                          <th className="p-3.5">Trạng thái</th>
+                          <th className="p-3.5 text-center">Số lượng</th>
+                          <th className="p-3.5 text-center">Tỷ lệ</th>
+                          <th className="p-3.5 text-right">Tổng giá trị</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                        {(contractBreakdownData?.statusChartData || []).map((row, i) => (
+                          <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
+                            <td className="p-3.5 font-semibold flex items-center gap-2 text-text-light dark:text-text-dark">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
+                              {row.name}
+                            </td>
+                            <td className="p-3.5 text-center font-medium text-text-light dark:text-text-dark">{row.count}</td>
+                            <td className="p-3.5 text-center font-medium text-text-light dark:text-text-dark">{row.percentage}%</td>
+                            <td className="p-3.5 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(row.value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>

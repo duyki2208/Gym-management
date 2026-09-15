@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, UserCircle2, Calendar } from "lucide-react";
 import toast from "react-hot-toast";
 import { staffService } from "../../services/customerService";
 
@@ -130,9 +130,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
           {/* Thông tin cá nhân */}
           <div className="w-full md:w-1/3 flex flex-col items-center bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
             <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 border-4 border-white dark:border-gray-800 shadow-lg flex items-center justify-center mb-3">
-              <span className="material-symbols-outlined text-5xl text-blue-500">
-                badge
-              </span>
+              <UserCircle2 size={48} className="text-blue-500" />
             </div>
             <h3 className="text-xl font-bold mb-1 text-center">
               {staff.fullName || staff.name}
@@ -185,9 +183,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
           <div className="w-full md:w-2/3 flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-500">
-                  calendar_month
-                </span>
+                <Calendar size={20} className="text-blue-500" />
                 Lịch làm việc tuần
               </h3>
               <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">

@@ -6,6 +6,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { ScanFace, VideoOff } from 'lucide-react';
 import api from '../../services/api';
 
 const CAPTURE_INTERVAL_MS = 1500; // Chụp mỗi 1.5 giây
@@ -143,9 +144,7 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
   if (cameraError) {
     return (
       <div className="bg-red-50 p-6 rounded-xl border border-red-200 text-center">
-        <span className="material-symbols-outlined text-red-500 text-4xl block mb-2">
-          videocam_off
-        </span>
+        <VideoOff size={36} className="text-red-500 block mb-2 mx-auto" />
         <p className="text-red-700 font-bold">{cameraError}</p>
       </div>
     );
@@ -162,7 +161,7 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
       {/* Camera Panel */}
       <div className="w-full md:w-1/2 flex flex-col items-center">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-          <span className="material-symbols-outlined text-blue-500">face_retouching_natural</span>
+          <ScanFace size={20} className="text-blue-500" />
           Giao Diện Quét
         </h3>
 

@@ -207,7 +207,7 @@ const Leads = () => {
   return (
     <div className="flex flex-col gap-6 font-display p-6 max-w-7xl mx-auto">
       {/* Header Summary */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-2xl text-white shadow-lg shadow-indigo-600/20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-xl text-white shadow-lg shadow-indigo-600/20">
         <div>
           <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
             <Users size={28} /> Quản Lý Khách Hàng Tiềm Năng
@@ -221,26 +221,26 @@ const Leads = () => {
             setFormData({ name: "", phone: "", email: "", source: "facebook", assignedSale: "", note: "" });
             setShowAddModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-700 rounded-xl font-bold hover:bg-indigo-50 shadow-md transition-all shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-text-light rounded-xl font-bold hover:bg-primary/90 shadow-md transition-all shrink-0 cursor-pointer"
         >
           <Plus size={18} /> Thêm Lead Mới
         </button>
       </div>
 
       {/* Filters & Search */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div className="relative md:col-span-2">
-          <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+          <Search className="absolute left-3 top-3 text-subtle-light dark:text-subtle-dark" size={18} />
           <input
             type="text"
             placeholder="Tìm theo tên hoặc số điện thoại..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
-          className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className="w-full p-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm cursor-pointer"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -252,7 +252,7 @@ const Leads = () => {
           <option value="lost">Thất bại</option>
         </select>
         <select
-          className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className="w-full p-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm cursor-pointer"
           value={sourceFilter}
           onChange={(e) => setSourceFilter(e.target.value)}
         >
@@ -266,7 +266,7 @@ const Leads = () => {
       </div>
 
       {/* Leads Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-gray-400">Đang tải dữ liệu...</div>
         ) : leads.length === 0 ? (
@@ -275,7 +275,7 @@ const Leads = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-200/80 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
+                <tr className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark text-xs font-bold text-text-light dark:text-text-dark uppercase tracking-wider">
                   <th className="px-6 py-4">Tên & Thông tin liên hệ</th>
                   <th className="px-6 py-4">Nguồn khách</th>
                   <th className="px-6 py-4">Trạng thái</th>
@@ -284,19 +284,19 @@ const Leads = () => {
                   <th className="px-6 py-4 text-center">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
+              <tbody className="divide-y divide-border-light dark:divide-border-dark text-sm">
                 {leads.map((lead) => (
-                  <tr key={lead._id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={lead._id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
-                        <p className="font-bold text-gray-800">{lead.name}</p>
-                        <div className="flex gap-4 text-xs text-gray-500 mt-1">
+                        <p className="font-bold text-text-light dark:text-text-dark">{lead.name}</p>
+                        <div className="flex gap-4 text-xs text-subtle-light dark:text-subtle-dark mt-1">
                           <span className="flex items-center gap-1"><Phone size={12} /> {lead.phone}</span>
                           {lead.email && <span className="flex items-center gap-1"><Mail size={12} /> {lead.email}</span>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-gray-600">
+                    <td className="px-6 py-4 font-semibold text-subtle-light dark:text-subtle-dark">
                       {getSourceLabel(lead.source)}
                     </td>
                     <td className="px-6 py-4">
@@ -366,46 +366,46 @@ const Leads = () => {
 
       {/* Add Lead Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <form onSubmit={handleCreateLead} className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
+          <form onSubmit={handleCreateLead} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-md w-full overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white">
               <h3 className="font-bold text-lg">Thêm khách hàng tiềm năng</h3>
             </div>
             <div className="p-6 flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tên khách hàng *</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Tên khách hàng *</label>
                 <input
                   type="text"
                   required
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Số điện thoại *</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Số điện thoại *</label>
                 <input
                   type="tel"
                   required
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Email</label>
                 <input
                   type="email"
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nguồn khách</label>
+                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nguồn khách</label>
                   <select
-                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                    className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.source}
                     onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                   >
@@ -417,9 +417,9 @@ const Leads = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nhân viên phụ trách</label>
+                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nhân viên phụ trách</label>
                   <select
-                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                    className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.assignedSale}
                     onChange={(e) => setFormData({ ...formData, assignedSale: e.target.value })}
                   >
@@ -433,27 +433,27 @@ const Leads = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Ghi chú chăm sóc đầu tiên</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Ghi chú chăm sóc đầu tiên</label>
                 <textarea
                   rows={3}
                   placeholder="Ví dụ: Quan tâm gói tập 3 tháng, muốn tập thử..."
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark"
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 />
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-300 text-sm"
+                className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark rounded-lg font-bold hover:bg-border-light dark:hover:bg-border-dark text-sm cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary text-background-dark rounded-xl font-bold hover:bg-primary/90 text-sm shadow-md transition-all"
+                className="px-4 py-2 bg-primary text-text-light rounded-lg font-bold hover:bg-primary/90 text-sm shadow-md transition-all cursor-pointer"
               >
                 Lưu lại
               </button>
@@ -464,46 +464,46 @@ const Leads = () => {
 
       {/* Edit Lead Modal */}
       {showEditModal && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <form onSubmit={handleUpdateLead} className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
+          <form onSubmit={handleUpdateLead} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-md w-full overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white">
               <h3 className="font-bold text-lg">Cập nhật khách hàng tiềm năng</h3>
             </div>
             <div className="p-6 flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tên khách hàng *</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Tên khách hàng *</label>
                 <input
                   type="text"
                   required
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Số điện thoại *</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Số điện thoại *</label>
                 <input
                   type="tel"
                   required
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Email</label>
                 <input
                   type="email"
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nguồn khách</label>
+                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nguồn khách</label>
                   <select
-                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                    className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.source}
                     onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                   >
@@ -515,47 +515,47 @@ const Leads = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nhân viên phụ trách</label>
+                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Trạng thái</label>
                   <select
-                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
-                    value={formData.assignedSale}
-                    onChange={(e) => setFormData({ ...formData, assignedSale: e.target.value })}
+                    className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   >
-                    <option value="">-- Phân công --</option>
-                    {sales.map((s) => (
-                      <option key={s._id} value={s._id}>
-                        {s.fullName || s.username}
-                      </option>
-                    ))}
+                    <option value="new">Mới</option>
+                    <option value="contacted">Đang chăm sóc</option>
+                    <option value="trial">Tập thử</option>
+                    <option value="converted">Đã chốt</option>
+                    <option value="lost">Thất bại</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Trạng thái chăm sóc</label>
+                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nhân viên phụ trách</label>
                 <select
-                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 font-bold"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                  value={formData.assignedSale}
+                  onChange={(e) => setFormData({ ...formData, assignedSale: e.target.value })}
                 >
-                  <option value="new">Mới (New)</option>
-                  <option value="contacted">Đang chăm sóc (Contacted)</option>
-                  <option value="trial">Tập thử (Trial)</option>
-                  <option value="converted">Đã chốt (Converted)</option>
-                  <option value="lost">Thất bại (Lost)</option>
+                  <option value="">-- Phân công --</option>
+                  {sales.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.fullName || s.username} ({s.role.toUpperCase()})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-300 text-sm"
+                className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark rounded-lg font-bold hover:bg-border-light dark:hover:bg-border-dark text-sm cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary text-background-dark rounded-xl font-bold hover:bg-primary/90 text-sm shadow-md transition-all"
+                className="px-4 py-2 bg-primary text-text-light rounded-lg font-bold hover:bg-primary/90 text-sm shadow-md transition-all cursor-pointer"
               >
                 Cập nhật
               </button>
@@ -566,8 +566,8 @@ const Leads = () => {
 
       {/* Details & Care Notes Modal */}
       {showDetailsModal && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white flex justify-between items-center shrink-0">
               <div>
                 <h3 className="font-bold text-lg">{selectedLead.name}</h3>
@@ -578,42 +578,42 @@ const Leads = () => {
 
             {/* Care Notes List */}
             <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
-              <h4 className="font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5 text-sm">
+              <h4 className="font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark pb-2 flex items-center gap-1.5 text-sm">
                 <FileText size={16} /> Lịch sử chăm sóc ({selectedLead.notes?.length || 0})
               </h4>
               
               {selectedLead.notes && selectedLead.notes.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   {selectedLead.notes.map((n, i) => (
-                    <div key={i} className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                      <div className="flex justify-between items-center mb-1 text-xs font-semibold text-gray-500">
-                        <span className="text-blue-600 font-bold">{n.author}</span>
+                    <div key={i} className="bg-background-light dark:bg-background-dark p-3.5 rounded-lg border border-border-light dark:border-border-dark">
+                      <div className="flex justify-between items-center mb-1 text-xs font-semibold text-subtle-light dark:text-subtle-dark">
+                        <span className="text-primary font-bold">{n.author}</span>
                         <span>{new Date(n.date).toLocaleString("vi-VN")}</span>
                       </div>
-                      <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{n.note}</p>
+                      <p className="text-text-light dark:text-text-dark text-sm leading-relaxed whitespace-pre-line">{n.note}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-400 italic text-center py-6 text-sm">Chưa có nhật ký chăm sóc nào</p>
+                <p className="text-subtle-light dark:text-subtle-dark italic text-center py-6 text-sm">Chưa có nhật ký chăm sóc nào</p>
               )}
             </div>
 
             {/* Add New Note */}
-            <form onSubmit={handleAddNote} className="p-6 bg-gray-50 border-t border-gray-100 shrink-0">
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Thêm ghi chú chăm sóc mới</label>
+            <form onSubmit={handleAddNote} className="p-6 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark shrink-0">
+              <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-2">Thêm ghi chú chăm sóc mới</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Nhập nội dung trao đổi..."
-                  className="flex-1 p-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                  className="flex-1 p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark"
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                 />
                 <button
                   type="submit"
                   disabled={!newNote.trim()}
-                  className="px-4 py-2.5 bg-primary text-background-dark rounded-xl font-bold hover:bg-primary/90 text-sm shadow-md transition-all disabled:opacity-50"
+                  className="px-4 py-2.5 bg-primary text-text-light rounded-lg font-bold hover:bg-primary/90 text-sm shadow-md transition-all disabled:opacity-50 cursor-pointer"
                 >
                   Gửi
                 </button>

@@ -22,17 +22,17 @@ const ProductsMain = () => {
   const currentLabel = titleMap[activeTab]?.label || 'Cửa Hàng';
 
   return (
-    <div className="flex flex-col h-full rounded-2xl bg-white shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
       {/* Header trang cửa hàng - Không còn tab thừa ở giữa */}
-      <div className="bg-white border-b border-gray-100 flex items-center justify-between z-10 w-full px-6 py-4">
-        <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center gap-3">
+      <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-between z-10 w-full px-6 py-4">
+        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark tracking-tight flex items-center gap-3">
           <CurrentIcon className="text-primary w-7 h-7" />
           {currentLabel}
         </h1>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
+      <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-6">
         {activeTab === 'pos' && <SalesOrderList />}
         {activeTab === 'inventory' && <ProductList />}
         {activeTab === 'import' && <ImportGoods onFinish={() => {}} />}

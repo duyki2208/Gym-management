@@ -1,5 +1,5 @@
-﻿---
-version: "alpha"
+---
+version: "beta"
 name: "Gym Fitness Management System"
 description: >
   Hệ thống quản lý phòng gym — giao diện admin dashboard với hai chế độ sáng/tối.
@@ -7,23 +7,23 @@ description: >
   Stack: React + TailwindCSS (Lexend font), hỗ trợ dark mode qua class strategy.
 
 colors:
-  primary:          "#13ec80"
-  background-light: "#f6f8f7"
-  background-dark:  "#102219"
-  surface-light:    "#ffffff"
-  surface-dark:     "#182c22"
-  text-light:       "#0d1b14"
-  text-dark:        "#e0f2e9"
-  subtle-light:     "#4c9a73"
-  subtle-dark:      "#7bbf9a"
-  border-light:     "#cfe7db"
-  border-dark:      "#2d523f"
+  primary:              "#13ec80"
+  background-light:     "#f6f8f7"
+  background-dark:      "#121316"
+  surface-light:        "#ffffff"
+  surface-dark:         "#1e1f26"
+  text-light:           "#0d1b14"
+  text-dark:            "#f3f4f6"
+  subtle-light:         "#4c9a73"
+  subtle-dark:          "#9ca3af"
+  border-light:         "#e5e7eb"
+  border-dark:          "#2d2f36"
   primary-subtle-light: "#e7f3ed"
   primary-subtle-dark:  "rgba(19, 236, 128, 0.1)"
-  positive-light:   "#07882c"
-  positive-dark:    "#50c878"
-  negative-light:   "#e72a08"
-  negative-dark:    "#ff6b6b"
+  positive-light:       "#07882c"
+  positive-dark:        "#10b981"
+  negative-light:       "#e72a08"
+  negative-dark:        "#f43f5e"
   gray-scrollbar-light: "#d1d5db"
   gray-scrollbar-dark:  "#374151"
 
@@ -87,78 +87,9 @@ spacing:
   2xl: 48px
 
 components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor:       "{colors.background-dark}"
-    fontWeight:      700
-    rounded:         "{rounded.lg}"
-    height:          56px
-    padding:         "0 24px"
-
-  button-primary-hover:
-    backgroundColor: "rgba(19, 236, 128, 0.9)"
-
-  button-primary-disabled:
-    backgroundColor: "{colors.primary}"
-    opacity:         "0.7"
-
-  button-ghost:
-    backgroundColor: "transparent"
-    textColor:       "{colors.subtle-light}"
-    rounded:         "{rounded.lg}"
-    padding:         "8px 16px"
-
-  button-ghost-hover:
-    backgroundColor: "{colors.primary-subtle-light}"
-
-  input:
-    backgroundColor: "{colors.surface-light}"
-    textColor:       "{colors.text-light}"
-    rounded:         "{rounded.lg}"
-    height:          56px
-    padding:         "0 15px"
-    borderColor:     "rgba(55, 65, 81, 0.5)"
-
-  input-focus:
-    borderColor:     "{colors.primary}"
-    boxShadow:       "0 0 0 2px rgba(19, 236, 128, 0.5)"
-
-  input-dark:
-    backgroundColor: "#102219"
-    textColor:       "{colors.text-dark}"
-
-  sidebar:
-    width:           256px
-    widthCollapsed:  64px
-    backgroundColor: "{colors.surface-light}"
-    borderColor:     "{colors.border-light}"
-
-  sidebar-dark:
-    backgroundColor: "#111827"
-    borderColor:     "#1f2937"
-
-  nav-item-active:
-    backgroundColor: "rgba(19, 236, 128, 0.15)"
-    textColor:       "{colors.text-light}"
-    fontWeight:      700
-    rounded:         "{rounded.lg}"
-
-  nav-item-active-indicator:
-    width:           4px
-    height:          24px
-    backgroundColor: "{colors.primary}"
-    rounded:         "{rounded.sm}"
-
-  nav-item-hover:
-    backgroundColor: "#f3f4f6"
-
-  nav-item-hover-dark:
-    backgroundColor: "rgba(255, 255, 255, 0.05)"
-
   card:
     backgroundColor: "{colors.surface-light}"
     rounded:         "{rounded.xl}"
-    padding:         "{spacing.lg}"
     borderColor:     "{colors.border-light}"
     boxShadow:       "0 1px 3px rgba(0,0,0,0.06)"
 
@@ -166,144 +97,168 @@ components:
     backgroundColor: "{colors.surface-dark}"
     borderColor:     "{colors.border-dark}"
 
-  badge-positive:
-    backgroundColor: "{colors.primary-subtle-light}"
-    textColor:       "{colors.positive-light}"
-    rounded:         "{rounded.full}"
-    padding:         "2px 10px"
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor:       "{colors.background-dark}"
+    fontWeight:      700
+    rounded:         "{rounded.lg}"
+    height:          48px
+    padding:         "0 20px"
 
-  badge-negative:
-    backgroundColor: "#fef2f2"
-    textColor:       "{colors.negative-light}"
-    rounded:         "{rounded.full}"
-    padding:         "2px 10px"
+  button-ghost:
+    backgroundColor: "transparent"
+    textColor:       "{colors.subtle-light}"
+    rounded:         "{rounded.lg}"
+    padding:         "8px 16px"
 
-  modal:
+  input:
     backgroundColor: "{colors.surface-light}"
-    rounded:         "{rounded.xl}"
-    padding:         "{spacing.xl}"
-    boxShadow:       "0 20px 60px rgba(0,0,0,0.15)"
+    textColor:       "{colors.text-light}"
+    rounded:         "{rounded.lg}"
+    height:          44px
+    padding:         "0 14px"
+    borderColor:     "{colors.border-light}"
 
-  tooltip:
-    backgroundColor: "#111827"
-    textColor:       "#ffffff"
-    rounded:         "{rounded.md}"
-    padding:         "6px 10px"
-
-  scrollbar:
-    width:           4px
-    thumbColor:      "{colors.gray-scrollbar-light}"
-    thumbColorHover: "#9ca3af"
-
-  scrollbar-dark:
-    thumbColor:      "{colors.gray-scrollbar-dark}"
-    thumbColorHover: "#4b5563"
+  input-dark:
+    backgroundColor: "{colors.surface-dark}"
+    textColor:       "{colors.text-dark}"
+    borderColor:     "{colors.border-dark}"
 ---
 
-## Overview
+# Gym Fitness Management System — Bộ Quy Chuẩn Thiết Kế (DESIGN.md)
 
-**Gym Fitness Management System** là admin dashboard quản lý phòng gym, xây dựng bằng React + TailwindCSS. Giao diện được thiết kế theo phong cách **Sport-Tech tối giản** — kết hợp giữa năng lượng vận động (màu xanh lá neon) và sự chuyên nghiệp của phần mềm doanh nghiệp.
+Tài liệu này là **nguồn chân lý duy nhất (Single Source of Truth)** cho toàn bộ giao diện của dự án. Mọi component và trang phải tuân thủ nghiêm ngặt các quy chuẩn dưới đây. Tuyệt đối không hardcode mã màu hoặc kích thước tuỳ tiện.
 
-## Colors
+---
 
-Palette xoay quanh một màu accent neon xanh lá duy nhất trên nền tối/sáng trung tính.
+## 1. Bảng Màu Chuẩn (Color Tokens)
 
-- **primary (`#13ec80`)**: Màu xanh lá neon — dùng cho CTA, active states, icon logo, border focus. Đây là màu nhận diện thương hiệu duy nhất.
-- **background-light (`#f6f8f7`)**: Nền trang ở light mode — trắng xanh nhẹ, không gây mỏi mắt.
-- **background-dark (`#102219`)**: Nền trang ở dark mode — xanh rừng đậm, tạo chiều sâu.
-- **surface-light (`#ffffff`)**: Nền card/panel ở light mode.
-- **surface-dark (`#182c22`)**: Nền card/panel ở dark mode.
-- **text-light (`#0d1b14`)**: Màu chữ chính ở light mode — gần đen, tông xanh lá rất nhẹ.
-- **text-dark (`#e0f2e9`)**: Màu chữ chính ở dark mode — trắng xanh nhẹ.
-- **subtle-light / subtle-dark**: Màu chữ phụ (meta, label, description).
-- **border-light (`#cfe7db`) / border-dark (`#2d523f`)**: Viền card, input, separator.
-- **positive (`#07882c` / `#50c878`)**: Trạng thái tích cực — tăng trưởng, thành công, active membership.
-- **negative (`#e72a08` / `#ff6b6b`)**: Trạng thái tiêu cực — giảm, lỗi, hết hạn.
+Đồng bộ 100% với `frontend/tailwind.config.js`:
 
-> **Nguyên tắc**: Không dùng màu nào ngoài palette này. Primary accent chỉ xuất hiện ở các điểm tương tác chủ đạo; không dùng làm nền toàn trang.
+| Token Name | Light Mode | Dark Mode | Ý nghĩa & Vị trí sử dụng |
+| :--- | :--- | :--- | :--- |
+| `primary` | `#13ec80` | `#13ec80` | Xanh lá neon brand: CTA chính, active state, logo |
+| `background-*` | `#f6f8f7` | `#121316` | Nền toàn trang |
+| `surface-*` | `#ffffff` | `#1e1f26` | Nền card, container, bảng, modal, dropdown |
+| `text-*` | `#0d1b14` | `#f3f4f6` | Màu chữ chính (tiêu đề, số liệu, dữ liệu chính) |
+| `subtle-*` | `#4c9a73` | `#9ca3af` | Màu chữ phụ, label, meta, icon không active |
+| `border-*` | `#e5e7eb` | `#2d2f36` | Đường viền card, đường kẻ bảng, divider, grid |
+| `positive-*` | `#07882c` | `#10b981` | Thành công, tăng trưởng, hoạt động (active) |
+| `negative-*` | `#e72a08` | `#f43f5e` | Thất bại, giảm, nợ đọng, hết hạn |
 
-## Typography
+> **Nguyên tắc**: Luôn sử dụng class Tailwind dạng cặp token:  
+> `bg-surface-light dark:bg-surface-dark`, `text-text-light dark:text-text-dark`, `border-border-light dark:border-border-dark`.  
+> Cấm hardcode `text-gray-*`, `text-black`, `text-white` hoặc `bg-gray-800/900` cho nền card.
 
-Font duy nhất: **Lexend** (Google Fonts) — thiết kế để đọc nhanh, phù hợp với dashboard số liệu.
+---
 
-- **display / h1**: Dùng cho tiêu đề trang (Login, Dashboard section), `font-black` / `font-extrabold`, tracking âm.
-- **h2, h3**: Tiêu đề card, section, modal.
-- **body-md**: Nội dung chính, mô tả.
-- **label-caps (`11px, bold`)**: Label nhóm sidebar ("Chính", "Quản lý", "Phân tích") — dùng `text-gray-400` để không cạnh tranh với nav items.
-- **caption**: Metadata nhỏ, footer credit, timestamp.
+## 2. Thang Chữ Chuẩn (Typography Scale)
 
-> Font weight tối thiểu cho interactive elements là `font-medium (500)`. Không dùng `font-light` hoặc `font-thin` trong UI này.
+Toàn bộ hệ thống sử dụng font **Lexend** (Google Fonts).
 
-## Layout
+| Cấp độ | Kích thước & Weight | Tailwind Class | Màu áp dụng | Ngữ cảnh sử dụng |
+| :--- | :--- | :--- | :--- | :--- |
+| **Page Title** | 24px - 30px / Bold (700-800) | `text-2xl font-bold` (hoặc `md:text-3xl`) | `text-text-light dark:text-text-dark` | Tiêu đề chính đầu trang |
+| **Section Title** | 18px / SemiBold (600) | `text-lg font-semibold` | `text-text-light dark:text-text-dark` | Tiêu đề Card, Header bảng, Tiêu đề Modal |
+| **Field Label / Subhead** | 14px / Medium (500) | `text-sm font-medium` | `text-subtle-light dark:text-subtle-dark` | Nhãn ô input, header cột bảng, subtitle |
+| **Body Text** | 14px / Regular (400) | `text-sm font-normal` | `text-text-light dark:text-text-dark` | Dữ liệu bảng, nội dung thông thường |
+| **Caption / Meta** | 12px / Regular (400) | `text-xs font-normal` | `text-subtle-light dark:text-subtle-dark` | Timestamp, mã ID, ghi chú nhỏ |
 
-Kiến trúc layout **sidebar + main content**:
+---
 
-- **Sidebar**: Fixed left, `w-64` (expanded) / `w-16` (collapsed), transition 300ms. Có toggle button (`±right-3, rounded-full`).
-- **Main**: `ml-64` hoặc `ml-16` tương ứng. Padding nội dung `p-6` hoặc `p-8`.
-- **Header**: Fixed top, `h-16`, nằm trong vùng main (không che sidebar).
-- **Breakpoint**: Layout được tối ưu cho màn hình `lg:` (>=1024px) trở lên — đây là admin tool, không ưu tiên mobile.
+## 3. Quy Chuẩn Khung Card & Bo Góc
 
-## Components
+### 3.1. Khung Card Chuẩn (Container Pattern)
+Mọi card thông tin, bộ lọc (filter bar), bảng danh sách, modal đều phải dùng chung công thức:
+```jsx
+<div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm p-4 md:p-6">
+  {/* Nội dung */}
+</div>
+```
 
-### Button
+### 3.2. Quy Chuẩn Bo Góc (Border Radius Hierarchy)
+- `rounded-xl` (16px): Khung Card lớn, Container bảng, Khung bộ lọc, Hộp thoại Modal.
+- `rounded-lg` (12px): Các phần tử tương tác (Button, Ô Input, Select, Menu Dropdown).
+- `rounded-full` (9999px): Badge trạng thái, Pill tag, Avatar, Toggle switch.
+- **Tuyệt đối không dùng `rounded-2xl`** lẫn lộn trong các trang quản lý.
 
-- **Primary**: Nền `primary`, chữ `background-dark` (dark green), `font-bold`, `h-14 (56px)`, `rounded-lg`. Trạng thái hover dùng `primary/90`.
-- **Ghost**: Nền transparent, hover `primary-subtle-light`, dùng cho actions phụ.
-- Disabled: opacity 70%, giữ nguyên màu nền (không dùng gray).
+---
 
-### Input
+## 4. Quy Chuẩn Biểu Đồ (Recharts Color & Dark Mode Standard)
 
-- Height `h-14 (56px)`, `rounded-lg`, border `border-gray-700/50`.
-- Focus: `ring-2 ring-primary/50` + `border-primary`.
-- Pattern: Input kết hợp icon bên phải trong div wrapper (`rounded-r-none` + div `rounded-r-lg border-l-0`).
+### 4.1. Bảng màu biểu đồ (`CHART_THEME`)
+Hằng số màu dùng chung cho mọi biểu đồ trong `frontend/src/utils/theme.js` hoặc trực tiếp trong các component biểu đồ:
 
-### Sidebar Nav Item
+```javascript
+export const CHART_THEME = {
+  primary:   "#13ec80", // Doanh thu, dữ liệu chủ đạo (Brand Primary)
+  positive:  "#10b981", // Tăng trưởng, check-in thành công, active membership
+  negative:  "#f43f5e", // Nợ đọng, hội viên quá hạn, thất bại
+  secondary: "#3b82f6", // Gói tập, phân loại dịch vụ (Blue)
+  tertiary:  "#8b5cf6", // PT, hoa hồng (Purple)
+  warning:   "#f59e0b", // Sắp hết hạn, cảnh báo (Amber)
 
-- Active: `bg-primary/15`, chữ `gray-900`/`gray-100`, `font-bold`, kèm thanh indicator `w-1 h-6 bg-primary rounded-r-full` ở cạnh trái.
-- Hover: `bg-gray-100` (light) / `bg-white/5` (dark).
-- Collapsed: Hiện tooltip ở `left-full` khi hover.
+  // CHÚ Ý: 2 giá trị này PHẢI LUÔN ĐỒNG BỘ với `subtle-light` và `subtle-dark` trong tailwind.config.js:
+  axisLabelLight: "#4c9a73", // subtle-light
+  axisLabelDark:  "#9ca3af", // subtle-dark
+};
+```
 
-### Cards / Panels
+### 4.2. Xử lý Lưới (Grid) & Trục (Axis) theo Dark Mode
+Không dùng `if (isDarkMode)` thủ công bằng JS cho SVG strokes. Thay vào đó, tận dụng việc Recharts chuyển tiếp `className` xuống SVG elements:
 
-- `bg-white dark:bg-surface-dark`, `rounded-xl`, border `border-light`/`border-dark`, shadow nhẹ.
-- Padding trong card: `p-6` (standard) hoặc `p-4` (compact).
+```jsx
+// Đường lưới tự đổi màu theo dark mode thông qua currentColor và Tailwind classes:
+<CartesianGrid
+  stroke="currentColor"
+  className="text-border-light dark:text-border-dark"
+  strokeDasharray="3 3"
+/>
 
-### Scrollbar
+// Tooltip chuẩn:
+<Tooltip
+  contentStyle={{
+    borderRadius: "12px",
+  }}
+  wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg"
+/>
+```
 
-- Width 4px, thumb `#d1d5db` (light) / `#374151` (dark), `border-radius: 99px`.
-- Apply class `custom-scrollbar` — đã định nghĩa trong `index.css`.
+---
 
-## Dark Mode
+## 5. Quy Chuẩn Icon (100% Lucide React)
 
-Dark mode toggle qua class `dark` trên `<html>`. Mọi component dùng cặp class `bg-X dark:bg-Y`.
+- **Thư viện chuẩn duy nhất**: `lucide-react` (đã có sẵn trong dự án).
+- **Loại bỏ hoàn toàn**: Google Material Symbols (`<span className="material-symbols-outlined">`).
+- **Kích cỡ chuẩn**:
+  - `size={16}`: Inline icon trong nút nhỏ, inline badge, action buttons trong bảng.
+  - `size={18}`: Icon trong ô input tìm kiếm, icon trong button thông thường.
+  - `size={20}`: Icon tiêu đề mục, nav item sidebar.
+  - `size={24}`: Icon tiêu đề trang chính, icon card KPI thống kê.
+- **Icon dạng tô màu (Filled)**: Thêm thuộc tính `fill="currentColor"`.
 
-Quy ước đặt tên dark variant:
-- Background: `bg-white` -> `dark:bg-gray-900` (sidebar) hoặc `dark:bg-surface-dark` (card)
-- Text: `text-gray-900` -> `dark:text-gray-100`
-- Border: `border-gray-200` -> `dark:border-gray-800`
+---
 
-> Không hardcode màu hex trực tiếp trong JSX. Luôn dùng Tailwind class hoặc biến Tailwind đã định nghĩa trong `tailwind.config.js`.
+## 6. Lộ Trình Triển Khai 3 Giai Đoạn (Migration Roadmap)
 
-## Animations & Transitions
+### Giai đoạn 1: Chuẩn Hóa Icon (13 files)
+Chuyển đổi toàn bộ Material Symbols sang `lucide-react`, kiểm tra box-model SVG, gỡ bỏ import Google Fonts không dùng.
+- `components/customer/AutoCheckIn.jsx`
+- `components/customer/FaceCaptureModal.jsx`
+- `components/customer/CustomerDetailModal.jsx`
+- `components/staff/StaffDetailModal.jsx`
+- `components/product/ProductModal.jsx`
+- `components/reports/PTSessionReportModal.jsx`
+- `pages/ProductList.jsx`
+- `pages/Packages.jsx`
+- `pages/CustomerList.jsx`
+- `pages/History.jsx`
+- `pages/Login.jsx`
+- `pages/CheckIn.jsx`
+- `pages/Staff.jsx`
 
-- **Dropdown**: `slideDown` keyframe — `opacity 0->1`, `translateY -6px->0`, `0.18s ease-out`.
-- **Sidebar collapse**: `transition-all duration-300 ease-in-out`.
-- **Hover states**: `transition-colors duration-200`.
-- **Loading shrink** (notification bar): `shrink 10s linear forwards` — `scaleX(1->0)`.
+### Giai đoạn 2: Chuẩn Hóa Khung Card & Typography Scale
+Thay thế các class `bg-white`, `dark:bg-gray-800`, `rounded-2xl`, `text-gray-*` bằng `bg-surface-light dark:bg-surface-dark`, `border-border-light dark:border-border-dark`, `rounded-xl`, `text-text-light dark:text-text-dark`.
 
-> Giữ animation ngắn (150–300ms). Không dùng animation rườm rà cho data tables hoặc các thao tác CRUD.
-
-## Iconography
-
-Thư viện icon: **Lucide React** (`lucide-react`). Kích thước chuẩn `size={20}` cho sidebar nav, `size={16}` cho inline icons trong text.
-
-Màu icon:
-- Active: `text-gray-900 dark:text-gray-100`
-- Inactive: `text-gray-400 dark:text-gray-500`
-- Brand (logo): `text-primary`
-
-## Voice & Tone
-
-- Ngôn ngữ giao diện: **Tiếng Việt** (label, placeholder, thông báo)
-- Tên app: **"Gym Fitness"** (hiển thị sidebar), tên đầy đủ: **"Hệ thống Quản lý Phòng Gym"**
-- Tone: Chuyên nghiệp, rõ ràng, không dùng tiếng lóng. Thông báo lỗi cụ thể, không generic.
+### Giai đoạn 3: Chuẩn Hóa Biểu Đồ Recharts
+Đồng bộ bảng màu `CHART_THEME` và cấu hình `CartesianGrid` với `currentColor` trên `Reports.jsx` và các trang chứa biểu đồ.

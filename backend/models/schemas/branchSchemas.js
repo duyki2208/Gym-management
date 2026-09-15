@@ -331,7 +331,13 @@ transactionSchema.pre("validate", async function () {
 transactionSchema.index({ customer: 1 });
 transactionSchema.index({ staff: 1 });
 transactionSchema.index({ createdAt: -1, status: 1 });
-transactionSchema.index({ saleOrder: 1, paymentPhase: 1 }, { unique: true, sparse: true });
+transactionSchema.index(
+  { saleOrder: 1, paymentPhase: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { saleOrder: { $type: "objectId" } },
+  }
+);
 
 // 8. SaleOrder Schema
 const saleOrderSchema = new mongoose.Schema(
@@ -483,7 +489,13 @@ commissionSchema.index({ type: 1, month: 1, year: 1 });
 commissionSchema.index({ period: 1 });
 commissionSchema.index({ customerPackage: 1 });
 commissionSchema.index({ workoutSession: 1 });
-commissionSchema.index({ customerPackage: 1, type: 1 }, { unique: true, sparse: true });
+commissionSchema.index(
+  { customerPackage: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { customerPackage: { $type: "objectId" } },
+  }
+);
 
 // 13. CommissionPeriod Schema
 const commissionPeriodSchema = new mongoose.Schema(

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { X } from 'lucide-react';
 
 const ProductModal = ({ product, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -64,7 +65,7 @@ const ProductModal = ({ product, onSave, onClose }) => {
             {product ? 'Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-            <span className="material-symbols-outlined">close</span>
+            <X size={20} />
           </button>
         </div>
 

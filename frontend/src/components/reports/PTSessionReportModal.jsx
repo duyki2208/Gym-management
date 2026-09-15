@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Download } from "lucide-react";
 import reportService from "../../services/reportService";
 import { staffService } from "../../services/customerService";
 import toast from "react-hot-toast";
@@ -217,9 +218,9 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
             {/* Export Excel Button */}
             <button
               onClick={handleExportExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/90 text-text-light rounded-xl text-xs md:text-sm font-bold transition-all shadow-sm cursor-pointer"
             >
-              <span className="material-symbols-outlined text-sm">download</span>
+              <Download size={16} />
               Xuất File Đối Soát
             </button>
           </div>

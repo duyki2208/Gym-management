@@ -3,7 +3,7 @@ import { productService } from '../services/productService';
 import ProductModal from '../components/product/ProductModal';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, Search, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Download, Search, Edit, Trash2, Package, PlusCircle } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 
 const ProductList = () => {
@@ -69,18 +69,16 @@ const ProductList = () => {
   return (
     <div className="flex flex-col gap-6 font-display bg-transparent h-full overflow-y-auto custom-scrollbar">
       {/* ── Card bao quanh: Search + Add Product ── */}
-      <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-xl">
-            search
-          </span>
+          <Search size={18} className="absolute left-3 top-2.5 text-subtle-light dark:text-subtle-dark" />
           <input
             id="productListSearchInput"
             name="productListSearch"
             type="text"
             aria-label="Tìm theo tên sản phẩm"
-            className="w-full pl-10 pr-4 h-10 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white text-gray-800 transition-colors"
+            className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark transition-colors"
             placeholder="Tìm theo tên sản phẩm..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -95,26 +93,21 @@ const ProductList = () => {
             setSelectedProduct(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 h-10 px-4 bg-primary text-white rounded-xl text-xs font-bold hover:opacity-90 shrink-0 shadow-sm transition-all"
+          className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 shrink-0 shadow-sm transition-all"
         >
-          <span
-            className="material-symbols-outlined text-base"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            add_circle
-          </span>
+          <Plus size={18} />
           <span>Thêm Sản Phẩm Mới</span>
         </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {loading ? (
-             <div className="col-span-full py-10 text-center text-gray-500">Đang tải...</div>
+             <div className="col-span-full py-10 text-center text-subtle-light dark:text-subtle-dark">Đang tải...</div>
         ) : products.length > 0 ? (
              products.map((p) => (
                 <div 
                   key={p._id} 
-                  className="aspect-square bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group flex flex-col justify-between relative overflow-hidden"
+                  className="aspect-square bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:border-primary/30 transition-all group flex flex-col justify-between relative overflow-hidden"
                 >
                     {/* Header: Category & Action buttons */}
                     <div className="flex justify-between items-center gap-2 min-w-0">
@@ -124,14 +117,14 @@ const ProductList = () => {
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                              <button 
                                onClick={() => { setSelectedProduct(p); setShowModal(true); }} 
-                               className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                               className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
                                title="Sửa"
                              >
                                <Edit size={15}/>
                              </button>
                              <button 
                                onClick={() => handleDelete(p._id)} 
-                               className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                               className="p-1 text-negative-light dark:text-negative-dark hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                                title="Xóa"
                              >
                                <Trash2 size={15}/>
@@ -141,23 +134,23 @@ const ProductList = () => {
 
                     {/* Middle: Icon + Product Name */}
                     <div className="flex flex-col items-center justify-center my-auto py-1 text-center min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary mb-2 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-2 group-hover:scale-110 transition-transform">
                             <Package size={22} />
                         </div>
-                        <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-snug px-1 break-words" title={p.name}>
+                        <h3 className="font-semibold text-sm text-text-light dark:text-text-dark line-clamp-2 leading-snug px-1 break-words" title={p.name}>
                           {p.name}
                         </h3>
                     </div>
 
                     {/* Footer: Price & Stock */}
-                    <div className="flex justify-between items-center pt-2.5 border-t border-gray-100 min-w-0">
+                    <div className="flex justify-between items-center pt-2.5 border-t border-border-light dark:border-border-dark min-w-0">
                         <div className="min-w-0">
-                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Giá bán</p>
-                            <p className="font-black text-xs sm:text-sm text-gray-900 truncate">{p.sellPrice.toLocaleString()} đ</p>
+                            <p className="text-[10px] text-subtle-light dark:text-subtle-dark font-medium uppercase tracking-wider">Giá bán</p>
+                            <p className="font-bold text-xs sm:text-sm text-text-light dark:text-text-dark truncate">{p.sellPrice.toLocaleString()} đ</p>
                         </div>
                         <div className="text-right shrink-0">
-                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Tồn kho</p>
-                            <span className={`inline-block font-black px-2 py-0.5 rounded-md text-xs ${p.stockQuantity <= 10 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                            <p className="text-[10px] text-subtle-light dark:text-subtle-dark font-medium uppercase tracking-wider">Tồn kho</p>
+                            <span className={`inline-block font-bold px-2 py-0.5 rounded-md text-xs ${p.stockQuantity <= 10 ? 'bg-red-50 dark:bg-red-950/50 text-negative-light dark:text-negative-dark border border-red-200 dark:border-red-900/50' : 'bg-emerald-50 dark:bg-emerald-950/50 text-positive-light dark:text-positive-dark border border-emerald-200 dark:border-emerald-900/50'}`}>
                                 {p.stockQuantity}
                             </span>
                         </div>

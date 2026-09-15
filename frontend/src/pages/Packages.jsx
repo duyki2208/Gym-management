@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { packageService } from "../services/customerService";
 import PackageModal from "../components/package/PackageModal";
 import { useConfirm } from "../context/ConfirmContext";
@@ -63,9 +64,7 @@ const Packages = () => {
 
       <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
         <div className="relative flex-1 max-w-2xl">
-          <span className="material-symbols-outlined absolute left-3 top-2.5 text-text-muted-light dark:text-text-muted-dark">
-            search
-          </span>
+          <Search size={18} className="absolute left-3 top-2.5 text-subtle-light dark:text-subtle-dark" />
           <input
             id="pkgSearchInput"
             name="pkgSearch"
@@ -84,14 +83,9 @@ const Packages = () => {
               setEdit(null);
               setModal(true);
             }}
-            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl font-bold hover:opacity-90"
+            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 shrink-0 shadow-sm transition-all"
           >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              add_circle
-            </span>
+            <Plus size={18} />
             <span>Thêm gói</span>
           </button>
         )}
@@ -99,7 +93,7 @@ const Packages = () => {
 
       <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-200/80 dark:bg-gray-800 uppercase text-sm font-bold text-black dark:text-white border-b border-gray-300 dark:border-gray-700">
+          <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
             <tr>
               <th className="px-6 py-4">TÊN GÓI</th>
               <th className="px-6 py-4">LOẠI GÓI</th>
@@ -143,17 +137,13 @@ const Packages = () => {
                         }}
                         className="p-2 hover:bg-primary/20 rounded-xl transition-colors"
                       >
-                        <span className="material-symbols-outlined text-text-light dark:text-text-dark text-base">
-                          edit
-                        </span>
+                        <Pencil size={16} className="text-text-light dark:text-text-dark" />
                       </button>
                       <button
                         onClick={() => del(p._id || p.id)}
                         className="p-2 hover:bg-red-500/20 rounded-xl transition-colors"
                       >
-                        <span className="material-symbols-outlined text-negative-light dark:text-negative-dark text-base">
-                          delete
-                        </span>
+                        <Trash2 size={16} className="text-negative-light dark:text-negative-dark" />
                       </button>
                     </td>
                   )}

@@ -182,7 +182,7 @@ const Dashboard = () => {
 
         {/* Tầng 2: Buổi dạy gần đây & KPI Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+          <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
               Lịch sử các buổi dạy gần đây
             </h3>
@@ -209,7 +209,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
+          <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
               Tiến trình & Cảnh báo chỉ tiêu
             </h3>
@@ -316,7 +316,7 @@ const Dashboard = () => {
 
         {/* Tầng 2: Hợp đồng gần đây & KPI Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+          <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
               Lịch sử chốt hợp đồng gần đây
             </h3>
@@ -331,19 +331,19 @@ const Dashboard = () => {
                       <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">
                         {act.customerName}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark">
                         {act.note} • Lúc {act.time}
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-text-muted-light text-sm text-center py-4">Chưa chốt hợp đồng nào hôm nay.</p>
+                <p className="text-subtle-light dark:text-subtle-dark text-sm text-center py-4">Chưa chốt hợp đồng nào hôm nay.</p>
               )}
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
+          <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
               Tiến trình KPI & Doanh số
             </h3>
@@ -462,7 +462,7 @@ const Dashboard = () => {
       {/* Tầng 2: Biểu đồ check-in theo giờ và Hoạt động gần đây */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Biểu đồ Giờ cao điểm hôm nay (Giữ nguyên cấu trúc bar chart div) */}
-        <div className="lg:col-span-2 p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+        <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Clock className="text-primary" size={20} />
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
@@ -497,7 +497,7 @@ const Dashboard = () => {
         </div>
 
         {/* Lượt check-in gần nhất của hội viên */}
-        <div className="p-6 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+        <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
           <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
             Hoạt động check-in gần đây
           </h3>
@@ -560,31 +560,31 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-gray-200">
+            <div className="overflow-hidden rounded-xl border border-border-light dark:border-border-dark">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-300 dark:border-gray-700 bg-gray-200/80 dark:bg-gray-800 text-xs font-bold text-black dark:text-white uppercase">
+                  <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-xs font-bold text-text-light dark:text-text-dark uppercase">
                     <th className="p-4">NGÀY TRONG TUẦN</th>
                     <th className="p-4">NGÀY THÁNG</th>
                     <th className="p-4 text-right">DOANH THU</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
                   {stats.weeklyRevenue.map((d, index) => {
                     const isToday = d.date === new Date().toISOString().substring(0, 10);
                     return (
                       <tr 
                         key={index} 
-                        className={`transition-colors text-sm ${isToday ? "bg-green-50/50 font-bold text-green-800" : "hover:bg-gray-50"}`}
+                        className={`transition-colors text-sm ${isToday ? "bg-green-50/50 font-bold text-green-800" : "hover:bg-background-light dark:hover:bg-background-dark"}`}
                       >
                         <td className="p-4 flex items-center gap-2">
                           {isToday && <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>}
                           {d.dayName}
                         </td>
-                        <td className="p-4 text-gray-500 font-medium">
+                        <td className="p-4 text-subtle-light dark:text-subtle-dark font-medium">
                           {new Date(d.date).toLocaleDateString("vi-VN")}
                         </td>
-                        <td className="p-4 text-right font-bold text-gray-800">
+                        <td className="p-4 text-right font-bold text-text-light dark:text-text-dark">
                           {d.revenue.toLocaleString("vi-VN")} đ
                         </td>
                       </tr>
@@ -604,7 +604,7 @@ const Dashboard = () => {
             {stats.newCustomersList.length > 0 ? (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-300 dark:border-gray-700 bg-gray-200/80 dark:bg-gray-800 text-xs font-bold text-black dark:text-white uppercase">
+                  <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-xs font-bold text-text-light dark:text-text-dark uppercase">
                     <th className="p-3 w-[10%]">AVATAR</th>
                     <th className="p-3 w-[30%]">HỌ TÊN</th>
                     <th className="p-3 w-[20%]">SỐ ĐIỆN THOẠI</th>
@@ -612,11 +612,11 @@ const Dashboard = () => {
                     <th className="p-3 w-[15%]">HỌC PHÍ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
                   {stats.newCustomersList.map((customer) => (
-                    <tr key={customer._id} className="hover:bg-gray-50 transition-colors text-sm">
+                    <tr key={customer._id} className="hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm">
                       <td className="p-3">
-                        <div className="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center text-gray-400">
+                        <div className="w-9 h-9 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark overflow-hidden flex items-center justify-center text-subtle-light dark:text-subtle-dark">
                           {customer.avatarUrl ? (
                              <img src={customer.avatarUrl} alt="" className="w-full h-full object-cover" />
                           ) : customer.avatar && customer.avatar !== "👤" ? (
@@ -627,10 +627,10 @@ const Dashboard = () => {
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="font-bold text-gray-800 block">{customer.name}</span>
-                        <span className="text-[10px] text-gray-400 font-medium uppercase">{customer.code}</span>
+                        <span className="font-bold text-text-light dark:text-text-dark block">{customer.name}</span>
+                        <span className="text-[10px] text-subtle-light dark:text-subtle-dark font-medium uppercase">{customer.code}</span>
                       </td>
-                      <td className="p-3 font-semibold text-gray-700">{customer.phone}</td>
+                      <td className="p-3 font-semibold text-text-light dark:text-text-dark">{customer.phone}</td>
                       <td className="p-3">
                         <span className="px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
                           {customer.packageType}
@@ -682,12 +682,12 @@ const Modal = ({ title, onClose, children }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden animate-scale-in"
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-          <h3 className="text-lg font-black text-gray-800 dark:text-white tracking-tight">{title}</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-500">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+          <h3 className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">{title}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-border-light dark:hover:bg-border-dark transition-colors text-subtle-light dark:text-subtle-dark cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -856,12 +856,12 @@ const TeamTasksModal = ({ onClose }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in"
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-          <h3 className="text-lg font-black text-gray-800 dark:text-white tracking-tight">Ghi Chú Ca Trực Hôm Nay</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-500">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+          <h3 className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">Ghi Chú Ca Trực Hôm Nay</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-border-light dark:hover:bg-border-dark transition-colors text-subtle-light dark:text-subtle-dark cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -869,7 +869,7 @@ const TeamTasksModal = ({ onClose }) => {
         <div className="p-6 space-y-6">
           {/* Hệ thống Tabs phân nhóm theo đội (Chỉ Admin & Kế toán được chuyển tab) */}
           {isAdminOrAccountant && (
-            <div className="flex border-b border-gray-100 dark:border-gray-800 -mt-2">
+            <div className="flex border-b border-border-light dark:border-border-dark -mt-2">
               {[
                 { id: "sale", label: "Đội Sale" },
                 { id: "pt", label: "Đội PT" },
@@ -878,10 +878,10 @@ const TeamTasksModal = ({ onClose }) => {
                 <button
                   key={tab.id}
                   type="button"
-                  className={`flex-1 py-2 text-sm font-bold border-b-2 transition-all ${
+                  className={`flex-1 py-2 text-sm font-bold border-b-2 transition-all cursor-pointer ${
                     activeTab === tab.id
                       ? "border-primary text-primary"
-                      : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                      : "border-transparent text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark"
                   }`}
                   onClick={() => setActiveTab(tab.id)}
                 >
@@ -893,12 +893,12 @@ const TeamTasksModal = ({ onClose }) => {
 
           {/* Form thêm nhanh đầu việc (Ẩn đối với nhân viên thường) */}
           {(isAdminOrAccountant || isManager) && (
-            <form onSubmit={handleAddTask} className="flex flex-col gap-3 bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+            <form onSubmit={handleAddTask} className="flex flex-col gap-3 bg-background-light dark:bg-background-dark p-4 rounded-xl border border-border-light dark:border-border-dark">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="w-full sm:w-1/3">
                   <input
                     type="text"
-                    className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark"
+                    className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-sm focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark"
                     placeholder="Khung giờ"
                     value={timeSlot}
                     onChange={(e) => setTimeSlot(e.target.value)}
@@ -907,7 +907,7 @@ const TeamTasksModal = ({ onClose }) => {
                 <div className="flex-1">
                   <input
                     type="text"
-                    className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark"
+                    className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-sm focus:outline-none focus:ring-1 focus:ring-primary text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark"
                     placeholder="Nội dung công việc cần làm..."
                     value={taskText}
                     onChange={(e) => setTaskText(e.target.value)}
@@ -918,9 +918,9 @@ const TeamTasksModal = ({ onClose }) => {
               <div className="flex justify-end items-center mt-1">
                 <button 
                   type="submit" 
-                  className="h-9 px-4 bg-primary text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1.5 justify-center text-sm shrink-0"
+                  className="h-10 px-4 bg-primary text-text-light font-bold rounded-xl hover:bg-primary/90 transition-all flex items-center gap-1.5 justify-center text-xs md:text-sm shrink-0 shadow-sm"
                 >
-                  <Plus size={16} /> Thêm Việc
+                  <Plus size={18} /> Thêm Việc
                 </button>
               </div>
             </form>
@@ -938,10 +938,10 @@ const TeamTasksModal = ({ onClose }) => {
                     key={t._id}
                     className={`flex items-center justify-between p-3.5 border rounded-xl transition-all ${
                       t.isCompleted 
-                        ? "bg-gray-50/70 border-gray-100 dark:bg-gray-800/20 dark:border-gray-800/50" 
+                        ? "bg-background-light/70 border-border-light dark:bg-surface-dark/40 dark:border-border-dark" 
                         : expired
-                          ? "bg-red-50/20 border-red-100/50 dark:bg-red-950/10 dark:border-red-900/30"
-                          : "bg-white border-gray-200/80 shadow-sm dark:bg-gray-900 dark:border-gray-800"
+                          ? "bg-red-500/10 border-red-500/20 dark:bg-red-950/20 dark:border-red-900/30"
+                          : "bg-surface-light border-border-light dark:bg-surface-dark dark:border-border-dark shadow-sm"
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1021,17 +1021,17 @@ const TeamTasksModal = ({ onClose }) => {
 const StatCard = ({ label, value, change, type, icon: Icon, colorClass, onClick }) => (
   <div 
     onClick={onClick}
-    className={`flex flex-col rounded-2xl p-6 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer min-w-0 w-full ${colorClass || 'border-border-light dark:border-border-dark'}`}
+    className={`flex flex-col rounded-xl p-6 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer min-w-0 w-full ${colorClass || 'border-border-light dark:border-border-dark'}`}
   >
     <div className={`absolute right-4 top-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-300 ${colorClass ? colorClass.split(' ')[0] : ''}`}>
       <Icon size={64} />
     </div>
     
     <div className="flex items-center gap-2 mb-4 min-w-0">
-      <div className={`p-2 rounded-lg shrink-0 ${colorClass || 'bg-gray-100 text-gray-600'}`}>
+      <div className={`p-2 rounded-lg shrink-0 ${colorClass || 'bg-background-light dark:bg-background-dark text-subtle-light dark:text-subtle-dark'}`}>
         <Icon size={20} />
       </div>
-      <p className="text-black dark:text-white text-sm font-bold uppercase tracking-wider break-words flex-1">
+      <p className="text-text-light dark:text-text-dark text-sm font-bold uppercase tracking-wider break-words flex-1">
         {label}
       </p>
     </div>

@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
+import {
+  X,
+  CircleUserRound,
+  ScanFace,
+  History,
+  CheckCircle2,
+  Trash2,
+  Dumbbell,
+  ClipboardList,
+  CalendarDays,
+  PauseCircle,
+} from "lucide-react";
 import { customerService, checkInService, workoutService, staffService } from "../../services/customerService";
 import FaceCaptureModal from "./FaceCaptureModal";
 import FreezeContractModal from "./FreezeContractModal";
@@ -386,7 +398,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
             onClick={onClose}
             className="absolute top-4 right-4 z-20 p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-full shadow-sm text-gray-500 hover:text-red-500 transition-colors"
           >
-            <span className="material-symbols-outlined">close</span>
+            <X size={20} />
          </button>
 
         {/* LEFT PANEL: Identity (Static) */}
@@ -406,7 +418,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                    />
                 ) : (
                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 text-amber-500/80">
-                      <span className="material-symbols-outlined text-[6rem]">account_circle</span>
+                      <CircleUserRound size={96} />
                    </div>
                 )}
             </div>
@@ -416,7 +428,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                disabled={isSavingFace}
                className="mb-4 px-4 py-2 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2"
             >
-               <span className="material-symbols-outlined text-xl">face_retouching_natural</span>
+               <ScanFace size={20} />
                {isSavingFace ? "Đang lưu..." : (customer.faceEmbedding && customer.faceEmbedding.length > 0 ? "Chụp lại nhận diện" : "Chụp nhận diện")}
             </button>
 
@@ -664,7 +676,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                         <tr>
                                         <td colSpan="4" className="p-12">
                                             <div className="flex flex-col items-center justify-center text-center text-gray-400 gap-2">
-                                                <span className="material-symbols-outlined text-4xl opacity-50">history_toggle_off</span>
+                                                <History size={36} className="opacity-50" />
                                                 <span className="font-display">Chưa có lịch sử check-in nào</span>
                                             </div>
                                         </td>
@@ -726,7 +738,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                         disabled={isDeducting}
                                         className="bg-primary hover:bg-primary/90 text-background-dark px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
-                                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                                        <CheckCircle2 size={16} />
                                         {isDeducting ? "Đang xử lý..." : "Trừ buổi"}
                                     </button>
                                 </div>
@@ -771,7 +783,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                                 className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors flex-shrink-0"
                                                                 title="Xóa buổi tập (Chỉ có quyền Admin)"
                                                             >
-                                                               <span className="material-symbols-outlined text-xl">delete</span>
+                                                               <Trash2 size={18} />
                                                             </button>
                                                         )}
                                                     </div>
@@ -782,7 +794,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                         <tr>
                                         <td colSpan="4" className="p-12">
                                             <div className="flex flex-col items-center justify-center text-center text-gray-400 gap-2">
-                                                <span className="material-symbols-outlined text-4xl opacity-50">fitness_center</span>
+                                                <Dumbbell size={36} className="opacity-50" />
                                                 <span className="font-display">Chưa có lịch sử tập luyện với PT</span>
                                             </div>
                                         </td>
@@ -853,7 +865,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                         <tr>
                                             <td colSpan="6" className="p-12">
                                                 <div className="flex flex-col items-center justify-center text-center text-gray-400 gap-2">
-                                                    <span className="material-symbols-outlined text-4xl opacity-50">assignment</span>
+                                                    <ClipboardList size={36} className="opacity-50" />
                                                     <span className="font-display">Chưa có gói tập nào đăng ký</span>
                                                 </div>
                                             </td>
@@ -951,7 +963,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                  <ul className="space-y-2">
                                                      {pkg.frozenPeriods.map((fp, i) => (
                                                          <li key={i} className="text-sm flex gap-3 text-gray-600 bg-gray-50 p-2 rounded">
-                                                             <span className="material-symbols-outlined text-gray-400 text-lg">event</span>
+                                                             <CalendarDays size={18} className="text-gray-400 flex-shrink-0 mt-0.5" />
                                                              <span>
                                                                  Từ: <strong className="text-gray-800">{format(new Date(fp.startDate), "dd/MM/yyyy")}</strong>
                                                                  {fp.endDate ? (
@@ -968,7 +980,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                  ))
                              ) : (
                                  <div className="flex flex-col items-center justify-center p-12 text-center text-gray-400 gap-2 h-full">
-                                     <span className="material-symbols-outlined text-4xl opacity-50">pause_circle</span>
+                                     <PauseCircle size={36} className="opacity-50" />
                                      <span className="font-display">Chưa có gói tập nào để bảo lưu</span>
                                  </div>
                              )}
@@ -986,7 +998,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          onClick={() => setFreezeModalOpen(false)}
                          className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors"
                      >
-                         <span className="material-symbols-outlined">close</span>
+                         <X size={20} />
                      </button>
                      <h2 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Bảo lưu gói tập</h2>
                      
@@ -1060,7 +1072,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                          onClick={() => setUnfreezeModalOpen(false)}
                          className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors"
                      >
-                         <span className="material-symbols-outlined">close</span>
+                         <X size={20} />
                      </button>
                      <h2 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Kích hoạt lại gói tập</h2>
                      

@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import {
+  Search,
+  Download,
+  Plus,
+  PlusCircle,
+  Check,
+  User,
+  Pencil,
+  Trash2,
+  SearchX,
+} from "lucide-react";
 import { customerService, packageService, staffService } from "../services/customerService";
 import CustomerModal from "../components/customer/CustomerModal"; // Existing Edit/Add Modal
 import CustomerDetailModal from "../components/customer/CustomerDetailModal"; // New Detail Modal
@@ -268,7 +279,7 @@ const CustomerList = () => {
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
           <div className="relative flex-1 min-w-[240px] max-w-md">
-            <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-500 text-xl">search</span>
+            <Search size={18} className="absolute left-3 top-2.5 text-gray-500" />
             <input
               id="customerListSearchInput"
               name="customerListSearch"
@@ -289,7 +300,7 @@ const CustomerList = () => {
             disabled={isExporting}
             className="flex items-center gap-1.5 h-10 px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shrink-0 shadow-sm disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-base">download</span>
+            <Download size={16} />
             {isExporting ? "Đang xuất..." : "Xuất Excel"}
           </button>
 
@@ -297,14 +308,9 @@ const CustomerList = () => {
           {isAdmin && (
             <button
               onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
-              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs font-bold hover:opacity-90 shrink-0 shadow-sm"
+              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 shrink-0 shadow-sm transition-all"
             >
-              <span
-                className="material-symbols-outlined text-base"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                add_circle
-              </span>
+              <Plus size={18} />
               Thêm Khách
             </button>
           )}
@@ -348,7 +354,7 @@ const CustomerList = () => {
                   >
                     {opt.label}
                     {filterStatus === opt.value && (
-                      <span className="material-symbols-outlined text-green-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                      <Check size={16} className="text-green-600 ml-auto" />
                     )}
                   </button>
                 ))}
@@ -391,7 +397,7 @@ const CustomerList = () => {
                   >
                     {opt.label}
                     {filterPayment === opt.value && (
-                      <span className="material-symbols-outlined text-blue-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                      <Check size={16} className="text-blue-600 ml-auto" />
                     )}
                   </button>
                 ))}
@@ -436,7 +442,7 @@ const CustomerList = () => {
                   >
                     {opt.label}
                     {filterContract === opt.value && (
-                      <span className="material-symbols-outlined text-purple-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                      <Check size={16} className="text-purple-600 ml-auto" />
                     )}
                   </button>
                 ))}
@@ -472,7 +478,7 @@ const CustomerList = () => {
                 >
                   Tất cả
                   {filterPackage === 'all' && (
-                    <span className="material-symbols-outlined text-orange-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    <Check size={16} className="text-orange-600 ml-auto" />
                   )}
                 </button>
                 {packages.map(pkg => (
@@ -483,7 +489,7 @@ const CustomerList = () => {
                   >
                     {pkg.name}
                     {filterPackage === pkg.name && (
-                      <span className="material-symbols-outlined text-orange-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                      <Check size={16} className="text-orange-600 ml-auto" />
                     )}
                   </button>
                 ))}
@@ -520,7 +526,7 @@ const CustomerList = () => {
                 >
                   Tất cả
                   {filterAssignedStaff === 'all' && (
-                    <span className="material-symbols-outlined text-teal-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                    <Check size={16} className="text-teal-600 ml-auto" />
                   )}
                 </button>
                 {staffList.map(staff => (
@@ -531,7 +537,7 @@ const CustomerList = () => {
                   >
                     {staff.name || staff.fullName} ({staff.role})
                     {filterAssignedStaff === (staff._id || staff.id) && (
-                      <span className="material-symbols-outlined text-teal-600 ml-auto" style={{fontSize:'16px'}}>check</span>
+                      <Check size={16} className="text-teal-600 ml-auto" />
                     )}
                   </button>
                 ))}
@@ -594,9 +600,9 @@ const CustomerList = () => {
       </div> {/* end card */}
 
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-200/80 dark:bg-gray-800 uppercase text-sm font-bold text-black dark:text-white border-b border-gray-300 dark:border-gray-700">
+          <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
             <tr>
               <th className="p-4 w-[5%]"></th>
               <th className="p-4 pl-8 w-[25%]">HỌ VÀ TÊN</th>
@@ -606,40 +612,40 @@ const CustomerList = () => {
               {isAdmin && <th className="p-4 text-right w-[15%]">HÀNH ĐỘNG</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 font-display">
+          <tbody className="divide-y divide-border-light dark:divide-border-dark font-display">
             {displayCustomers.length > 0 ? displayCustomers.map((c) => {
                 const st = getCustomerStatus(c.startDate, c.endDate, c.status);
                 return (
                   <tr 
                     key={c._id || c.id} 
-                    className="group hover:bg-blue-50/50 transition-colors cursor-pointer"
+                    className="group hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors cursor-pointer"
                     onClick={() => {
                         setSelectedCustomer(c);
                         setShowDetailModal(true);
                     }}
                   >
                     <td className="p-4 pr-0">
-                       <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden mx-auto md:mx-0">
+                       <div className="w-10 h-10 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark overflow-hidden mx-auto md:mx-0">
                           {c.avatarUrl ? (
                              <img src={c.avatarUrl} alt="" className="w-full h-full object-cover" />
                           ) : c.avatar && c.avatar !== "👤" ? (
                              <img src={c.avatar} alt="" className="w-full h-full object-cover" />
                           ) : (
-                             <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                <span className="material-symbols-outlined text-sm">face</span>
+                             <div className="w-full h-full flex items-center justify-center text-subtle-light dark:text-subtle-dark">
+                                <User size={18} className="text-subtle-light dark:text-subtle-dark" />
                              </div>
                           )}
                        </div>
                     </td>
                     <td className="p-4 pl-8">
-                        <div className="font-medium text-gray-900 text-base">{c.name}</div>
-                        <div className="text-xs text-gray-500 font-light mt-0.5">{c.code}</div>
+                        <div className="font-medium text-text-light dark:text-text-dark text-base">{c.name}</div>
+                        <div className="text-xs text-subtle-light dark:text-subtle-dark font-light mt-0.5">{c.code}</div>
                     </td>
-                    <td className="p-4 text-base font-medium text-gray-900">
+                    <td className="p-4 text-base font-medium text-text-light dark:text-text-dark">
                         {c.phone}
                     </td>
                     <td className="p-4 pl-8">
-                        <span className="text-base font-medium text-gray-900">{c.packageType}</span>
+                        <span className="text-base font-medium text-text-light dark:text-text-dark">{c.packageType}</span>
                     </td>
                     <td className="p-4">
                       <span
@@ -677,7 +683,7 @@ const CustomerList = () => {
                             className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors"
                             title="Sửa thông tin"
                           >
-                            <span className="material-symbols-outlined text-xl">edit</span>
+                            <Pencil size={18} />
                           </button>
                           <button
                             onClick={(e) => {
@@ -687,7 +693,7 @@ const CustomerList = () => {
                             className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-colors"
                             title="Xóa khách hàng"
                           >
-                             <span className="material-symbols-outlined text-xl">delete</span>
+                             <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
@@ -699,7 +705,7 @@ const CustomerList = () => {
                     <td colSpan={isAdmin ? 6 : 5} className="p-12 text-center text-gray-500">
                         <div className="flex flex-col items-center gap-3">
                             <div className="bg-gray-100 p-4 rounded-full">
-                                <span className="material-symbols-outlined text-3xl text-gray-400">search_off</span>
+                                <SearchX size={28} className="text-gray-400" />
                             </div>
                             <p>Không tìm thấy khách hàng nào phù hợp.</p>
                         </div>

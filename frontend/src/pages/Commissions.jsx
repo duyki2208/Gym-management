@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import commissionService from '../services/commissionService';
 import { staffService } from '../services/customerService';
 import { useAuth } from '../context/AuthContext';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const formatCurrency = (amount) => {
@@ -39,9 +39,9 @@ const SummaryCards = ({ summary, loading }) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-5 animate-pulse border border-gray-100 dark:border-gray-700">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-3" />
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-36" />
+          <div key={i} className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 animate-pulse border border-border-light dark:border-border-dark">
+            <div className="h-4 bg-background-light dark:bg-background-dark rounded w-24 mb-3" />
+            <div className="h-8 bg-background-light dark:bg-background-dark rounded w-36" />
           </div>
         ))}
       </div>
@@ -75,15 +75,15 @@ const SummaryCards = ({ summary, loading }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       {cards.map((c, i) => (
-        <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-shadow">
+        <div key={i} className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{c.label}</p>
+            <p className="text-sm font-semibold text-subtle-light dark:text-subtle-dark">{c.label}</p>
             {c.status && <StatusBadge status={c.status} />}
           </div>
           <p className={`text-2xl font-black bg-gradient-to-r ${c.gradient} bg-clip-text text-transparent`}>
             {formatCurrency(c.amount)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{c.sub}</p>
+          <p className="text-xs text-subtle-light dark:text-subtle-dark mt-1">{c.sub}</p>
         </div>
       ))}
     </div>
@@ -102,12 +102,12 @@ const PTCommissionTable = ({ data, loading }) => {
   return (
     <div className="space-y-4">
       {data.staffSummary.map((s) => (
-        <div key={s.staff._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div key={s.staff._id} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
           {/* Header */}
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-gray-200">{s.staff.fullName || s.staff.username}</h3>
-              <p className="text-xs text-gray-400">
+              <h3 className="font-bold text-text-light dark:text-text-dark">{s.staff.fullName || s.staff.username}</h3>
+              <p className="text-xs text-subtle-light dark:text-subtle-dark">
                 {s.totalSessions} buổi dạy • Hoa hồng: {formatCurrency(s.totalAmount)}
               </p>
             </div>
@@ -117,28 +117,28 @@ const PTCommissionTable = ({ data, loading }) => {
           {/* Details table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">NGÀY</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">KHÁCH HÀNG</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">GIÁ BUỔI</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">%</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">HOA HỒNG</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">NGÀY</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">KHÁCH HÀNG</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">GIÁ BUỔI</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">%</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">HOA HỒNG</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              <tbody className="divide-y divide-border-light dark:divide-border-dark">
                 {s.records.map((r) => (
-                  <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                    <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
+                  <tr key={r._id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50">
+                    <td className="px-4 py-2.5 text-subtle-light dark:text-subtle-dark">
                       {r.workoutSession?.date
                         ? new Date(r.workoutSession.date).toLocaleDateString('vi-VN')
                         : new Date(r.createdAt).toLocaleDateString('vi-VN')}
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200">
-                      {r.customer?.name || 'N/A'} <span className="text-xs text-gray-400">({r.customer?.code})</span>
+                    <td className="px-4 py-2.5 font-medium text-text-light dark:text-text-dark">
+                      {r.customer?.name || 'N/A'} <span className="text-xs text-subtle-light dark:text-subtle-dark">({r.customer?.code})</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-gray-600">{formatCurrency(r.baseAmount)}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-500">{r.rate}%</td>
+                    <td className="px-4 py-2.5 text-right text-text-light dark:text-text-dark">{formatCurrency(r.baseAmount)}</td>
+                    <td className="px-4 py-2.5 text-right text-subtle-light dark:text-subtle-dark">{r.rate}%</td>
                     <td className="px-4 py-2.5 text-right font-bold text-blue-600">{formatCurrency(r.amount)}</td>
                   </tr>
                 ))}
@@ -163,12 +163,12 @@ const SaleCommissionTable = ({ data, loading }) => {
   return (
     <div className="space-y-4">
       {data.staffSummary.map((s) => (
-        <div key={s.staff._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div key={s.staff._id} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
           {/* Header */}
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-gray-200">{s.staff.fullName || s.staff.username}</h3>
-              <p className="text-xs text-gray-400">
+              <h3 className="font-bold text-text-light dark:text-text-dark">{s.staff.fullName || s.staff.username}</h3>
+              <p className="text-xs text-subtle-light dark:text-subtle-dark">
                 {s.totalContracts} hợp đồng (Mới: {s.newContracts} | Gia hạn: {s.renewContracts} | Nâng gói: {s.upgradeContracts})
               </p>
             </div>
@@ -178,32 +178,32 @@ const SaleCommissionTable = ({ data, loading }) => {
           {/* Details table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">KHÁCH HÀNG</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">GÓI TẬP</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-bold text-black dark:text-white uppercase">LOẠI</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">GIÁ TRỊ HĐ</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">%</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-bold text-black dark:text-white uppercase">HOA HỒNG</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">KHÁCH HÀNG</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">GÓI TẬP</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">LOẠI</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">GIÁ TRỊ HĐ</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">%</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">HOA HỒNG</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              <tbody className="divide-y divide-border-light dark:divide-border-dark">
                 {s.records.map((r) => {
-                  const ct = contractTypeMap[r.contractType] || { label: r.contractType, color: 'text-gray-600' };
+                  const ct = contractTypeMap[r.contractType] || { label: r.contractType, color: 'text-subtle-light dark:text-subtle-dark' };
                   return (
-                    <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                      <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200">
-                        {r.customer?.name || 'N/A'} <span className="text-xs text-gray-400">({r.customer?.code})</span>
+                    <tr key={r._id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50">
+                      <td className="px-4 py-2.5 font-medium text-text-light dark:text-text-dark">
+                        {r.customer?.name || 'N/A'} <span className="text-xs text-subtle-light dark:text-subtle-dark">({r.customer?.code})</span>
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
+                      <td className="px-4 py-2.5 text-subtle-light dark:text-subtle-dark">
                         {r.customerPackage?.packageName || 'N/A'}
                       </td>
                       <td className="px-4 py-2.5">
                         <span className={`text-xs font-bold ${ct.color}`}>{ct.label}</span>
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-600">{formatCurrency(r.baseAmount)}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">{r.rate}%</td>
+                      <td className="px-4 py-2.5 text-right text-text-light dark:text-text-dark">{formatCurrency(r.baseAmount)}</td>
+                      <td className="px-4 py-2.5 text-right text-subtle-light dark:text-subtle-dark">{r.rate}%</td>
                       <td className="px-4 py-2.5 text-right font-bold text-emerald-600">{formatCurrency(r.amount)}</td>
                     </tr>
                   );
@@ -486,7 +486,7 @@ const Commissions = () => {
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="text-sm border border-border-light dark:border-border-dark rounded-lg px-3 py-2 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary outline-none cursor-pointer"
           >
             {months.map(m => (
               <option key={m} value={m}>Tháng {m}</option>
@@ -495,7 +495,7 @@ const Commissions = () => {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="text-sm border border-border-light dark:border-border-dark rounded-lg px-3 py-2 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary outline-none cursor-pointer"
           >
             {years.map(y => (
               <option key={y} value={y}>{y}</option>
@@ -505,8 +505,9 @@ const Commissions = () => {
           {isManager && (activeTab === 'pt' || activeTab === 'sale') && (
             <button
               onClick={exportToExcel}
-              className="text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg font-bold transition-colors flex items-center gap-1 border border-gray-200 dark:border-gray-700"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/90 text-text-light rounded-xl text-xs md:text-sm font-bold transition-all shadow-sm cursor-pointer"
             >
+              <Download size={16} />
               Xuất Excel
             </button>
           )}
@@ -534,15 +535,15 @@ const Commissions = () => {
       {isManager && <SummaryCards summary={summary} loading={loadingSummary} />}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-6 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark p-1 rounded-xl w-fit">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
               activeTab === t.id
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm'
+                : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'
             }`}
           >
             {t.label}
@@ -553,49 +554,49 @@ const Commissions = () => {
       {/* ── Tab Content ── */}
       {activeTab === 'summary' && isManager && (
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
             Tổng hợp tháng {selectedMonth}/{selectedYear}
           </h2>
           {/* PT mini */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5">
               <h3 className="font-bold text-blue-600 mb-2">Hoa hồng PT</h3>
-              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                <p>Tổng buổi dạy: <span className="font-bold text-gray-800 dark:text-gray-200">{summary?.pt?.totalSessions || 0}</span></p>
-                <p>Số PT: <span className="font-bold">{summary?.pt?.staffCount || 0}</span></p>
+              <div className="space-y-1 text-sm text-subtle-light dark:text-subtle-dark">
+                <p>Tổng buổi dạy: <span className="font-bold text-text-light dark:text-text-dark">{summary?.pt?.totalSessions || 0}</span></p>
+                <p>Số PT: <span className="font-bold text-text-light dark:text-text-dark">{summary?.pt?.staffCount || 0}</span></p>
                 <p>Tổng hoa hồng: <span className="font-bold text-blue-600">{formatCurrency(summary?.pt?.totalAmount)}</span></p>
                 <p>Trạng thái: <StatusBadge status={summary?.pt?.periodStatus || 'draft'} /></p>
                 {isAdminLike && summary?.pt?.periodId && summary?.pt?.periodStatus === 'draft' && (
                   <button onClick={() => handleApprove(summary.pt.periodId)}
-                    className="mt-2 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                    className="mt-2 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors cursor-pointer">
                     Duyệt kỳ PT
                   </button>
                 )}
                 {isAdminLike && summary?.pt?.periodId && summary?.pt?.periodStatus === 'approved' && (
                   <button onClick={() => handleMarkPaid(summary.pt.periodId)}
-                    className="mt-2 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-700 transition-colors">
+                    className="mt-2 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors cursor-pointer">
                     Đánh dấu đã trả
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5">
               <h3 className="font-bold text-emerald-600 mb-2">Hoa hồng Sale</h3>
-              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                <p>Tổng hợp đồng: <span className="font-bold text-gray-800 dark:text-gray-200">{summary?.sale?.totalContracts || 0}</span></p>
-                <p>Doanh thu từ HĐ: <span className="font-bold">{formatCurrency(summary?.sale?.totalBaseValue)}</span></p>
+              <div className="space-y-1 text-sm text-subtle-light dark:text-subtle-dark">
+                <p>Tổng hợp đồng: <span className="font-bold text-text-light dark:text-text-dark">{summary?.sale?.totalContracts || 0}</span></p>
+                <p>Doanh thu từ HĐ: <span className="font-bold text-text-light dark:text-text-dark">{formatCurrency(summary?.sale?.totalBaseValue)}</span></p>
                 <p>Tổng hoa hồng: <span className="font-bold text-emerald-600">{formatCurrency(summary?.sale?.totalAmount)}</span></p>
                 <p>Trạng thái: <StatusBadge status={summary?.sale?.periodStatus || 'draft'} /></p>
                 {isAdminLike && summary?.sale?.periodId && summary?.sale?.periodStatus === 'draft' && (
                   <button onClick={() => handleApprove(summary.sale.periodId)}
-                    className="mt-2 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors">
+                    className="mt-2 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors cursor-pointer">
                     Duyệt kỳ Sale
                   </button>
                 )}
                 {isAdminLike && summary?.sale?.periodId && summary?.sale?.periodStatus === 'approved' && (
                   <button onClick={() => handleMarkPaid(summary.sale.periodId)}
-                    className="mt-2 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-700 transition-colors">
+                    className="mt-2 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors cursor-pointer">
                     Đánh dấu đã trả
                   </button>
                 )}
@@ -609,32 +610,32 @@ const Commissions = () => {
       {activeTab === 'sale' && <SaleCommissionTable data={saleData} loading={loadingSale} />}
 
       {activeTab === 'periods' && isManager && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="font-bold text-gray-800 dark:text-gray-200">Lịch sử kỳ thanh toán</h3>
+        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+          <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
+            <h3 className="font-bold text-text-light dark:text-text-dark">Lịch sử kỳ thanh toán</h3>
           </div>
           {loadingPeriods ? (
-            <div className="text-center py-10 text-gray-400">Đang tải...</div>
+            <div className="text-center py-10 text-subtle-light dark:text-subtle-dark">Đang tải...</div>
           ) : periods.length === 0 ? (
-            <div className="text-center py-10 text-gray-400">Chưa có kỳ thanh toán nào</div>
+            <div className="text-center py-10 text-subtle-light dark:text-subtle-dark">Chưa có kỳ thanh toán nào</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-black dark:text-white uppercase">KỲ</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-black dark:text-white uppercase">LOẠI</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold text-black dark:text-white uppercase">TỔNG TIỀN</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold text-black dark:text-white uppercase">SỐ BẢN GHI</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-black dark:text-white uppercase">TRẠNG THÁI</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-black dark:text-white uppercase">NGƯỜI DUYỆT</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-black dark:text-white uppercase">THAO TÁC</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">KỲ</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">LOẠI</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">TỔNG TIỀN</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-text-light dark:text-text-dark uppercase">SỐ BẢN GHI</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-text-light dark:text-text-dark uppercase">TRẠNG THÁI</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-text-light dark:text-text-dark uppercase">NGƯỜI DUYỆT</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-text-light dark:text-text-dark uppercase">THAO TÁC</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
                   {periods.map(p => (
-                    <tr key={p._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                      <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-200">
+                    <tr key={p._id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50">
+                      <td className="px-4 py-3 font-bold text-text-light dark:text-text-dark">
                         T{p.month}/{p.year}
                       </td>
                       <td className="px-4 py-3">
@@ -642,10 +643,10 @@ const Commissions = () => {
                           {p.type === 'pt' ? 'PT' : 'Sale'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-bold">{formatCurrency(p.totalAmount)}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{p.totalRecords}</td>
+                      <td className="px-4 py-3 text-right font-bold text-text-light dark:text-text-dark">{formatCurrency(p.totalAmount)}</td>
+                      <td className="px-4 py-3 text-right text-subtle-light dark:text-subtle-dark">{p.totalRecords}</td>
                       <td className="px-4 py-3 text-center"><StatusBadge status={p.status} /></td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
+                      <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark text-xs">
                         {p.approvedBy?.fullName || '-'}
                         {p.approvedAt && <span className="block text-gray-400">{new Date(p.approvedAt).toLocaleDateString('vi-VN')}</span>}
                       </td>
@@ -684,43 +685,43 @@ const Commissions = () => {
       {/* ── Rollback Confirmation Modal ── */}
       {rollbackModalOpen && selectedPeriodForRollback && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+          <div className="bg-surface-light dark:bg-surface-dark w-full max-w-md rounded-xl shadow-2xl border border-border-light dark:border-border-dark p-6 space-y-4">
             <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
-              <div className="p-2.5 bg-amber-100 dark:bg-amber-950/50 rounded-xl">
+              <div className="p-2.5 bg-amber-500/10 rounded-xl">
                 <RotateCcw size={22} />
               </div>
               <div>
-                <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">
+                <h3 className="font-bold text-base text-text-light dark:text-text-dark">
                   Mở Lại Kỳ Hoa Hồng (Rollback)
                 </h3>
-                <p className="text-xs text-gray-500">Chuyển kỳ thanh toán về trạng thái Chờ duyệt</p>
+                <p className="text-xs text-subtle-light dark:text-subtle-dark">Chuyển kỳ thanh toán về trạng thái Chờ duyệt</p>
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-xs space-y-1">
-              <p className="text-gray-600 dark:text-gray-400">
-                Kỳ hoa hồng: <strong className="text-gray-900 dark:text-gray-100 font-bold">Tháng {selectedPeriodForRollback.month}/{selectedPeriodForRollback.year} — {selectedPeriodForRollback.type.toUpperCase()}</strong>
+            <div className="p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-xs space-y-1">
+              <p className="text-subtle-light dark:text-subtle-dark">
+                Kỳ hoa hồng: <strong className="text-text-light dark:text-text-dark font-bold">Tháng {selectedPeriodForRollback.month}/{selectedPeriodForRollback.year} — {selectedPeriodForRollback.type.toUpperCase()}</strong>
               </p>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-subtle-light dark:text-subtle-dark">
                 Tổng tiền: <strong className="text-blue-600 font-bold">{formatCurrency(selectedPeriodForRollback.totalAmount)}</strong>
               </p>
             </div>
 
             {selectedPeriodForRollback.status === 'paid' ? (
-              <div className="p-3.5 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/40 text-xs text-red-700 dark:text-red-300 space-y-1">
-                <strong className="block font-bold uppercase text-red-800 dark:text-red-200">
+              <div className="p-3.5 bg-red-500/10 rounded-xl border border-red-500/30 text-xs text-red-600 dark:text-red-400 space-y-1">
+                <strong className="block font-bold uppercase text-red-700 dark:text-red-300">
                   ⚠️ CẢNH BÁO NGHÊM TRỌNG (RỦI RO TÀI CHÍNH)
                 </strong>
                 <span>Kỳ này ĐÃ ĐƯỢC THANH TOÁN THỰC TẾ cho nhân viên. Việc mở lại kỳ sẽ hủy bỏ trạng thái Đã trả. Bạn chịu trách nhiệm về tính chính xác của sổ sách tài chính!</span>
               </div>
             ) : (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/30 text-xs text-amber-800 dark:text-amber-300">
+              <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 text-xs text-amber-600 dark:text-amber-400">
                 Mở lại kỳ để chuyển về trạng thái Chờ duyệt, giúp quản lý bổ sung hoặc điều chỉnh lại danh sách hoa hồng trước khi chốt lại.
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-bold text-text-light dark:text-text-dark mb-1">
                 Gõ lại tên kỳ để xác nhận: <span className="font-black text-amber-600">T{selectedPeriodForRollback.month}/{selectedPeriodForRollback.year}-{selectedPeriodForRollback.type.toUpperCase()}</span>
               </label>
               <input
@@ -728,12 +729,12 @@ const Commissions = () => {
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder={`Ví dụ: T${selectedPeriodForRollback.month}/${selectedPeriodForRollback.year}-${selectedPeriodForRollback.type.toUpperCase()}`}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm outline-none focus:ring-2 focus:ring-amber-500 font-bold"
+                className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark text-sm outline-none focus:ring-2 focus:ring-amber-500 font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-bold text-text-light dark:text-text-dark mb-1">
                 Lý do mở lại kỳ
               </label>
               <textarea
@@ -741,21 +742,21 @@ const Commissions = () => {
                 value={rollbackReason}
                 onChange={(e) => setRollbackReason(e.target.value)}
                 placeholder="Nhập lý do điều chỉnh..."
-                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark text-sm outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setRollbackModalOpen(false)}
-                className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
+                className="px-4 py-2 text-sm font-bold text-subtle-light dark:text-subtle-dark hover:bg-background-light dark:hover:bg-background-dark rounded-lg cursor-pointer"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleConfirmRollback}
                 disabled={confirmText !== `T${selectedPeriodForRollback.month}/${selectedPeriodForRollback.year}-${selectedPeriodForRollback.type.toUpperCase()}`}
-                className="px-5 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40 rounded-xl shadow-sm transition-all"
+                className="px-5 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40 rounded-lg shadow-sm transition-all cursor-pointer"
               >
                 Xác Nhận Mở Lại Kỳ
               </button>

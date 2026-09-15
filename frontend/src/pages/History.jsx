@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { CalendarRange, Calendar, ChevronDown, Search } from "lucide-react";
 // Import từ file service vừa tạo
 import { customerService, checkInService } from "../services/customerService";
 import reportService from "../services/reportService";
@@ -259,13 +260,9 @@ const History = () => {
                   : "bg-white dark:bg-gray-800 border-border-light text-gray-600"
               }`}
             >
-              <span className="material-symbols-outlined text-lg">
-                calendar_view_week
-              </span>{" "}
-              Tuần & Ngày{" "}
-              <span className="material-symbols-outlined text-lg">
-                expand_more
-              </span>
+              <CalendarRange size={18} />
+              Tuần & Ngày
+              <ChevronDown size={18} />
             </button>
             {activeDropdown === "week" && (
               <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-10 border border-gray-100 overflow-hidden">
@@ -311,13 +308,9 @@ const History = () => {
                   : "bg-white dark:bg-gray-800 border-border-light text-gray-600"
               }`}
             >
-              <span className="material-symbols-outlined text-lg">
-                calendar_month
-              </span>{" "}
-              Tháng{" "}
-              <span className="material-symbols-outlined text-lg">
-                expand_more
-              </span>
+              <Calendar size={18} />
+              Tháng
+              <ChevronDown size={18} />
             </button>
             {activeDropdown === "month" && (
               <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-10 border border-gray-100 overflow-hidden">
@@ -429,19 +422,17 @@ const History = () => {
       {/* Bảng Lịch sử */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
         <div className="p-6 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h3 className="text-xl font-bold text-black dark:text-white">
+          <h3 className="text-xl font-bold text-text-light dark:text-text-dark">
             Nhật ký hoạt động ({getLabel()})
           </h3>
           <div className="relative w-full sm:w-auto">
-            <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">
-              search
-            </span>
+            <Search size={16} className="absolute left-3 top-2.5 text-subtle-light dark:text-subtle-dark" />
             <input
               id="historySearchInput"
               name="historySearch"
               type="text"
               aria-label="Tìm kiếm nhật ký theo tên khách hàng"
-              className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm rounded-lg border border-border-light bg-background-light dark:bg-background-dark focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Tìm tên khách hàng..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -450,7 +441,7 @@ const History = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-200/80 dark:bg-gray-800 text-black dark:text-white uppercase font-bold text-xs border-b border-gray-300 dark:border-gray-700">
+            <thead className="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark uppercase font-bold text-xs border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="p-4">KHÁCH HÀNG</th>
                 <th className="p-4">THỜI GIAN</th>
@@ -458,7 +449,7 @@ const History = () => {
                 <th className="p-4 text-right">TRẠNG THÁI</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {filteredCheckins
                 .filter((i) =>
                   (i.customerName || "")
@@ -469,19 +460,19 @@ const History = () => {
                 .map((item) => (
                   <tr
                     key={item._id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors"
                   >
-                    <td className="p-4 font-bold text-black dark:text-white">
+                    <td className="p-4 font-bold text-text-light dark:text-text-dark">
                       {item.customerName}
                     </td>
-                    <td className="p-4 text-black dark:text-white font-medium">
+                    <td className="p-4 text-text-light dark:text-text-dark font-medium">
                       {formatDateTime(item.time)}
                     </td>
-                    <td className="p-4 text-black dark:text-white font-medium">
+                    <td className="p-4 text-text-light dark:text-text-dark font-medium">
                       {item.packageType || "Vãng lai"}
                     </td>
                     <td className="p-4 text-right">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                         Thành công
                       </span>
                     </td>
@@ -489,7 +480,7 @@ const History = () => {
                 ))}
               {rawCheckins.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-gray-400">
+                  <td colSpan="4" className="p-8 text-center text-subtle-light dark:text-subtle-dark">
                     Chưa có dữ liệu check-in.
                   </td>
                 </tr>

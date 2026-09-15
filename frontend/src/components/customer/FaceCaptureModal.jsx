@@ -6,6 +6,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { Camera, ScanFace, VideoOff, X } from 'lucide-react';
 import api from '../../services/api';
 
 const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
@@ -131,7 +132,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
             <p className="text-sm text-gray-500 mt-0.5">{customer?.name}</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
-            <span className="material-symbols-outlined">close</span>
+            <X size={20} />
           </button>
         </div>
 
@@ -139,7 +140,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
         <div className="p-5 flex flex-col items-center gap-4">
           {cameraError ? (
             <div className="text-center text-red-600 py-8">
-              <span className="material-symbols-outlined text-4xl block mb-2">videocam_off</span>
+              <VideoOff size={36} className="block mb-2 mx-auto" />
               <p className="font-bold">{cameraError}</p>
             </div>
           ) : (
@@ -223,7 +224,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-base">face_retouching_natural</span>
+                      <ScanFace size={18} />
                       Lưu khuôn mặt
                     </>
                   )}
@@ -236,7 +237,7 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
                 disabled={!cameraReady || isProcessing}
                 className="px-5 py-2.5 rounded-xl font-bold bg-primary text-background-dark hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
               >
-                <span className="material-symbols-outlined text-base">camera</span>
+                <Camera size={18} />
                 Chụp ảnh
               </button>
             )}

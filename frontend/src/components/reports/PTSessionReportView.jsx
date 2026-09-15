@@ -164,9 +164,9 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm hover:bg-emerald-700 shrink-0 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-text-light text-xs md:text-sm font-bold shadow-sm shrink-0 transition-all cursor-pointer"
           >
-            <Download size={15} /> Xuất File Excel
+            <Download size={16} /> Xuất File Excel
           </button>
         </div>
       </div>
@@ -203,9 +203,9 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
       </div>
 
       {/* 2 & 3. ĐỒNG BỘ THANH LỌC VÀ BẢNG DỮ LIỆU THÀNH MỘT CARD THỐNG NHẤT */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden flex flex-col">
         {/* Toolbar Lọc Dữ Liệu */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-border-light dark:border-border-dark">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 flex-1 min-w-[220px]">
               <Search size={15} className="text-gray-400 shrink-0" />
@@ -246,7 +246,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
         {/* Data Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50/80 dark:bg-gray-900/40 text-black dark:text-white uppercase font-bold text-xs border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-background-light dark:bg-surface-dark/80 text-text-light dark:text-text-dark font-bold text-xs border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="px-4 py-3.5">Thời gian</th>
                 <th className="px-4 py-3.5">Hội viên</th>
@@ -257,7 +257,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 <th className="px-4 py-3.5">Trạng thái</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {loading && (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
@@ -299,7 +299,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                       {s.packageName || 'Gói PT'}
                     </td>
                     {/* 5. Số buổi */}
-                    <td className="px-4 py-3.5 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                    <td className="px-4 py-3.5 font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       {s.usedSessions ?? 0}/{s.totalSessions ?? 0}
                     </td>
                     {/* 6. PT hướng dẫn */}
@@ -344,7 +344,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-gray-800 dark:text-gray-100 truncate">{pt.name}</p>
-                <p className="text-[11px] font-black text-blue-600 dark:text-blue-400 mt-0.5">{pt.sessions} buổi</p>
+                <p className="text-[11px] font-black text-gray-900 dark:text-gray-100 mt-0.5">{pt.sessions} buổi</p>
               </div>
             </div>
           ))}

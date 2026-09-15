@@ -15,7 +15,7 @@ export default {
         "surface-dark": "#1e1f26",
         "text-light": "#0d1b14",
         "text-dark": "#f3f4f6",
-        "subtle-light": "#4c9a73",
+        "subtle-light": "#4b5563",
         "subtle-dark": "#9ca3af",
         "border-light": "#e5e7eb",
         "border-dark": "#2d2f36",

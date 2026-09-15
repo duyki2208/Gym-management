@@ -168,28 +168,28 @@ const PointOfSale = ({ onFinish, onClose }) => {
   return (
     <div className="flex flex-col gap-6 font-display bg-transparent h-full">
       {onClose && (
-        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+        <div className="flex justify-between items-center bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+           <h2 className="text-xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
              <ShoppingCart className="text-primary" /> Bán Hàng (POS)
            </h2>
-           <button onClick={onClose} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs transition-colors flex items-center gap-1">
+           <button onClick={onClose} className="px-4 py-2 bg-background-light dark:bg-background-dark hover:bg-border-light dark:hover:bg-border-dark text-text-light dark:text-text-dark font-bold rounded-lg text-xs transition-colors flex items-center gap-1 border border-border-light dark:border-border-dark cursor-pointer">
               ✕ Đóng POS
            </button>
         </div>
       )}
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${onClose ? 'h-[calc(100vh-280px)]' : 'h-[calc(100vh-230px)]'} min-h-[520px]`}>
          {/* Left Side: Product Grid */}
-         <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col h-full">
+         <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-full">
             <div className="flex gap-4 mb-5">
                <div className="relative flex-1">
-                   <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                   <Search className="absolute left-3 top-3 text-subtle-light dark:text-subtle-dark" size={18} />
                    <input 
                       id="pos_search_input"
                       name="posSearch"
                       type="text" 
                       placeholder="Tìm tên..." 
                       aria-label="Tìm kiếm sản phẩm"
-                      className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary" 
+                      className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm" 
                       value={searchTerm} 
                       onChange={(e) => setSearchTerm(e.target.value)} 
                    />
@@ -198,7 +198,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                  id="pos_category_filter"
                  name="posCategory"
                  aria-label="Lọc theo danh mục sản phẩm"
-                 className="border border-gray-200 rounded-xl px-4 py-2.5 outline-none bg-gray-50 focus:ring-2 focus:ring-primary" 
+                 className="border border-border-light dark:border-border-dark rounded-lg px-4 py-2.5 outline-none bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary text-sm" 
                  value={categoryFilter} 
                  onChange={(e) => setCategoryFilter(e.target.value)}
                >
@@ -215,20 +215,20 @@ const PointOfSale = ({ onFinish, onClose }) => {
                    <div 
                       key={p._id} 
                       onClick={() => addToCart(p)}
-                      className={`aspect-square relative border rounded-2xl p-3 bg-white cursor-pointer hover:shadow-lg transition-all group flex flex-col justify-between overflow-hidden ${p.stockQuantity <= 0 ? 'opacity-50 grayscale border-gray-200' : 'border-gray-100 hover:border-primary/30'}`}
+                      className={`aspect-square relative border rounded-xl p-3 bg-surface-light dark:bg-surface-dark cursor-pointer hover:shadow-lg transition-all group flex flex-col justify-between overflow-hidden ${p.stockQuantity <= 0 ? 'opacity-50 grayscale border-border-light dark:border-border-dark' : 'border-border-light dark:border-border-dark hover:border-primary/40'}`}
                    >
-                       <div className="absolute top-2 right-2 z-10 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm border border-gray-100 text-gray-600">
+                       <div className="absolute top-2 right-2 z-10 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark">
                           Kho: {p.stockQuantity}
                        </div>
-                       <div className="flex-1 w-full bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden mb-2 relative">
+                       <div className="flex-1 w-full bg-background-light dark:bg-background-dark rounded-lg flex items-center justify-center overflow-hidden mb-2 relative">
                           {p.imageUrl ? (
                              <img src={p.imageUrl} alt={p.name} className="object-cover h-full w-full group-hover:scale-105 transition-transform duration-300" />
                           ) : (
-                             <Package className="text-gray-300 group-hover:scale-110 transition-transform duration-300" size={36}/>
+                             <Package className="text-subtle-light dark:text-subtle-dark group-hover:scale-110 transition-transform duration-300" size={36}/>
                           )}
                        </div>
-                       <div className="bg-white">
-                          <p className="font-bold text-gray-800 text-xs sm:text-sm line-clamp-1">{p.name}</p>
+                       <div>
+                          <p className="font-bold text-text-light dark:text-text-dark text-xs sm:text-sm line-clamp-1">{p.name}</p>
                           <p className="font-black text-primary text-xs sm:text-sm mt-0.5">{p.sellPrice.toLocaleString()} đ</p>
                        </div>
                    </div>
@@ -237,15 +237,15 @@ const PointOfSale = ({ onFinish, onClose }) => {
          </div>
 
          {/* Right Side: Cart Workspace */}
-         <div className="lg:col-span-1 bg-white rounded-2xl flex flex-col shadow-sm border border-gray-100 h-full overflow-hidden relative">
-            <div className="p-4 bg-white border-b border-gray-100">
-               <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2 mb-4">Giỏ Hàng <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">{cart.length}</span></h3>
-               <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-full">
+         <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl flex flex-col shadow-sm border border-border-light dark:border-border-dark h-full overflow-hidden relative">
+            <div className="p-4 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
+               <h3 className="font-bold text-xl text-text-light dark:text-text-dark flex items-center gap-2 mb-4">Giỏ Hàng <span className="bg-primary text-text-light text-xs font-bold px-2 py-1 rounded-full">{cart.length}</span></h3>
+               <div className="flex gap-2 p-1 bg-background-light dark:bg-background-dark rounded-lg w-full border border-border-light dark:border-border-dark">
                   <button 
-                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all ${isWalkIn ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} 
+                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all cursor-pointer ${isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`} 
                      onClick={() => setIsWalkIn(true)}>Khách Lẻ</button>
                   <button 
-                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all ${!isWalkIn ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} 
+                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all cursor-pointer ${!isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`} 
                      onClick={() => setIsWalkIn(false)}>Hội Viên</button>
                </div>
                {!isWalkIn && (
@@ -253,7 +253,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      id="pos_customer_select"
                      name="posCustomer"
                      aria-label="Chọn hội viên mua hàng"
-                     className="w-full mt-3 p-2.5 border border-gray-200 rounded-xl outline-none text-sm bg-white focus:ring-2 focus:ring-primary"
+                     className="w-full mt-3 p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none text-sm bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary"
                      onChange={(e) => setSelectedCustomer(customers.find(c => c._id === e.target.value))}
                   >
                      <option value="">-- Chọn Hội Viên --</option>
@@ -262,42 +262,42 @@ const PointOfSale = ({ onFinish, onClose }) => {
                )}
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
                {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full opacity-30 text-center p-6">
+                  <div className="flex flex-col items-center justify-center h-full opacity-40 text-center p-6 text-subtle-light dark:text-subtle-dark">
                      <ShoppingCart size={48} className="mb-2" />
                      <p className="font-bold text-sm">Chưa có sản phẩm.</p>
                   </div>
                ) : (
                   cart.map(c => (
-                     <div key={c.product._id} className="p-4 flex gap-3 group hover:bg-gray-50/50 transition-colors">
+                     <div key={c.product._id} className="p-4 flex gap-3 group hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
                         <div className="flex-1">
-                           <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{c.product.name}</h4>
-                           <p className="text-xs text-gray-500">{c.sellPrice.toLocaleString()} đ</p>
+                           <h4 className="font-bold text-text-light dark:text-text-dark text-sm line-clamp-1">{c.product.name}</h4>
+                           <p className="text-xs text-subtle-light dark:text-subtle-dark">{c.sellPrice.toLocaleString()} đ</p>
                            <div className="flex items-center gap-3 mt-2">
-                              <button onClick={() => updateCart(c.product._id, c.quantity - 1)} className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-700 transition-colors"><Minus size={14}/></button>
-                              <span className="font-bold text-sm w-4 text-center">{c.quantity}</span>
-                              <button onClick={() => updateCart(c.product._id, c.quantity + 1)} className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-700 transition-colors"><Plus size={14}/></button>
+                              <button onClick={() => updateCart(c.product._id, c.quantity - 1)} className="w-6 h-6 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-border-light dark:hover:bg-border-dark text-text-light dark:text-text-dark transition-colors cursor-pointer"><Minus size={14}/></button>
+                              <span className="font-bold text-sm w-4 text-center text-text-light dark:text-text-dark">{c.quantity}</span>
+                              <button onClick={() => updateCart(c.product._id, c.quantity + 1)} className="w-6 h-6 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-border-light dark:hover:bg-border-dark text-text-light dark:text-text-dark transition-colors cursor-pointer"><Plus size={14}/></button>
                            </div>
                         </div>
                         <div className="flex flex-col items-end justify-between">
-                           <button onClick={() => removeFromCart(c.product._id)} className="text-red-400 hover:text-red-600 transition-colors p-1"><Trash2 size={16}/></button>
-                           <p className="font-black text-gray-800 text-sm">{(c.sellPrice * c.quantity).toLocaleString()} đ</p>
+                           <button onClick={() => removeFromCart(c.product._id)} className="text-red-400 hover:text-red-600 transition-colors p-1 cursor-pointer"><Trash2 size={16}/></button>
+                           <p className="font-black text-text-light dark:text-text-dark text-sm">{(c.sellPrice * c.quantity).toLocaleString()} đ</p>
                         </div>
                      </div>
                   ))
                )}
             </div>
 
-            <div className="p-5 bg-white border-t border-gray-100 mt-auto">
+            <div className="p-5 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark mt-auto">
                <div className="flex justify-between items-end mb-4">
-                  <span className="text-gray-400 font-bold uppercase tracking-wide text-xs">Thanh toán</span>
-                  <span className="text-3xl font-black text-blue-700">{totalAmount.toLocaleString()} <span className="text-lg text-blue-600/70">đ</span></span>
+                  <span className="text-subtle-light dark:text-subtle-dark font-bold uppercase tracking-wide text-xs">Thanh toán</span>
+                  <span className="text-3xl font-black text-primary">{totalAmount.toLocaleString()} <span className="text-lg opacity-70">đ</span></span>
                </div>
                <div className="grid grid-cols-2 gap-3">
                    <button 
                      onClick={() => handleCheckout('Tiền mặt')}
-                     className="bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold flex flex-col items-center justify-center shadow-md shadow-green-600/20 transition-all active:scale-[0.98]"
+                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3 font-bold flex flex-col items-center justify-center shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={cart.length === 0}
                    >
                      <Banknote size={20} className="mb-1" />
@@ -305,7 +305,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                    </button>
                    <button 
                      onClick={() => handleCheckout('Chuyển khoản QR')}
-                     className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold flex flex-col items-center justify-center shadow-md shadow-blue-600/20 transition-all active:scale-[0.98]"
+                     className="bg-primary hover:bg-primary/90 text-text-light rounded-xl py-3 font-bold flex flex-col items-center justify-center shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={cart.length === 0}
                    >
                      <CreditCard size={20} className="mb-1" />
@@ -318,34 +318,34 @@ const PointOfSale = ({ onFinish, onClose }) => {
 
       {/* INVOICE MODAL (Thanh toán xong hiện Bill kèm QR) */}
       {showInvoice && lastOrder && (
-         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur flex justify-center items-center p-4">
-             <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-center items-center p-4">
+             <div className="bg-surface-light dark:bg-surface-dark rounded-xl w-full max-w-sm shadow-2xl overflow-hidden border border-border-light dark:border-border-dark animate-in fade-in zoom-in duration-300">
                  {orderStatus === 'Chờ thanh toán' ? (
                       <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-center text-white">
                           <p className="text-white font-bold text-lg">Đơn hàng: {lastOrder._id?.substr(-8).toUpperCase()}</p>
                       </div>
                   ) : (
-                     <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 text-center text-white">
+                     <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 text-center text-white">
                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                             <CheckCircle size={32} className="text-white" />
                          </div>
                          <h2 className="text-2xl font-black">HÓA ĐƠN ({lastOrder._id?.substr(-4)})</h2>
-                         <p className="text-green-50 mt-1">Gym Fitness Center • Đã thanh toán</p>
+                         <p className="text-emerald-50 mt-1">Gym Fitness Center • Đã thanh toán</p>
                      </div>
                   )}
                  
                  <div className="p-6">
-                     <div className="max-h-48 overflow-y-auto mb-4 border-b border-gray-100 pb-4 text-sm font-medium">
+                     <div className="max-h-48 overflow-y-auto mb-4 border-b border-border-light dark:border-border-dark pb-4 text-sm font-medium text-text-light dark:text-text-dark">
                         {lastOrder.cartClone?.map(c => (
                            <div key={c.product._id} className="flex justify-between mb-2">
-                              <span><span className="text-gray-400">{c.quantity}x</span> {c.product.name}</span>
+                              <span><span className="text-subtle-light dark:text-subtle-dark">{c.quantity}x</span> {c.product.name}</span>
                               <span className="font-bold">{(c.quantity * c.sellPrice).toLocaleString()} đ</span>
                            </div>
                         ))}
                      </div>
                      <div className="flex justify-between items-center mb-4 text-lg">
-                        <span className="font-bold text-gray-500">Tổng cộng</span>
-                        <span className="font-black text-gray-900">{lastOrder.totalAmount.toLocaleString()} đ</span>
+                        <span className="font-bold text-subtle-light dark:text-subtle-dark">Tổng cộng</span>
+                        <span className="font-black text-text-light dark:text-text-dark">{lastOrder.totalAmount.toLocaleString()} đ</span>
                      </div>
 
                      {/* Dynamic QR Code VietQR - chỉ hiện mã QR thuần */}
@@ -355,24 +355,24 @@ const PointOfSale = ({ onFinish, onClose }) => {
                                <img 
                                   src={`https://img.vietqr.io/image/970422-0344075790-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
                                   alt="VietQR MBBank" 
-                                  className="w-64 h-64 rounded-xl object-contain"
+                                  className="w-64 h-64 rounded-xl object-contain bg-white p-2"
                                />
                                {/* Trạng thái chờ - tự động xác nhận */}
-                               <div className="w-full mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                               <div className="w-full mt-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2">
                                   <Loader2 size={16} className="text-amber-500 animate-spin flex-shrink-0" />
                                   <div>
-                                     <p className="text-amber-700 font-bold text-xs">Đang chờ thanh toán...</p>
-                                     <p className="text-amber-600 text-[10px] mt-0.5">Hệ thống tự động xác nhận khi nhận được tiền</p>
+                                     <p className="text-amber-600 dark:text-amber-400 font-bold text-xs">Đang chờ thanh toán...</p>
+                                     <p className="text-amber-600/80 dark:text-amber-400/80 text-[10px] mt-0.5">Hệ thống tự động xác nhận khi nhận được tiền</p>
                                   </div>
                                </div>
                             </div>
                          ) : (
-                            <div className="bg-green-50 border border-green-200 p-4 rounded-2xl flex flex-col items-center justify-center">
-                               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
-                                  <CheckCircle className="text-green-600" size={24} />
+                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex flex-col items-center justify-center">
+                               <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mb-2">
+                                  <CheckCircle className="text-emerald-500" size={24} />
                                </div>
-                               <p className="text-sm font-bold text-green-800">Thanh toán hoàn tất!</p>
-                               <p className="text-xs text-green-600 mt-1 text-center font-medium">Hệ thống đã nhận được tiền chuyển khoản.</p>
+                               <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Thanh toán hoàn tất!</p>
+                               <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1 text-center font-medium">Hệ thống đã nhận được tiền chuyển khoản.</p>
                             </div>
                          )
                      )}
@@ -381,10 +381,10 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      <button 
                         onClick={handleCloseInvoice}
                         disabled={isCancelling}
-                        className={`w-full mt-6 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                        className={`w-full mt-6 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer ${
                            orderStatus === 'Chờ thanh toán'
-                              ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                              ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
+                              : 'bg-background-light dark:bg-background-dark hover:bg-border-light dark:hover:bg-border-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark'
                         }`}
                      >
                         {isCancelling ? (
