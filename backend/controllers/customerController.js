@@ -3,6 +3,8 @@ const CustomerPackage = require("../models/CustomerPackage");
 const ContractTransfer = require("../models/ContractTransfer");
 const Transaction = require("../models/Transaction");
 const Invoice = require("../models/Invoice");
+const PackageExtensionHistory = require("../models/PackageExtensionHistory");
+const AuditLog = require("../models/AuditLog");
 const ExcelJS = require("exceljs");
 const { CUSTOMER_STATUS } = require("../utils/constants");
 const { sendRegistrationEmail } = require("../utils/emailService");
@@ -1732,6 +1734,120 @@ const exportCustomersExcel = async (req, res) => {
   }
 };
 
+// @desc    Admin điều chỉnh hạn gói tập thủ công (có Audit Trail)
+// @route   PUT /api/v1/customers/packages/:id/adjust-expiry
+// @access  Private (Admin only)
+const adjustPackageExpiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newEndDate, reason } = req.body;
+
+    if (!newEndDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng cung cấp ngày hết hạn mới",
+      });
+    }
+
+    const targetDate = new Date(newEndDate);
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Ngày hết hạn mới không hợp lệ",
+      });
+    }
+
+    const pkg = await CustomerPackage.findById(id);
+    if (!pkg) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy gói tập của hội viên",
+      });
+    }
+
+    const oldEndDate = new Date(pkg.endDate);
+    const diffMs = targetDate.getTime() - oldEndDate.getTime();
+    const daysDifference = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    pkg.endDate = targetDate;
+    await pkg.save();
+
+    // Tạo bản ghi lịch sử điều chỉnh
+    const history = await PackageExtensionHistory.create({
+      packageId: pkg._id,
+      customerId: pkg.customer,
+      oldEndDate,
+      newEndDate: targetDate,
+      daysDifference,
+      reason: reason ? reason.trim() : "Admin điều chỉnh ngày hết hạn",
+      performedBy: req.user._id,
+    });
+
+    // Đồng bộ lại ngày hết hạn trên Customer
+    await syncCustomerFields(pkg.customer);
+
+    // Ghi Audit Log
+    try {
+      await AuditLog.create({
+        user: req.user._id,
+        action: `Điều chỉnh hạn gói tập "${pkg.packageName}": ${daysDifference >= 0 ? "+" : ""}${daysDifference} ngày`,
+        target: pkg._id,
+        targetModel: "CustomerPackage",
+        details: {
+          packageId: pkg._id,
+          customerId: pkg.customer,
+          oldEndDate,
+          newEndDate: targetDate,
+          daysDifference,
+          reason,
+        },
+        ipAddress: req.ip,
+      });
+    } catch (auditErr) {
+      console.warn("Lỗi ghi AuditLog điều chỉnh hạn gói:", auditErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        package: pkg,
+        history,
+      },
+      message: `Đã điều chỉnh ngày hết hạn thành công (${daysDifference >= 0 ? "+" : ""}${daysDifference} ngày)`,
+    });
+  } catch (error) {
+    console.error("Lỗi adjustPackageExpiry:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi máy chủ khi điều chỉnh hạn gói tập",
+    });
+  }
+};
+
+// @desc    Lấy lịch sử điều chỉnh hạn của gói tập
+// @route   GET /api/v1/customers/packages/:id/extension-history
+// @access  Private (Admin, Manager)
+const getPackageExtensionHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const history = await PackageExtensionHistory.find({ packageId: id })
+      .populate("performedBy", "fullName username role")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: history,
+      message: "Lấy lịch sử điều chỉnh hạn thành công",
+    });
+  } catch (error) {
+    console.error("Lỗi getPackageExtensionHistory:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi máy chủ khi lấy lịch sử điều chỉnh hạn",
+    });
+  }
+};
+
 module.exports = {
   getAll: getAllCustomers,
   create: createCustomer,
@@ -1744,4 +1860,6 @@ module.exports = {
   exportExcel: exportCustomersExcel,
   upgradePackage: upgradeCustomerPackage,
   transferPackage: transferCustomerPackage,
+  adjustPackageExpiry,
+  getPackageExtensionHistory,
 };

@@ -122,4 +122,18 @@ router.post('/:id/enroll-face',
   customerController.enrollFace
 );
 
+// PUT /api/v1/customers/packages/:id/adjust-expiry — Admin điều chỉnh ngày hết hạn gói tập thủ công
+router.put('/packages/:id/adjust-expiry',
+  protect,
+  authorize('admin'),
+  customerController.adjustPackageExpiry
+);
+
+// GET /api/v1/customers/packages/:id/extension-history — Lịch sử điều chỉnh ngày hết hạn
+router.get('/packages/:id/extension-history',
+  protect,
+  authorize('admin', 'manager', 'accountant'),
+  customerController.getPackageExtensionHistory
+);
+
 module.exports = router;

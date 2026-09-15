@@ -25,6 +25,7 @@ import {
   TrendingUp,
   UserSearch,
   AlertTriangle,
+  CalendarOff,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
@@ -96,7 +97,6 @@ const menuStructure = [
           { path: '/reports/sales-funnel', icon: Target, label: 'Hợp đồng', roles: MANAGER_ROLES },
           { path: '/reports/customer-analytics', icon: UserSearch, label: 'Phân tích khách hàng', roles: MANAGER_ROLES },
           { path: '/reports/inventory', icon: PackageSearch, label: 'Phân tích kho hàng', roles: MANAGER_ROLES },
-          { path: '/reports/logs', icon: AlertTriangle, label: 'Nhật ký & Cảnh báo', roles: MANAGER_ROLES },
         ],
       },
     ],

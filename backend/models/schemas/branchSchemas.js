@@ -194,6 +194,15 @@ const customerPackageSchema = new mongoose.Schema(
         freezeFee: { type: Number, default: 0 },
       },
     ],
+    appliedClosures: [
+      {
+        closureEventId: { type: mongoose.Schema.Types.ObjectId, ref: "ClosureEvent", required: true },
+        daysAdded: { type: Number, required: true },
+        appliedAt: { type: Date, default: Date.now },
+        previousEndDate: { type: Date, required: true },
+        newEndDate: { type: Date, required: true },
+      },
+    ],
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -667,6 +676,62 @@ const settingSchema = new mongoose.Schema(
     gymCapacity: { type: Number, default: 50 },
     minStockAlert: { type: Number, default: 5 },
     transferFee: { type: Number, default: 1000000 },
+    // Nhắc nhở tự động
+    sendExpiryReminder: { type: Boolean, default: true },
+    expiryReminderDays: { type: Number, default: 14 },
+    sendInactiveReminder: { type: Boolean, default: false },
+    inactiveDays: { type: Number, default: 30 },
+    // Cấu hình Thanh toán
+    vietqrBank: { type: String, default: "MBBank" },
+    vietqrAccountNo: { type: String, default: "" },
+    vietqrAccountName: { type: String, default: "" },
+    posTerminalId: { type: String, default: "" },
+    sepayApiKey: { type: String, default: "" },
+    // Cấu hình Thiết bị nhận diện khuôn mặt
+    faceAiServerUrl: { type: String, default: "http://localhost:5001" },
+    faceMatchThreshold: { type: Number, default: 0.6 },
+    cameraRtspUrl: { type: String, default: "" },
+    // Mẫu nội dung nhắc nhở tự động (Email & Zalo)
+    reminderTemplates: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({
+        expiry: {
+          subject: "[Gym Fitness] Nhắc nhở: Gói tập của bạn sắp hết hạn sau {{so_ngay}} ngày",
+          body: "Xin chào {{ten_khach_hang}},\n\nGym Fitness xin thông báo gói tập {{ten_goi_tap}} của bạn tại chi nhánh {{ten_chi_nhanh}} sẽ hết hạn vào ngày {{ngay_het_han}}.\n\nĐể không gián đoạn quá trình tập luyện, vui lòng liên hệ quầy lễ tân để được hỗ trợ gia hạn sớm nhất!",
+          attachmentName: "",
+          enableEmail: true,
+          enableZalo: false,
+          zaloTemplateId: "",
+        },
+        inactive: {
+          subject: "[Gym Fitness] Lâu rồi chưa thấy bạn ghé phòng tập!",
+          body: "Xin chào {{ten_khach_hang}},\n\nĐã {{so_ngay}} ngày rồi chúng tôi chưa được đón tiếp bạn tại chi nhánh {{ten_chi_nhanh}}.\n\nHãy dành chút thời gian ghé phòng tập để tiếp tục duy trì sức khỏe và vóc dáng nhé!",
+          attachmentName: "",
+          enableEmail: true,
+          enableZalo: false,
+          zaloTemplateId: "",
+        },
+        registration: {
+          subject: "[Gym Fitness] Xác nhận đăng ký thành công gói tập - Chào mừng {{ten_khach_hang}}!",
+          body: "Xin chào {{ten_khach_hang}},\n\nChúc mừng bạn đã đăng ký thành công gói tập {{ten_goi_tap}} với hạn sử dụng đến {{ngay_het_han}}.\n\nChúc bạn có những giờ phút tập luyện hiệu quả và tràn đầy năng lượng!",
+          attachmentName: "",
+          enableEmail: true,
+          enableZalo: false,
+          zaloTemplateId: "",
+        },
+      }),
+    },
+    // Ma trận phân quyền các vai trò
+    rolePermissions: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({
+        manager: ["view_dashboard", "manage_customers", "checkin", "view_reports", "pos_sell", "manage_staff", "manage_closures"],
+        accountant: ["view_dashboard", "view_reports", "view_financials", "view_invoices"],
+        sale: ["view_dashboard", "manage_leads", "manage_customers", "checkin", "pos_sell", "view_commissions"],
+        pt: ["view_dashboard", "checkin", "manage_workouts", "view_commissions"],
+        reception: ["view_dashboard", "checkin", "manage_customers", "pos_sell", "deduct_workout"],
+      }),
+    },
   },
   { timestamps: true }
 );
@@ -768,6 +833,70 @@ auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ timestamp: -1 });
 auditLogSchema.index({ action: 1 });
 
+// 23. ClosureEvent Schema
+const closureEventSchema = new mongoose.Schema(
+  {
+    branchCode: { type: String, required: true, uppercase: true },
+    title: { type: String, required: true, trim: true },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    reason: { type: String, required: true, trim: true },
+    type: {
+      type: String,
+      enum: ["planned", "emergency"],
+      default: "planned",
+    },
+    status: {
+      type: String,
+      enum: ["active", "reversed"],
+      default: "active",
+    },
+    compensationStats: {
+      totalPackagesAffected: { type: Number, default: 0 },
+      totalCustomersAffected: { type: Number, default: 0 },
+      totalDaysAdded: { type: Number, default: 0 },
+      executedAt: { type: Date },
+      reversedAt: { type: Date },
+      reversedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    },
+    mailNotification: {
+      subject: { type: String, default: "" },
+      body: { type: String, default: "" },
+      attachmentName: { type: String, default: "" },
+      status: {
+        type: String,
+        enum: ["not_sent", "sending", "completed", "failed"],
+        default: "not_sent",
+      },
+      sentCount: { type: Number, default: 0 },
+      failedCount: { type: Number, default: 0 },
+      sentAt: { type: Date },
+    },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+closureEventSchema.index({ branchCode: 1, startDate: 1, endDate: 1 });
+closureEventSchema.index({ status: 1 });
+
+// 24. PackageExtensionHistory Schema
+const packageExtensionHistorySchema = new mongoose.Schema(
+  {
+    packageId: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage", required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
+    oldEndDate: { type: Date, required: true },
+    newEndDate: { type: Date, required: true },
+    daysDifference: { type: Number, required: true },
+    reason: { type: String, required: true, trim: true },
+    performedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+packageExtensionHistorySchema.index({ packageId: 1, createdAt: -1 });
+packageExtensionHistorySchema.index({ customerId: 1 });
+
 module.exports = {
   userSchema,
   counterSchema,
@@ -791,4 +920,6 @@ module.exports = {
   workoutSessionSchema,
   contractTransferSchema,
   auditLogSchema,
+  closureEventSchema,
+  packageExtensionHistorySchema,
 };

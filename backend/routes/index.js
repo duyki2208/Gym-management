@@ -34,5 +34,6 @@ router.use('/leads',            require('./leadRoutes'));
 router.use('/upload',           require('./uploadRoutes'));
 router.use('/search',           require('./searchRoutes'));
 router.use('/branch-transfers', require('./branchTransferRoutes'));
+router.use('/closures',         require('./closureRoutes'));
 
 module.exports = router;

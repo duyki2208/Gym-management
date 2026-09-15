@@ -139,6 +139,17 @@ export const customerService = {
     const response = await api.post(`/customers/${id}/unfreeze`, { actualUnfreezeDate });
     return response.data;
   },
+  adjustExpiry: async (packageId, newEndDate, reason) => {
+    const response = await api.put(`/customers/packages/${packageId}/adjust-expiry`, {
+      newEndDate,
+      reason,
+    });
+    return response.data;
+  },
+  getExtensionHistory: async (packageId) => {
+    const response = await api.get(`/customers/packages/${packageId}/extension-history`);
+    return response.data;
+  },
   exportExcel: async (params = {}) => {
     const response = await api.get('/customers/export-excel', {
       params,

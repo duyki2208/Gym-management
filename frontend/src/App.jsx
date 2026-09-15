@@ -30,6 +30,7 @@ const Commissions = lazy(() => import('./pages/Commissions'));
 const Settings = lazy(() => import('./pages/Settings'));
 const ProductsMain = lazy(() => import('./pages/ProductsMain'));
 const Leads = lazy(() => import('./pages/Leads'));
+const BranchClosures = lazy(() => import('./pages/BranchClosures'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[400px]">
@@ -68,6 +69,7 @@ const App = () => {
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/products/*" element={<ProductsMain />} />
                             <Route path="/leads" element={<Leads />} />
+                            <Route path="/branch-closures" element={<BranchClosures />} />
                             
                             {/* Fallback cho route sai */}
                             <Route path="*" element={<Navigate to="/" replace />} />

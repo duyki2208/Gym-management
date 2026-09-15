@@ -1,7 +1,7 @@
 const { format } = require('date-fns');
 
 // Hàm helper để gửi email qua Brevo HTTP API (Port 443) thay thế cho SMTP bị Render chặn
-const sendEmailViaBrevo = async (toEmail, toName, subject, htmlContent) => {
+const sendEmailViaBrevo = async (toEmail, toName, subject, htmlContent, attachments = []) => {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.error("Lỗi: BREVO_API_KEY chưa được cấu hình trên môi trường Render!");
@@ -11,6 +11,33 @@ const sendEmailViaBrevo = async (toEmail, toName, subject, htmlContent) => {
   const senderEmail = process.env.EMAIL_USER || "gymfitnesshungduy@gmail.com";
 
   try {
+    const requestBody = {
+      sender: {
+        name: "Gym Fitness",
+        email: senderEmail
+      },
+      to: [
+        {
+          email: toEmail,
+          name: toName || "Quý khách"
+        }
+      ],
+      subject: subject,
+      htmlContent: htmlContent
+    };
+
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      requestBody.attachment = attachments.map(att => ({
+        content: att.content, // base64 string
+        name: att.name
+      }));
+    } else if (attachments && attachments.content && attachments.name) {
+      requestBody.attachment = [{
+        content: attachments.content,
+        name: attachments.name
+      }];
+    }
+
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -18,20 +45,7 @@ const sendEmailViaBrevo = async (toEmail, toName, subject, htmlContent) => {
         "api-key": apiKey,
         "content-type": "application/json"
       },
-      body: JSON.stringify({
-        sender: {
-          name: "Gym Fitness",
-          email: senderEmail
-        },
-        to: [
-          {
-            email: toEmail,
-            name: toName
-          }
-        ],
-        subject: subject,
-        htmlContent: htmlContent
-      })
+      body: JSON.stringify(requestBody)
     });
 
     const data = await response.json();
@@ -202,8 +216,16 @@ const sendUnfreezeNotificationEmail = async (email, name, packageType, newEndDat
   await sendEmailViaBrevo(email, name, subject, htmlContent);
 };
 
+// Gửi email tùy chỉnh kèm file đính kèm
+const sendCustomEmailWithAttachment = async ({ toEmail, toName, subject, htmlContent, attachments = [] }) => {
+  if (!toEmail) return false;
+  return await sendEmailViaBrevo(toEmail, toName, subject, htmlContent, attachments);
+};
+
 module.exports = {
   sendRegistrationEmail,
   sendExpirationReminderEmail,
-  sendUnfreezeNotificationEmail
+  sendUnfreezeNotificationEmail,
+  sendCustomEmailWithAttachment,
+  sendEmailViaBrevo,
 };

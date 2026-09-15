@@ -60,8 +60,6 @@ const pathToTabMap = {
   'customer-analytics': 'customer-analytics',
   'churn': 'customer-analytics',
   'inventory': 'inventory',
-  'logs': 'audit',
-  'audit': 'audit',
   'pt-sessions': 'pt-sessions',
 };
 
@@ -70,7 +68,6 @@ const tabToPathMap = {
   'sales-funnel': 'sales-funnel',
   'customer-analytics': 'customer-analytics',
   'inventory': 'inventory',
-  'audit': 'logs',
   'pt-sessions': 'pt-sessions',
 };
 
@@ -79,7 +76,13 @@ const Reports = () => {
   const navigate = useNavigate();
 
   const subPath = location.pathname.split('/')[2];
-  const activeTab = pathToTabMap[subPath] || (['revenue', 'sales-funnel', 'customer-analytics', 'inventory', 'audit', 'pt-sessions'].includes(subPath) ? subPath : 'revenue');
+  const activeTab = pathToTabMap[subPath] || (['revenue', 'sales-funnel', 'customer-analytics', 'inventory', 'pt-sessions'].includes(subPath) ? subPath : 'revenue');
+
+  useEffect(() => {
+    if (subPath === 'logs' || subPath === 'audit') {
+      navigate('/settings');
+    }
+  }, [subPath, navigate]);
 
   const setActiveTab = (tabId) => {
     const targetPath = tabToPathMap[tabId] || tabId;
@@ -1726,121 +1729,6 @@ const Reports = () => {
       {/* Rời bỏ Tab */}
       {activeTab === 'churn' && (
         <ChurnPrediction />
-      )}
-
-      {/* Nhật ký Tab */}
-      {activeTab === 'audit' && (
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-            <div className="relative flex-1 max-w-md w-full">
-              <input
-                id="audit_search_input"
-                name="auditSearch"
-                type="text"
-                aria-label="Tìm kiếm nhật ký theo nhân viên hoặc hành động"
-                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-xs sm:text-sm bg-gray-50/50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors"
-                placeholder="Tìm kiếm theo nhân viên, hành động..."
-                value={auditSearch}
-                onChange={(e) => {
-                  setAuditSearch(e.target.value);
-                  setAuditPage(1);
-                }}
-              />
-            </div>
-            <div className="flex items-center gap-2 text-xs text-subtle-light dark:text-subtle-dark font-medium">
-              <span>Trang {auditPage} / {auditTotalPages}</span>
-            </div>
-          </div>
-
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
-            {auditLoading ? (
-              <div className="p-8 text-center text-gray-400 text-sm">Đang tải nhật ký hệ thống...</div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
-                        <th className="p-4 w-[15%]">Thời gian</th>
-                        <th className="p-4 w-[18%]">Nhân viên</th>
-                        <th className="p-4 w-[32%]">Hành động</th>
-                        <th className="p-4 w-[12%] text-center">Thao tác</th>
-                        <th className="p-4 w-[23%]">Chi tiết</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                      {auditLogs.length > 0 ? (
-                        auditLogs.map((log) => (
-                          <tr key={log._id} className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors">
-                            <td className="p-4 text-subtle-light dark:text-subtle-dark font-mono text-[11px]">
-                              {new Date(log.createdAt).toLocaleString("vi-VN")}
-                            </td>
-                            <td className="p-4">
-                              <span className="font-bold text-text-light dark:text-text-dark">{log.username}</span>
-                              {log.user?.role && (
-                                <span className="ml-1.5 px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-gray-100 dark:bg-gray-700 text-subtle-light dark:text-subtle-dark">
-                                  {log.user.role}
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-4 text-gray-800 dark:text-gray-200 font-medium">
-                              {log.action}
-                            </td>
-                            <td className="p-4 text-center">
-                              <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-md border ${
-                                log.method === "POST" ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/50" :
-                                log.method === "PUT" ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200/50" :
-                                "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/50"
-                              }`}>
-                                {log.method === "POST" ? "Thêm" : log.method === "PUT" ? "Sửa" : "Xóa"}
-                              </span>
-                            </td>
-                            <td className="p-4 text-xs font-mono text-gray-500 max-w-xs truncate">
-                              <details className="cursor-pointer">
-                                <summary className="text-primary hover:underline font-sans font-bold">Xem chi tiết</summary>
-                                <pre className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 text-subtle-light dark:text-subtle-dark rounded text-[10px] overflow-x-auto whitespace-pre-wrap max-h-32">
-                                  {JSON.stringify(log.details, null, 2)}
-                                </pre>
-                              </details>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="p-8 text-center text-gray-400 text-xs">
-                            Không có nhật ký vận hành nào phù hợp.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="p-4 border-t border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/40 flex justify-between items-center">
-                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                    Trang {auditPage} / {auditTotalPages}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setAuditPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={auditPage === 1 || auditLoading}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Trang trước
-                    </button>
-                    <button
-                      onClick={() => setAuditPage((prev) => Math.min(prev + 1, auditTotalPages))}
-                      disabled={auditPage >= auditTotalPages || auditLoading}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Trang sau
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
       )}
 
       {/* 2. Chuyển đổi & Hợp đồng (Gộp Lead & Chuyển đổi + Tỷ lệ Hợp đồng) */}

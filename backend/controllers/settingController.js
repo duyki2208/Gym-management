@@ -41,6 +41,14 @@ const updateSettings = async (req, res) => {
       saleMonthlyRevenueTarget, saleMonthlyContractTarget, saleMonthlyRenewTarget,
       // Vận hành
       gymCapacity, minStockAlert, transferFee,
+      // Nhắc nhở tự động
+      sendExpiryReminder, expiryReminderDays, sendInactiveReminder, inactiveDays,
+      // Thanh toán
+      vietqrBank, vietqrAccountNo, vietqrAccountName, posTerminalId, sepayApiKey,
+      // Thiết bị nhận diện khuôn mặt
+      faceAiServerUrl, faceMatchThreshold, cameraRtspUrl,
+      // Mẫu nhắc nhở & Ma trận quyền
+      reminderTemplates, rolePermissions,
     } = req.body;
 
     let setting = await Setting.findOne();
@@ -49,21 +57,37 @@ const updateSettings = async (req, res) => {
       setting = new Setting();
     }
 
-    // Cập nhật các trường — chỉ cập nhật nếu có gửi lên
+    // Cập nhật các trường số
     const numericFields = {
       targetRevenue, ptSessionPrice, ptCommissionRate,
       saleNewContractRate, saleRenewRate, saleUpsellRate,
       ptMonthlySessionTarget,
       saleMonthlyRevenueTarget, saleMonthlyContractTarget, saleMonthlyRenewTarget,
       gymCapacity, minStockAlert, transferFee,
+      expiryReminderDays, inactiveDays, faceMatchThreshold,
     };
 
+    // Cập nhật chuỗi và boolean
     if (gymName !== undefined) setting.gymName = gymName;
     if (address !== undefined) setting.address = address;
+    if (sendExpiryReminder !== undefined) setting.sendExpiryReminder = Boolean(sendExpiryReminder);
+    if (sendInactiveReminder !== undefined) setting.sendInactiveReminder = Boolean(sendInactiveReminder);
+
+    if (vietqrBank !== undefined) setting.vietqrBank = vietqrBank;
+    if (vietqrAccountNo !== undefined) setting.vietqrAccountNo = vietqrAccountNo;
+    if (vietqrAccountName !== undefined) setting.vietqrAccountName = vietqrAccountName;
+    if (posTerminalId !== undefined) setting.posTerminalId = posTerminalId;
+    if (sepayApiKey !== undefined) setting.sepayApiKey = sepayApiKey;
+
+    if (faceAiServerUrl !== undefined) setting.faceAiServerUrl = faceAiServerUrl;
+    if (cameraRtspUrl !== undefined) setting.cameraRtspUrl = cameraRtspUrl;
+
+    if (reminderTemplates !== undefined) setting.reminderTemplates = reminderTemplates;
+    if (rolePermissions !== undefined) setting.rolePermissions = rolePermissions;
 
     // Cập nhật các trường số
     for (const [key, value] of Object.entries(numericFields)) {
-      if (value !== undefined && value !== null) {
+      if (value !== undefined && value !== null && value !== "") {
         setting[key] = Number(value);
       }
     }

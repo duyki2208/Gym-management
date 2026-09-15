@@ -10,7 +10,15 @@ const WorkoutSession = require('../models/WorkoutSession');
 const Transaction = require('../models/Transaction');
 const CustomerPackage = require('../models/CustomerPackage');
 const { protect } = require('../middleware/authMiddleware');
-const { startOfMonth, endOfMonth, differenceInDays } = require("date-fns");
+const { startOfMonth, endOfMonth, differenceInDays, format } = require("date-fns");
+const multer = require('multer');
+const { sendCustomEmailWithAttachment } = require('../utils/emailService');
+const { sendZaloNotification } = require('../utils/zaloService');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -286,6 +294,150 @@ router.get('/', protect, async (req, res) => {
   } catch (error) {
     console.error('Lỗi lấy notifications:', error);
     res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/notifications/send-manual
+ * Gửi thông báo / email / Zalo soạn tay tức thì
+ */
+router.post('/send-manual', protect, upload.single('attachment'), async (req, res) => {
+  try {
+    const { targetAudience, customRecipient, subject, body, channels } = req.body;
+    const branchSetting = await Setting.findOne();
+    const branchName = branchSetting?.gymName || "Gym Fitness";
+
+    if (!subject || !body) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ tiêu đề và nội dung thông báo" });
+    }
+
+    const channelList = Array.isArray(channels)
+      ? channels
+      : typeof channels === 'string'
+      ? channels.split(',')
+      : ['email'];
+
+    let recipients = [];
+    const now = new Date();
+
+    if (customRecipient && customRecipient.trim()) {
+      recipients = [
+        {
+          name: "Quý khách",
+          email: customRecipient.includes('@') ? customRecipient.trim() : '',
+          phone: !customRecipient.includes('@') ? customRecipient.trim() : '',
+          packageName: "Gói tập",
+          endDate: now,
+        },
+      ];
+    } else {
+      let query = { isDeleted: { $ne: true } };
+      if (targetAudience === 'active') {
+        query.status = 'active';
+      } else if (targetAudience === 'expiring_soon') {
+        const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        query.status = 'active';
+        query.endDate = { $gte: now, $lte: thirtyDaysLater };
+      } else if (targetAudience === 'expired') {
+        query.endDate = { $lt: now };
+      }
+
+      const customers = await Customer.find(query).select('name email phone packageType endDate').lean();
+      recipients = customers.map((c) => ({
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        packageName: c.packageType || "Gói tập",
+        endDate: c.endDate,
+      }));
+    }
+
+    if (recipients.length === 0) {
+      return res.status(400).json({ success: false, message: "Không tìm thấy hội viên nào phù hợp với nhóm đối tượng đã chọn" });
+    }
+
+    let attachment = null;
+    if (req.file) {
+      attachment = {
+        content: req.file.buffer.toString('base64'),
+        name: req.file.originalname,
+      };
+    }
+
+    // Phản hồi HTTP 200 ngay cho client
+    res.status(200).json({
+      success: true,
+      message: `Đang phát lệnh gửi thông báo tới ${recipients.length} người nhận...`,
+      data: { total: recipients.length },
+    });
+
+    // Chạy ngầm theo batch
+    setImmediate(async () => {
+      let sentEmail = 0;
+      let sentZalo = 0;
+
+      for (const r of recipients) {
+        const formattedEndDate = r.endDate ? format(new Date(r.endDate), "dd/MM/yyyy") : "Đang cập nhật";
+        const personalizedSubject = subject
+          .replace(/\{\{ten_khach_hang\}\}/gi, r.name)
+          .replace(/\{\{ten_chi_nhanh\}\}/gi, branchName);
+
+        const personalizedBody = body
+          .replace(/\{\{ten_khach_hang\}\}/gi, r.name)
+          .replace(/\{\{ten_chi_nhanh\}\}/gi, branchName)
+          .replace(/\{\{ten_goi_tap\}\}/gi, r.packageName)
+          .replace(/\{\{ngay_het_han\}\}/gi, formattedEndDate);
+
+        // Gửi Email nếu kênh email được chọn
+        if (channelList.includes('email') && r.email && r.email.includes('@')) {
+          try {
+            const html = `
+              <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #0abf69 0%, #059669 100%); padding: 22px; text-align: center; color: white;">
+                  <h2 style="margin: 0; font-size: 18px;">${branchName}</h2>
+                </div>
+                <div style="padding: 24px; line-height: 1.7; color: #334155; font-size: 14px; white-space: pre-line;">
+${personalizedBody}
+                </div>
+                <div style="background-color: #f8fafc; padding: 14px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+                  Cảm ơn bạn đã đồng hành cùng ${branchName}!
+                </div>
+              </div>
+            `;
+            await sendCustomEmailWithAttachment({
+              toEmail: r.email,
+              toName: r.name,
+              subject: personalizedSubject,
+              htmlContent: html,
+              attachments: attachment ? [attachment] : [],
+            });
+            sentEmail++;
+          } catch (e) {
+            console.error("Lỗi gửi email tay:", e.message);
+          }
+        }
+
+        // Gửi Zalo nếu kênh zalo được chọn
+        if (channelList.includes('zalo') && r.phone) {
+          try {
+            await sendZaloNotification({
+              phone: r.phone,
+              message: personalizedBody,
+              type: "manual_broadcast",
+            });
+            sentZalo++;
+          } catch (ze) {
+            console.error("Lỗi gửi zalo tay:", ze.message);
+          }
+        }
+
+        await new Promise((res) => setTimeout(res, 100));
+      }
+      console.log(`[Manual Notification] Hoàn tất phát tin: Email (${sentEmail}), Zalo (${sentZalo})`);
+    });
+  } catch (err) {
+    console.error("Lỗi send-manual:", err);
+    res.status(500).json({ success: false, message: err.message || "Lỗi máy chủ khi gửi thông báo thủ công" });
   }
 });
 

@@ -193,6 +193,8 @@ const getBranchModels = async (branchCode, forceRefresh = false) => {
     WorkoutSession: branchConn.models.WorkoutSession || branchConn.model("WorkoutSession", branchSchemas.workoutSessionSchema),
     ContractTransfer: branchConn.models.ContractTransfer || branchConn.model("ContractTransfer", branchSchemas.contractTransferSchema),
     AuditLog: branchConn.models.AuditLog || branchConn.model("AuditLog", branchSchemas.auditLogSchema),
+    ClosureEvent: branchConn.models.ClosureEvent || branchConn.model("ClosureEvent", branchSchemas.closureEventSchema),
+    PackageExtensionHistory: branchConn.models.PackageExtensionHistory || branchConn.model("PackageExtensionHistory", branchSchemas.packageExtensionHistorySchema),
     connection: branchConn,
     branchCode: normalizedCode,
     dbName: branchDbName,

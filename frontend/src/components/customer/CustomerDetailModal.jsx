@@ -17,6 +17,7 @@ import FaceCaptureModal from "./FaceCaptureModal";
 import FreezeContractModal from "./FreezeContractModal";
 import UpgradeContractModal from "./UpgradeContractModal";
 import TransferContractModal from "./TransferContractModal";
+import AdjustExpiryModal from "./AdjustExpiryModal";
 import toast from "react-hot-toast";
 import { useConfirm } from "../../context/ConfirmContext";
 
@@ -60,6 +61,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   const [isFreezeContractModalOpen, setIsFreezeContractModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isAdjustExpiryModalOpen, setIsAdjustExpiryModalOpen] = useState(false);
   const [selectedPackageForAction, setSelectedPackageForAction] = useState(null);
 
   // Quyền trừ buổi tập
@@ -937,9 +939,19 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                                                                      onClick={() => { setSelectedPackageForAction(pkg); setIsTransferModalOpen(true); }}
                                                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
                                                                  >
-                                                                     Chuyển nhượng
-                                                                 </button>
-                                                             </>
+                                                                      Chuyển nhượng
+                                                                  </button>
+                                                                  {currentUser.role === 'admin' && (
+                                                                      <button
+                                                                          type="button"
+                                                                          onClick={() => { setSelectedPackageForAction(pkg); setIsAdjustExpiryModalOpen(true); }}
+                                                                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                                          title="Admin điều chỉnh ngày hết hạn hợp đồng"
+                                                                      >
+                                                                          Sửa hạn gói
+                                                                      </button>
+                                                                  )}
+                                                              </>
                                                          )}
                                                          {pkg.status === 'frozen' && (
                                                              <button
@@ -1169,6 +1181,14 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
         isOpen={isTransferModalOpen}
         onClose={() => { setIsTransferModalOpen(false); setSelectedPackageForAction(null); }}
         customerPackage={selectedPackageForAction}
+        onSuccess={() => { fetchCustomerPackages(); if (onUpdate) onUpdate(); }}
+      />
+
+      <AdjustExpiryModal
+        isOpen={isAdjustExpiryModalOpen}
+        onClose={() => { setIsAdjustExpiryModalOpen(false); setSelectedPackageForAction(null); }}
+        customerPackage={selectedPackageForAction}
+        customerName={customer?.name}
         onSuccess={() => { fetchCustomerPackages(); if (onUpdate) onUpdate(); }}
       />
     </div>
