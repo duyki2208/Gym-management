@@ -535,7 +535,7 @@ const Settings = () => {
       {/* Main Layout 2 Cột (Master - Detail) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* CỘT TRÁI: MENU DỌC (VERTICAL SIDEBAR) */}
-        <div className="lg:col-span-4 xl:col-span-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4 shadow-sm space-y-6 sticky top-20">
+        <div className="lg:col-span-4 xl:col-span-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4 shadow-sm space-y-6">
           {MENU_GROUPS.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1.5">
               <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark px-3 mb-1">
@@ -581,9 +581,7 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                       <Building2 size={20} className="text-primary" /> Thông tin cơ sở
                     </h3>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      Thông tin này hiển thị trên hợp đồng, hóa đơn và phiếu thu của chi nhánh.
-                    </p>
+                   
                   </div>
 
                   <div className="space-y-4">
@@ -625,9 +623,7 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                       <Coins size={20} className="text-primary" /> Chính sách Hoa hồng & KPI Mặc định
                     </h3>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      Thiết lập chỉ tiêu doanh thu cơ sở, mức trích phần trăm và chỉ tiêu công việc mặc định cho Huấn luyện viên (PT) và Nhân viên tư vấn (Sale).
-                    </p>
+                    
                   </div>
 
                   <div className="space-y-6">
@@ -638,7 +634,7 @@ const Settings = () => {
                         value={targetRevenue}
                         onChange={setTargetRevenue}
                         suffix="VNĐ"
-                        hint="Dùng làm mốc tính tỷ lệ hoàn thành KPI chi nhánh trên Dashboard & Báo cáo"
+                        
                         min="0"
                       />
                     </div>
@@ -745,9 +741,7 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                       <ShieldCheck size={20} className="text-primary" /> Thông số Vận hành Cơ sở
                     </h3>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      Giới hạn sức chứa phòng tập, ngưỡng cảnh báo tồn kho tối thiểu và mức phí chuyển nhượng hợp đồng.
-                    </p>
+                    
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -786,9 +780,7 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                       <Bell size={20} className="text-primary" /> Quản lý Mẫu Nhắc nhở & Kênh gửi Tự động
                     </h3>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      Nơi thiết lập nội dung tin nhắn, tải file đính kèm mặc định và cấu hình gửi qua Email (Brevo) và Zalo (ZNS Notification).
-                    </p>
+                    
                   </div>
 
                   {/* Cấu hình kích hoạt cơ bản */}
@@ -959,7 +951,7 @@ const Settings = () => {
                                 className="w-4 h-4 accent-primary rounded cursor-pointer"
                               />
                               <Mail size={15} className="text-blue-500" />
-                              Gửi Email qua Brevo
+                              Gửi qua gmail
                             </label>
 
                             <label className="flex items-center gap-2 text-xs font-semibold text-text-light dark:text-text-dark cursor-pointer">
@@ -1122,8 +1114,8 @@ const Settings = () => {
                               }
                               className="w-4 h-4 accent-primary rounded cursor-pointer"
                             />
-                            <Mail size={15} className="text-blue-500" />
-                            Gửi Email qua Brevo
+                            
+                            Gửi qua mail 
                           </label>
 
                           <label className="flex items-center gap-2 text-xs font-semibold text-text-light dark:text-text-dark cursor-pointer">
@@ -1141,8 +1133,8 @@ const Settings = () => {
                               }
                               className="w-4 h-4 accent-primary rounded cursor-pointer"
                             />
-                            <MessageSquare size={15} className="text-blue-600" />
-                            Gửi tin nhắn Zalo (ZNS Notification)
+                            
+                            Gửi tin nhắn Zalo 
                           </label>
                         </div>
 
@@ -1305,9 +1297,7 @@ const Settings = () => {
                       <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                         <UserCheck size={20} className="text-primary" /> Ma trận Phân quyền Tài khoản & Vai trò
                       </h3>
-                      <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                        Admin có toàn quyền chọn hoặc bỏ chọn chức năng được phép truy cập cho từng vai trò trong hệ thống.
-                      </p>
+                      
                     </div>
 
                     <button
@@ -1379,25 +1369,11 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                       <CreditCard size={20} className="text-primary" /> Cổng Thanh toán & Tích hợp SePay
                     </h3>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      Cấu hình tài khoản ngân hàng để tạo mã VietQR động tại quầy và kết nối Webhook SePay đối soát tự động.
-                    </p>
+                    
                   </div>
 
-                  {/* Giải thích vì sao cần cấu hình cả VietQR và SePay */}
-                  <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900 dark:text-blue-200 space-y-2">
-                    <div className="font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
-                      <Info size={15} /> Cơ chế hoạt động của Thanh toán Chuyển khoản:
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1 leading-relaxed">
-                      <li>
-                        <strong>Mã VietQR động:</strong> Khi thu ngân bán hàng hoặc bán gói tập, hệ thống dùng <strong>Số tài khoản & Ngân hàng bên dưới</strong> để sinh ra mã QR Napas 24/7 kèm mã đơn hàng. Khách quét mã này tiền sẽ về trực tiếp tài khoản phòng tập.
-                      </li>
-                      <li>
-                        <strong>SePay Webhook:</strong> Khi tiền về tài khoản ngân hàng, SePay sẽ gửi tín hiệu tức thì về Webhook của GymPro để hệ thống <strong>tự động đổi trạng thái đơn sang Đã thanh toán</strong> và in hóa đơn mà thu ngân không cần kiểm tra app ngân hàng thủ công.
-                      </li>
-                    </ul>
-                  </div>
+
+                  
 
                   {/* Thông tin VietQR Ngân hàng */}
                   <div className="p-5 rounded-2xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
@@ -1530,9 +1506,7 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1 flex items-center gap-2">
                       <Camera size={20} className="text-primary" /> Thiết bị Nhận diện Khuôn mặt (AI Face Check-in)
                     </h3>
-                    <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      Kết nối máy chủ Flask / InsightFace phục vụ việc nhận diện hội viên tự động tại cổng vào chi nhánh.
-                    </p>
+                    
                   </div>
 
                   <div className="space-y-4">

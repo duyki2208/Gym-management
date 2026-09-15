@@ -270,9 +270,7 @@ Ban Quản Lý Chi Nhánh`
               Quản lý Đóng / Mở Chi Nhánh
             </h1>
           </div>
-          <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-            Lên lịch đóng cửa cơ sở, tự động bù hạn hợp đồng theo overlap thực tế & gửi email kèm văn bản thông báo.
-          </p>
+         
         </div>
 
         <div className="flex items-center gap-3">
