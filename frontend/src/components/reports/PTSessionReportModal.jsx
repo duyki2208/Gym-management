@@ -139,7 +139,7 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark w-full max-w-5xl rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -232,19 +232,19 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex flex-col gap-1">
               <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Tổng số buổi đã hoàn thành</span>
-              <span className="text-2xl font-black text-emerald-800 dark:text-emerald-200">
+              <span className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">
                 {reportData?.totalSessions || 0} buổi
               </span>
             </div>
             <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex flex-col gap-1">
               <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Đơn giá trung bình / buổi</span>
-              <span className="text-2xl font-black text-blue-800 dark:text-blue-200">
+              <span className="text-2xl font-bold text-blue-800 dark:text-blue-200">
                 {(reportData?.sessionRate || 500000).toLocaleString("vi-VN")}đ
               </span>
             </div>
             <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl flex flex-col gap-1">
               <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">Hoa hồng dự kiến ({reportData?.commissionRate || 10}%)</span>
-              <span className="text-2xl font-black text-purple-800 dark:text-purple-200">
+              <span className="text-2xl font-bold text-purple-800 dark:text-purple-200">
                 {(reportData?.estimatedCommission || 0).toLocaleString("vi-VN")}đ
               </span>
             </div>
@@ -375,8 +375,8 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
       {/* Mini Modal Gửi Khiếu Nại */}
       {disputeModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl max-w-md w-full flex flex-col gap-4 shadow-xl border border-gray-200 dark:border-gray-800">
-            <h4 className="text-base font-bold text-gray-900 dark:text-white">Khiếu Nại Buổi Tập</h4>
+          <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl max-w-md w-full flex flex-col gap-4 shadow-xl border border-border-light dark:border-border-dark">
+            <h4 className="text-base font-semibold text-gray-900 dark:text-white">Khiếu nại buổi tập</h4>
             <p className="text-xs text-gray-500">
               Buổi tập ngày: {selectedSession?.date ? new Date(selectedSession.date).toLocaleDateString("vi-VN") : ""} — Khách: {selectedSession?.customer?.name}
             </p>

@@ -344,7 +344,7 @@ const SalesOrderList = () => {
             className="flex items-center justify-center gap-1.5 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
           >
             <Plus size={18} />
-            <span>Đơn Hàng Mới</span>
+            <span>Đơn hàng mới</span>
           </button>
         </div>
       </div>
@@ -356,16 +356,16 @@ const SalesOrderList = () => {
           {/* Summary Row */}
           <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4 flex flex-wrap justify-between items-center text-sm font-bold text-text-light dark:text-text-dark">
             <div className="flex items-center gap-2">
-              <span className="text-text-light dark:text-text-dark font-black text-sm">{getFilterLabel()}</span>
+              <span className="text-text-light dark:text-text-dark font-semibold text-sm">{getFilterLabel()}</span>
             </div>
             <div className="flex gap-6 text-right">
               <div>
-                <span className="text-subtle-light dark:text-subtle-dark text-xs font-medium block">TỔNG DOANH THU</span>
-                <span className="text-text-light dark:text-text-dark text-base font-black">{summary.totalAmount?.toLocaleString()} đ</span>
+                <span className="text-subtle-light dark:text-subtle-dark text-xs font-medium block">Tổng doanh thu</span>
+                <span className="text-text-light dark:text-text-dark text-base font-bold">{summary.totalAmount?.toLocaleString()} đ</span>
               </div>
               <div>
-                <span className="text-subtle-light dark:text-subtle-dark text-xs font-medium block">ĐÃ THANH TOÁN</span>
-                <span className="text-text-light dark:text-text-dark text-base font-black">{summary.totalPaid?.toLocaleString()} đ</span>
+                <span className="text-subtle-light dark:text-subtle-dark text-xs font-medium block">Đã thanh toán</span>
+                <span className="text-text-light dark:text-text-dark text-base font-bold">{summary.totalPaid?.toLocaleString()} đ</span>
               </div>
             </div>
           </div>
@@ -387,14 +387,14 @@ const SalesOrderList = () => {
                       <button className="p-1 text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark">
                         {isGroupExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                       </button>
-                      <span className="font-extrabold text-sm text-text-light dark:text-text-dark">
+                      <span className="font-semibold text-sm text-text-light dark:text-text-dark">
                         {group.formattedDate}
                       </span>
                     </div>
                     <div className="flex gap-6 text-right text-xs font-bold text-text-light dark:text-text-dark">
                       <div>
                         <span className="text-subtle-light dark:text-subtle-dark mr-2">Tổng:</span>
-                        <span className="text-text-light dark:text-text-dark font-black text-sm">{group.totalAmount?.toLocaleString()} đ</span>
+                        <span className="text-text-light dark:text-text-dark font-bold text-sm">{group.totalAmount?.toLocaleString()} đ</span>
                       </div>
                     </div>
                   </div>
@@ -471,7 +471,7 @@ const SalesOrderList = () => {
       {/* ── POS Modal (Khi bấm Bán Hàng Mới) ── */}
       {showPosModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-center items-center p-4">
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl w-full max-w-6xl h-[90vh] overflow-hidden shadow-2xl flex flex-col p-4 border border-border-light dark:border-border-dark">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl w-full max-w-6xl h-[90vh] overflow-hidden shadow-xl flex flex-col p-4 border border-border-light dark:border-border-dark">
             <PointOfSale 
               onClose={() => {
                 setShowPosModal(false);

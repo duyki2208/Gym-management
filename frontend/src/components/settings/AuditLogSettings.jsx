@@ -149,7 +149,7 @@ const AuditLogSettings = () => {
             </div>
           </div>
 
-          <div className="border border-border-light dark:border-border-dark rounded-2xl overflow-hidden bg-surface-light dark:bg-surface-dark shadow-sm">
+          <div className="border border-border-light dark:border-border-dark rounded-xl overflow-hidden bg-surface-light dark:bg-surface-dark shadow-sm">
             {auditLoading ? (
               <div className="p-12 text-center text-xs text-text-muted-light dark:text-text-muted-dark space-y-2">
                 <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
@@ -261,12 +261,12 @@ const AuditLogSettings = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {/* 1. Cảnh báo tồn kho */}
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
+              <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
                 <div className="p-3.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-xs">
                     <Package size={16} /> Sản phẩm sắp hết hàng
                   </div>
-                  <span className="px-2 py-0.5 text-[11px] font-extrabold bg-rose-600 text-white rounded-full">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-rose-600 text-white rounded-full">
                     {notificationsSummary.lowStockProductsCount || 0}
                   </span>
                 </div>
@@ -294,12 +294,12 @@ const AuditLogSettings = () => {
               </div>
 
               {/* 2. Hội viên sắp hết hạn */}
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
+              <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
                 <div className="p-3.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs">
                     <Users size={16} /> Hội viên sắp hết hạn (14 ngày)
                   </div>
-                  <span className="px-2 py-0.5 text-[11px] font-extrabold bg-amber-600 text-white rounded-full">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-amber-600 text-white rounded-full">
                     {notificationsSummary.expiringCustomersCount || 0}
                   </span>
                 </div>
@@ -327,12 +327,12 @@ const AuditLogSettings = () => {
               </div>
 
               {/* 3. Ca trực hôm nay chưa làm */}
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
+              <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
                 <div className="p-3.5 bg-blue-500/10 border-b border-blue-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs">
                     <Calendar size={16} /> Ca trực chưa làm hôm nay
                   </div>
-                  <span className="px-2 py-0.5 text-[11px] font-extrabold bg-blue-600 text-white rounded-full">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-600 text-white rounded-full">
                     {notificationsSummary.pendingTasksCount || 0}
                   </span>
                 </div>
@@ -360,12 +360,12 @@ const AuditLogSettings = () => {
               </div>
 
               {/* 4. Hoa hồng chờ duyệt */}
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
+              <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px]">
                 <div className="p-3.5 bg-purple-500/10 border-b border-purple-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold text-xs">
                     <DollarSign size={16} /> Hoa hồng chờ phê duyệt
                   </div>
-                  <span className="px-2 py-0.5 text-[11px] font-extrabold bg-purple-600 text-white rounded-full">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-purple-600 text-white rounded-full">
                     {notificationsSummary.pendingCommissionsCount || 0}
                   </span>
                 </div>
@@ -395,12 +395,12 @@ const AuditLogSettings = () => {
               </div>
 
               {/* 5. Cảnh báo KPI yếu */}
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px] md:col-span-2">
+              <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm flex flex-col h-[340px] md:col-span-2">
                 <div className="p-3.5 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-bold text-xs">
                     <AlertTriangle size={16} /> Cảnh báo nhân viên KPI yếu (&lt; 50% cuối tháng)
                   </div>
-                  <span className="px-2 py-0.5 text-[11px] font-extrabold bg-yellow-600 text-white rounded-full">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-yellow-600 text-white rounded-full">
                     {notificationsSummary.lowKPIStaffCount || 0}
                   </span>
                 </div>

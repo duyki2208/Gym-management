@@ -14,8 +14,15 @@ import {
 import * as XLSX from 'xlsx';
 import ChurnPrediction from '../components/report/ChurnPrediction';
 import PTSessionReportView from '../components/reports/PTSessionReportView';
+import { getIconTone } from '../utils/iconTone';
 
 const COLORS = CHART_THEME.palette;
+
+const ReportIconBadge = ({ icon: Icon, size = 22 }) => (
+  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${getIconTone(Icon)}`}>
+    <Icon size={size} />
+  </div>
+);
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -409,12 +416,12 @@ const Reports = () => {
 
             return (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Card 1: Doanh thu thực tế */}
                   <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng thực thu</p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                      <p className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                         {formatCurrency(summary.totalRevenue || 0)}
                       </p>
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -424,16 +431,14 @@ const Reports = () => {
                         Doanh thu tháng trước: <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(lastMonthValue)}</span>
                       </p>
                     </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                      <DollarSign size={20} />
-                    </div>
+                    <ReportIconBadge icon={DollarSign} size={20} />
                   </div>
 
                   {/* Card 2: Trung bình / ngày & Dự kiến */}
                   <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Trung bình / ngày</p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                      <p className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                         {formatCurrency(avgDailyRevenue)}
                       </p>
                       <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-2 font-medium">
@@ -445,9 +450,7 @@ const Reports = () => {
                         </p>
                       )}
                     </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
-                      <BarChart2 size={20} />
-                    </div>
+                    <ReportIconBadge icon={BarChart2} size={20} />
                   </div>
 
                   {/* Card 3: Tiến độ mục tiêu tháng */}
@@ -456,7 +459,7 @@ const Reports = () => {
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Tiến độ mục tiêu</p>
                       </div>
-                      <p className="text-xl sm:text-2xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                      <p className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                         {targetProgress}%
                       </p>
                       <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mt-2">
@@ -471,16 +474,14 @@ const Reports = () => {
                         Chỉ tiêu: <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(targetRevenue)}</span>
                       </p>
                     </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
-                      <Target size={20} />
-                    </div>
+                    <ReportIconBadge icon={Target} size={20} />
                   </div>
 
                   {/* Card 4: Công nợ cần thu */}
                   <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Công nợ</p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight break-words">
+                      <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight break-words">
                         {formatCurrency(receivables.totalAmount)}
                       </p>
                       <div className="flex items-center gap-1.5 mt-2">
@@ -500,7 +501,7 @@ const Reports = () => {
                 <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Cơ cấu luồng doanh thu cơ sở</h3>
+                      <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Cơ cấu luồng doanh thu cơ sở</h3>
                     </div>
                     <span className="text-xs font-medium text-subtle-light dark:text-subtle-dark bg-border-light/40 dark:bg-border-dark/40 px-2.5 py-1 rounded-lg">
                       Tháng {selectedMonth}/{selectedYear}
@@ -562,7 +563,7 @@ const Reports = () => {
                 <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
-                      <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Diễn biến doanh thu theo ngày</h2>
+                      <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Diễn biến doanh thu theo ngày</h2>
                       
                     </div>
                     <div className="flex items-center gap-3 sm:gap-4 text-xs font-semibold flex-wrap">
@@ -698,7 +699,7 @@ const Reports = () => {
                   <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-base font-bold text-text-light dark:text-text-dark">Cơ cấu hợp đồng gói tập</h3>
+                        <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Cơ cấu hợp đồng gói tập</h3>
                         
                       </div>
 
@@ -729,7 +730,7 @@ const Reports = () => {
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                               <span className="text-[10px] text-gray-400 font-medium">Doanh số gói</span>
-                              <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
+                              <span className="text-xs sm:text-sm font-semibold text-text-light dark:text-text-dark mt-0.5">
                                 {formatCurrency(totalContractRev)}
                               </span>
                             </div>
@@ -778,7 +779,7 @@ const Reports = () => {
                   <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phương thức thanh toán</h3>
+                        <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phương thức thanh toán</h3>
 
                       </div>
 
@@ -860,7 +861,7 @@ const Reports = () => {
           <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h3 className="text-base font-bold text-text-light dark:text-text-dark">Doanh thu 6 tháng gần đây</h3>
+                <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Doanh thu 6 tháng gần đây</h3>
 
               </div>
 
@@ -914,7 +915,7 @@ const Reports = () => {
           {hrSummary.length > 0 && (
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
               <div className="p-5 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+                <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
                   Doanh số & hoa hồng nhân sự
                 </h2>
                 <span className="text-xs font-medium text-subtle-light dark:text-subtle-dark bg-border-light/40 dark:bg-border-dark/40 px-2.5 py-1 rounded-lg self-start sm:self-auto">
@@ -924,7 +925,7 @@ const Reports = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                    <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                       <th className="p-4">Nhân viên</th>
                       <th className="p-4">Chức vụ</th>
                       <th className="p-4 text-right">Doanh số đem về</th>
@@ -983,26 +984,24 @@ const Reports = () => {
           ) : customerAnalytics ? (
             <>
               {/* KPI 3 Cards: ARPU | PT Riêng | Solo */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {/* Card 1: Chi tiêu trung bình */}
                 <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Chi tiêu trung bình / KH</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                       {formatCurrency(customerAnalytics.arpu)}
                     </p>
                     <p className="text-xs text-gray-400 mt-2">Doanh thu trung bình trọn đời mỗi hội viên</p>
                   </div>
-                  <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
-                    <DollarSign size={22} />
-                  </div>
+                  <ReportIconBadge icon={DollarSign} />
                 </div>
 
                 {/* Card 2: Hội viên có PT riêng */}
                 <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên có PT riêng</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                       {customerAnalytics.trainerRatio?.withTrainer || 0} <span className="text-sm font-semibold text-gray-400">người</span>
                     </p>
                     <div className="mt-2">
@@ -1011,32 +1010,28 @@ const Reports = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="w-11 h-11 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
-                    <Award size={22} />
-                  </div>
+                  <ReportIconBadge icon={Award} />
                 </div>
 
                 {/* Card 3: Hội viên tự tập (Solo) */}
                 <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên tự tập (Solo)</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                       {customerAnalytics.trainerRatio?.solo || 0} <span className="text-sm font-semibold text-gray-400">người</span>
                     </p>
                     <p className="text-xs text-gray-400 mt-2">Hội viên tập luyện tự do tại phòng</p>
                   </div>
-                  <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                    <Users size={22} />
-                  </div>
+                  <ReportIconBadge icon={Users} />
                 </div>
               </div>
 
               {/* Hàng 2 Cards: Tỷ lệ giữ chân & Tỷ lệ rời bỏ */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ giữ chân hội viên</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight">
+                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
                       {summary.retentionRate}%
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -1046,15 +1041,13 @@ const Reports = () => {
                     </div>
                     <p className="text-xs text-gray-400 mt-2">Dựa trên tỷ lệ khách hàng còn Active / Tổng số</p>
                   </div>
-                  <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                    <TrendingUp size={22} />
-                  </div>
+                  <ReportIconBadge icon={TrendingUp} />
                 </div>
 
                 <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ rời bỏ (Churn rate)</p>
-                    <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
+                    <p className="text-2xl md:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
                       {summary.churnRate}%
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -1064,9 +1057,7 @@ const Reports = () => {
                     </div>
                     <p className="text-xs text-gray-400 mt-2">Tỷ lệ khách hàng không gia hạn / rời bỏ</p>
                   </div>
-                  <div className="w-11 h-11 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/30">
-                    <AlertTriangle size={22} />
-                  </div>
+                  <ReportIconBadge icon={AlertTriangle} />
                 </div>
               </div>
 
@@ -1078,7 +1069,7 @@ const Reports = () => {
                 <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân bổ hội viên theo huấn luyện viên (PT)</h3>
+                      <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân bổ hội viên theo huấn luyện viên (PT)</h3>
                       <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Danh sách PT và khối lượng khách phụ trách</p>
                     </div>
                   </div>
@@ -1086,7 +1077,7 @@ const Reports = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                           <th className="p-4">Huấn luyện viên</th>
                           <th className="p-4">Vai trò</th>
                           <th className="p-4 text-right">Số hội viên kèm</th>
@@ -1130,7 +1121,7 @@ const Reports = () => {
                 {/* Donut Chart Giới tính */}
                 <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Cơ cấu giới tính hội viên</h3>
+                    <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Cơ cấu giới tính hội viên</h3>
                     <span className="text-xs text-gray-400 font-normal">Tỷ trọng</span>
                   </div>
                   <div className="h-[250px] flex items-center justify-center relative my-auto">
@@ -1158,7 +1149,7 @@ const Reports = () => {
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
                       <span className="text-[11px] text-gray-400 font-medium">Tổng</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
+                      <span className="text-xs sm:text-sm font-semibold text-text-light dark:text-text-dark mt-0.5">
                         {customerAnalytics.gender.reduce((a, b) => a + (b.value || 0), 0)} KH
                       </span>
                     </div>
@@ -1168,7 +1159,7 @@ const Reports = () => {
                 {/* Bar Chart Độ tuổi */}
                 <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân bổ độ tuổi hội viên</h3>
+                    <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân bổ độ tuổi hội viên</h3>
                     <span className="text-xs text-gray-400 font-normal">Nhóm tuổi</span>
                   </div>
                   <div className="h-[250px] relative my-auto">
@@ -1191,7 +1182,7 @@ const Reports = () => {
               {/* Phân bổ gói tập - full width, layout Side-by-side lớn */}
               <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-text-light dark:text-text-dark">Gói tập đang hoạt động</h3>
+                  <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Gói tập đang hoạt động</h3>
                   <span className="text-xs text-gray-400 font-normal">Mức độ phổ biến</span>
                 </div>
                 <div className="flex flex-col lg:flex-row items-center gap-6">
@@ -1241,7 +1232,7 @@ const Reports = () => {
                     )}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-[11px] text-gray-400 font-medium">Tổng</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
+                      <span className="text-xs sm:text-sm font-semibold text-text-light dark:text-text-dark mt-0.5">
                         {customerAnalytics.packagePopularity.reduce((a, b) => a + (b.value || 0), 0)} KH
                       </span>
                     </div>
@@ -1253,7 +1244,7 @@ const Reports = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Kênh tiếp cận</h3>
+                    <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Kênh tiếp cận</h3>
                     <span className="text-xs text-gray-400 font-normal">Nguồn hội viên</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1287,7 +1278,7 @@ const Reports = () => {
                 <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân khúc tần suất tập luyện</h3>
+                      <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân khúc tần suất tập luyện</h3>
                       <span className="text-xs text-gray-400 font-normal">30 ngày qua</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-3">Gom nhóm hội viên dựa trên số ngày đi tập (check-in)</p>
@@ -1320,7 +1311,7 @@ const Reports = () => {
                   <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
                     <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                       <div>
-                        <h3 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Khách hàng lâu chưa đi tập</h3>
+                        <h3 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Khách hàng lâu chưa đi tập</h3>
                         <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Còn hạn gói tập nhưng không có check-in trong 30 ngày qua</p>
                       </div>
                       <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50">
@@ -1330,7 +1321,7 @@ const Reports = () => {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-sm">
                         <thead>
-                          <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                          <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                             <th className="p-4">Khách hàng</th>
                             <th className="p-4">Mã KH</th>
                             <th className="p-4">Số điện thoại</th>
@@ -1397,7 +1388,7 @@ const Reports = () => {
                 <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <div>
-                      <h3 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Hội viên sắp hết hạn (14 ngày tới)</h3>
+                      <h3 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Hội viên sắp hết hạn (14 ngày tới)</h3>
                       <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Danh sách cần liên hệ chăm sóc và gia hạn</p>
                     </div>
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50">
@@ -1407,7 +1398,7 @@ const Reports = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                           <th className="p-4">Khách hàng</th>
                           <th className="p-4">Số điện thoại</th>
                           <th className="p-4">Gói tập</th>
@@ -1477,7 +1468,7 @@ const Reports = () => {
                       <Package size={18} />
                       <span>Sản phẩm sắp hết hàng</span>
                     </div>
-                    <span className="px-2.5 py-0.5 text-xs font-extrabold bg-rose-600 text-white rounded-full">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold bg-rose-600 text-white rounded-full">
                       {notificationsSummary.lowStockProductsCount}
                     </span>
                   </div>
@@ -1507,7 +1498,7 @@ const Reports = () => {
                       <Users size={18} />
                       <span>Hội viên sắp hết hạn (14 ngày)</span>
                     </div>
-                    <span className="px-2.5 py-0.5 text-xs font-extrabold bg-amber-600 text-white rounded-full">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold bg-amber-600 text-white rounded-full">
                       {notificationsSummary.expiringCustomersCount}
                     </span>
                   </div>
@@ -1537,7 +1528,7 @@ const Reports = () => {
                       <Calendar size={18} />
                       <span>Ca trực chưa hoàn thành hôm nay</span>
                     </div>
-                    <span className="px-2.5 py-0.5 text-xs font-extrabold bg-blue-600 text-white rounded-full">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
                       {notificationsSummary.pendingTasksCount}
                     </span>
                   </div>
@@ -1567,7 +1558,7 @@ const Reports = () => {
                       <DollarSign size={18} />
                       <span>Hoa hồng chờ duyệt</span>
                     </div>
-                    <span className="px-2.5 py-0.5 text-xs font-extrabold bg-purple-600 text-white rounded-full">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold bg-purple-600 text-white rounded-full">
                       {notificationsSummary.pendingCommissionsCount}
                     </span>
                   </div>
@@ -1597,7 +1588,7 @@ const Reports = () => {
                       <AlertTriangle size={18} />
                       <span>Cảnh báo nhân viên KPI yếu (&lt;50% cuối tháng)</span>
                     </div>
-                    <span className="px-2.5 py-0.5 text-xs font-extrabold bg-yellow-600 text-white rounded-full">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold bg-yellow-600 text-white rounded-full">
                       {notificationsSummary.lowKPIStaffCount}
                     </span>
                   </div>
@@ -1638,28 +1629,24 @@ const Reports = () => {
             <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Doanh thu bán lẻ </p>
-                <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                   {formatCurrency(inventoryData.posRevenue || 0)}
                 </p>
                 <p className="text-xs text-gray-400 mt-2">Tổng doanh số bán lẻ trực tiếp tại quầy</p>
               </div>
-              <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                <ShoppingCart size={22} />
-              </div>
+              <ReportIconBadge icon={ShoppingCart} />
             </div>
 
             {/* Card 2: Tổng giá trị tồn kho */}
             <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng giá trị tồn kho</p>
-                <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                   {formatCurrency(inventoryData.totalStockValue || 0)}
                 </p>
                 <p className="text-xs text-gray-400 mt-2">Giá trị ước tính toàn bộ sản phẩm hiện có trong kho</p>
               </div>
-              <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
-                <Package size={22} />
-              </div>
+              <ReportIconBadge icon={Package} />
             </div>
           </div>
           
@@ -1667,7 +1654,7 @@ const Reports = () => {
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
             <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
               <div>
-                <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+                <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
                   <AlertTriangle className="text-amber-500" size={20} />
                   Sản phẩm sắp hết hàng (Tồn kho &le; 10)
                 </h2>
@@ -1681,7 +1668,7 @@ const Reports = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                  <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                     <th className="p-4">Mã SP</th>
                     <th className="p-4">Tên sản phẩm</th>
                     <th className="p-4">Danh mục</th>
@@ -1737,7 +1724,7 @@ const Reports = () => {
           {/* Phân khúc 1: Chuyển đổi khách tiềm năng (Lead Funnel) */}
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Chuyển đổi khách tiềm năng</h2>
+              <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Chuyển đổi khách tiềm năng</h2>
             
             </div>
 
@@ -1746,46 +1733,40 @@ const Reports = () => {
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng lead tiềm năng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                     {leadReportData?.totalLeads || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Dữ liệu ghi nhận từ các kênh</p>
                 </div>
-                <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
-                  <Users size={22} />
-                </div>
+                <ReportIconBadge icon={Users} />
               </div>
 
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ chuyển đổi</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                     {leadReportData?.conversionRateOverall || 0}%
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tỷ lệ chuyển thành hợp đồng</p>
                 </div>
-                <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                  <TrendingUp size={22} />
-                </div>
+                <ReportIconBadge icon={TrendingUp} />
               </div>
 
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Đã chốt hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                     {leadReportData?.statusCounts?.converted || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Khách hàng kích hoạt thành công</p>
                 </div>
-                <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                  <CheckCircle2 size={22} />
-                </div>
+                <ReportIconBadge icon={CheckCircle2} />
               </div>
 
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hủy / Từ chối</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight break-words">
                     {leadReportData?.statusCounts?.lost || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Khách không có nhu cầu tiếp tục</p>
@@ -1800,7 +1781,7 @@ const Reports = () => {
               {/* Biểu đồ trạng thái Lead (Auto-scale Y axis) */}
               <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-text-light dark:text-text-dark">Tình trạng lead theo giai đoạn</h3>
+                  <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Tình trạng lead theo giai đoạn</h3>
                   
                 </div>
                 <div className="h-[240px] w-full relative">
@@ -1838,12 +1819,12 @@ const Reports = () => {
               <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
                 <div>
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Hiệu suất chuyển đổi theo sale</h3>
+                    <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Hiệu suất chuyển đổi theo sale</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                           <th className="p-3.5">Nhân viên sale</th>
                           <th className="p-3.5 text-center">Tổng lead</th>
                           <th className="p-3.5 text-center">Chốt</th>
@@ -1880,7 +1861,7 @@ const Reports = () => {
           {/* Phân khúc 2: Tình trạng Hợp đồng */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark">Cơ cấu & giá trị hợp đồng</h2>
+              <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Cơ cấu & giá trị hợp đồng</h2>
              
             </div>
 
@@ -1889,40 +1870,34 @@ const Reports = () => {
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                     {contractBreakdownData?.totalContracts || 0} HĐ
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tổng số hợp đồng đã phát sinh</p>
                 </div>
-                <div className="w-11 h-11 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
-                  <Package size={22} />
-                </div>
+                <ReportIconBadge icon={Package} />
               </div>
 
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng giá trị tiền hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                     {formatCurrency(contractBreakdownData?.grandTotalValue)}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tổng giá trị quy đổi tất cả hợp đồng</p>
                 </div>
-                <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
-                  <DollarSign size={22} />
-                </div>
+                <ReportIconBadge icon={DollarSign} />
               </div>
 
               <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Đang hoạt động (Active)</p>
-                  <p className="text-2xl md:text-3xl font-extrabold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
                     {contractBreakdownData?.breakdown?.active?.count || 0} HĐ
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Hợp đồng đang có hiệu lực tập luyện</p>
                 </div>
-                <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
-                  <Users size={22} />
-                </div>
+                <ReportIconBadge icon={Users} />
               </div>
             </div>
 
@@ -1930,7 +1905,7 @@ const Reports = () => {
               {/* Donut Chart Tỷ lệ trạng thái (Bỏ label leader-line bị đè chữ + Center Total) */}
               <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base font-bold text-text-light dark:text-text-dark">Phân bổ trạng thái hợp đồng</h3>
+                  <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân bổ trạng thái hợp đồng</h3>
                 </div>
 
                 <div className="h-[240px] w-full relative flex items-center justify-center my-auto">
@@ -1956,7 +1931,7 @@ const Reports = () => {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
                     <span className="text-[11px] text-gray-400 font-medium">Tổng hợp đồng</span>
-                    <span className="text-xs sm:text-sm font-extrabold text-text-light dark:text-text-dark mt-0.5">
+                    <span className="text-xs sm:text-sm font-semibold text-text-light dark:text-text-dark mt-0.5">
                       {contractBreakdownData?.totalContracts || 0} HĐ
                     </span>
                   </div>
@@ -1967,12 +1942,12 @@ const Reports = () => {
               <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
                 <div>
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-                    <h3 className="text-base font-bold text-text-light dark:text-text-dark">Bảng thống kê chi tiết trạng thái hợp đồng</h3>
+                    <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Bảng thống kê chi tiết trạng thái hợp đồng</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+                        <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                           <th className="p-3.5">Trạng thái</th>
                           <th className="p-3.5 text-center">Số lượng</th>
                           <th className="p-3.5 text-center">Tỷ lệ</th>

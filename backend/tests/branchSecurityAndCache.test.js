@@ -3,7 +3,7 @@ const cacheService = require("../utils/cacheService");
 const cacheMiddleware = require("../middleware/cacheMiddleware");
 
 const bcrypt = require("bcryptjs");
-const { getCentralModels } = require("../db/branchConnectionManager");
+const { getCentralModels, getBranchModels } = require("../db/branchConnectionManager");
 
 // Mock branchConnectionManager to avoid real DB connections during unit test
 jest.mock("../db/branchConnectionManager", () => ({
@@ -16,6 +16,14 @@ const authController = require("../controllers/authController");
 
 const getJwtSecret = () => process.env.JWT_SECRET || "testsecret123";
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "testrefreshsecret123";
+process.env.FACILITY_LOOKUP_PEPPER =
+  process.env.FACILITY_LOOKUP_PEPPER || "test-facility-lookup-pepper-32-characters";
+
+const {
+  hashFacilityKey,
+  encryptFacilityKey,
+  decryptFacilityKey,
+} = require("../utils/facilityKey");
 
 const createMockRes = () => {
   const res = {
@@ -259,8 +267,8 @@ describe("Branch Security and Cache Isolation Tests", () => {
     });
   });
 
-  describe("3. authController.loginUser - Pre-token reqBranchCode Validation", () => {
-    test("Central accountant with allowedBranches: ['HN01'] requesting branchCode: 'HN02' -> 403 BRANCH_ACCESS_DENIED without token", async () => {
+  describe("3. authController.loginUser - Facility-scoped authentication", () => {
+    test("Central accountant cannot login through a facility outside allowedBranches", async () => {
       const mockCentralUser = {
         _id: "central_acc_1",
         username: "accountant_user",
@@ -273,6 +281,9 @@ describe("Branch Security and Cache Isolation Tests", () => {
       getCentralModels.mockResolvedValue({
         LoginIndex: { findOne: jest.fn().mockResolvedValue(null) },
         CentralUser: { findOne: jest.fn().mockResolvedValue(mockCentralUser) },
+        Branch: {
+          findOne: jest.fn().mockResolvedValue({ code: "HN02", isActive: true }),
+        },
         CentralSession: { create: jest.fn().mockResolvedValue({}) },
       });
 
@@ -280,9 +291,9 @@ describe("Branch Security and Cache Isolation Tests", () => {
 
       const req = {
         body: {
+          facilityKey: "Dvertofit",
           username: "accountant_user",
           password: "correct_password",
-          branchCode: "HN02",
         },
         headers: {},
       };
@@ -290,16 +301,16 @@ describe("Branch Security and Cache Isolation Tests", () => {
 
       await authController.loginUser(req, res);
 
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(401);
       expect(res.body).toEqual({
-        code: "BRANCH_ACCESS_DENIED",
-        message: "Bạn không có quyền đăng nhập vào chi nhánh HN02",
+        code: "INVALID_CREDENTIALS",
+        message: "Thông tin đăng nhập không chính xác.",
       });
       // Đảm bảo không cấp token khi bị chặn
       expect(res.body.token).toBeUndefined();
     });
 
-    test("Central accountant with allowedBranches: ['HN01'] requesting branchCode: 'HN01' -> 200 and issues token", async () => {
+    test("Central accountant with the correct facility key receives a branch-scoped token", async () => {
       const mockCentralUser = {
         _id: "central_acc_1",
         username: "accountant_user",
@@ -312,6 +323,15 @@ describe("Branch Security and Cache Isolation Tests", () => {
       getCentralModels.mockResolvedValue({
         LoginIndex: { findOne: jest.fn().mockResolvedValue(null) },
         CentralUser: { findOne: jest.fn().mockResolvedValue(mockCentralUser) },
+        Branch: {
+          findOne: jest.fn().mockImplementation((query) =>
+            Promise.resolve(
+              query.loginKeyHash === hashFacilityKey("Dvertofit")
+                ? { code: "HN01", isActive: true }
+                : null
+            )
+          ),
+        },
         CentralSession: { create: jest.fn().mockResolvedValue({}) },
       });
 
@@ -319,14 +339,14 @@ describe("Branch Security and Cache Isolation Tests", () => {
 
       const req = {
         body: {
+          facilityKey: "Dvertofit",
           username: "accountant_user",
           password: "correct_password",
-          branchCode: "HN01",
         },
         headers: {},
         cookie: jest.fn(),
       };
-      res = createMockRes();
+      const res = createMockRes();
       res.cookie = jest.fn();
 
       await authController.loginUser(req, res);
@@ -336,6 +356,161 @@ describe("Branch Security and Cache Isolation Tests", () => {
       const decoded = jwt.verify(res.body.token, getJwtSecret());
       expect(decoded.activeBranch).toBe("HN01");
       expect(decoded.allowedBranches).toEqual(["HN01"]);
+    });
+
+    test("Branch user is looked up only inside the facility selected by the login key", async () => {
+      const findLoginIndex = jest.fn().mockResolvedValue({
+        userId: "branch_user_1",
+        username: "reception_user",
+        branchCode: "HN01",
+      });
+      const branchUser = {
+        _id: "branch_user_1",
+        username: "reception_user",
+        password: "hashed_password",
+        fullName: "Reception User",
+        role: "reception",
+        isActive: true,
+      };
+
+      getCentralModels.mockResolvedValue({
+        Branch: { findOne: jest.fn().mockResolvedValue({ code: "HN01", isActive: true }) },
+        LoginIndex: { findOne: findLoginIndex },
+        CentralUser: { findOne: jest.fn() },
+      });
+      getBranchModels.mockResolvedValue({
+        User: { findOne: jest.fn().mockResolvedValue(branchUser) },
+        Session: { create: jest.fn().mockResolvedValue({}) },
+      });
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
+
+      const req = {
+        body: {
+          facilityKey: "Dvertofit",
+          username: "reception_user",
+          password: "correct_password",
+        },
+        headers: {},
+      };
+      const res = createMockRes();
+      res.cookie = jest.fn();
+
+      await authController.loginUser(req, res);
+
+      expect(res.statusCode).toBe(200);
+      expect(findLoginIndex).toHaveBeenCalledWith({
+        username: "reception_user",
+        branchCode: "HN01",
+      });
+      expect(res.body.user.branchCode).toBe("HN01");
+    });
+
+    test("Unknown facility key returns the same generic failure as invalid credentials", async () => {
+      getCentralModels.mockResolvedValue({
+        Branch: { findOne: jest.fn().mockResolvedValue(null) },
+        LoginIndex: { findOne: jest.fn() },
+        CentralUser: { findOne: jest.fn().mockResolvedValue(null) },
+      });
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(false);
+
+      const req = {
+        body: {
+          facilityKey: "Unknownfit",
+          username: "reception_user",
+          password: "wrong_password",
+        },
+        headers: {},
+      };
+      const res = createMockRes();
+
+      await authController.loginUser(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({
+        code: "INVALID_CREDENTIALS",
+        message: "Thông tin đăng nhập không chính xác.",
+      });
+    });
+
+    test("Correct facility and password with an unknown username cannot login", async () => {
+      const findLoginIndex = jest.fn().mockResolvedValue(null);
+      getCentralModels.mockResolvedValue({
+        Branch: { findOne: jest.fn().mockResolvedValue({ code: "HN01", isActive: true }) },
+        LoginIndex: { findOne: findLoginIndex },
+        CentralUser: { findOne: jest.fn().mockResolvedValue(null) },
+      });
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(false);
+
+      const req = {
+        body: {
+          facilityKey: "Dvertofit",
+          username: "unknown_user",
+          password: "correct_password",
+        },
+        headers: {},
+      };
+      const res = createMockRes();
+
+      await authController.loginUser(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(findLoginIndex).toHaveBeenCalledWith({
+        username: "unknown_user",
+        branchCode: "HN01",
+      });
+      expect(res.body.code).toBe("INVALID_CREDENTIALS");
+    });
+
+    test("Correct facility and username with a wrong password cannot login", async () => {
+      const createSession = jest.fn();
+      getCentralModels.mockResolvedValue({
+        Branch: { findOne: jest.fn().mockResolvedValue({ code: "HN01", isActive: true }) },
+        LoginIndex: {
+          findOne: jest.fn().mockResolvedValue({
+            userId: "branch_user_1",
+            username: "reception_user",
+            branchCode: "HN01",
+          }),
+        },
+        CentralUser: { findOne: jest.fn() },
+      });
+      getBranchModels.mockResolvedValue({
+        User: {
+          findOne: jest.fn().mockResolvedValue({
+            _id: "branch_user_1",
+            username: "reception_user",
+            password: "hashed_password",
+            role: "reception",
+            isActive: true,
+          }),
+        },
+        Session: { create: createSession },
+      });
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(false);
+
+      const req = {
+        body: {
+          facilityKey: "Dvertofit",
+          username: "reception_user",
+          password: "wrong_password",
+        },
+        headers: {},
+      };
+      const res = createMockRes();
+
+      await authController.loginUser(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body.code).toBe("INVALID_CREDENTIALS");
+      expect(createSession).not.toHaveBeenCalled();
+    });
+
+    test("Facility key is encrypted for admin display and still uses deterministic HMAC lookup", () => {
+      const encrypted = encryptFacilityKey("Dvertofit");
+      expect(encrypted.loginKeyCiphertext).not.toContain("dvertofit");
+      expect(decryptFacilityKey(encrypted)).toBe("dvertofit");
+      expect(hashFacilityKey("Dvertofit")).toBe(hashFacilityKey("dvertofit"));
+      expect(hashFacilityKey("Dvertofit")).not.toBe(hashFacilityKey("linhtinh"));
     });
   });
 });

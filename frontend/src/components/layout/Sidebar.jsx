@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
@@ -131,7 +131,7 @@ const NavItem = ({ path, icon: Icon, label, isActive, isChild, isCollapsed }) =>
       ${isCollapsed ? 'justify-center px-0' : ''}
       ${
         isActive
-          ? 'bg-primary/15 text-gray-900 dark:text-gray-100 font-bold'
+          ? 'bg-primary/15 text-gray-900 dark:text-gray-100 font-semibold'
           : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100 font-medium'
       }`}
   >
@@ -158,33 +158,168 @@ const NavItem = ({ path, icon: Icon, label, isActive, isChild, isCollapsed }) =>
 
 const GroupNavItem = ({ group, activePath, isOpen, isCollapsed, onToggle }) => {
   const Icon = group.icon;
-  const hasActiveChild = group.children.some((c) => activePath === c.path || (c.path !== '/' && activePath.startsWith(c.path)));
+  const hasActiveChild = group.children.some(
+    (c) => activePath === c.path || (c.path !== '/' && activePath.startsWith(c.path))
+  );
+
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [flyoutTop, setFlyoutTop] = useState(0);
+
+  const triggerRef = useRef(null);
+  const flyoutRef = useRef(null);
+  const hoverTimerRef = useRef(null);
+  const closeTimerRef = useRef(null);
+
+  // Tính toán vị trí hiển thị đảm bảo không tràn màn hình (Boundary check)
+  const updatePosition = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const flyoutEstimatedHeight = (group.children.length * 40) + 60;
+      const viewportHeight = window.innerHeight;
+
+      let top = rect.top;
+      if (top + flyoutEstimatedHeight > viewportHeight - 16) {
+        top = Math.max(16, viewportHeight - flyoutEstimatedHeight - 16);
+      }
+      setFlyoutTop(top);
+    }
+  }, [group.children.length]);
+
+  const handleMouseEnter = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      updatePosition();
+      setIsHovered(true);
+    }, 150); // 150ms delay chống nhấp nháy
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    if (!isPinned) {
+      closeTimerRef.current = setTimeout(() => {
+        setIsHovered(false);
+      }, 120);
+    }
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    updatePosition();
+    setIsPinned((prev) => !prev);
+    setIsHovered(true);
+  };
+
+  const handleCloseFlyout = () => {
+    setIsPinned(false);
+    setIsHovered(false);
+  };
+
+  // Click outside & Escape listener khi Flyout đang mở hoặc ghim
+  useEffect(() => {
+    if (!isCollapsed || (!isHovered && !isPinned)) return;
+
+    const handleClickOutside = (event) => {
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target) &&
+        flyoutRef.current &&
+        !flyoutRef.current.contains(event.target)
+      ) {
+        handleCloseFlyout();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        handleCloseFlyout();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCollapsed, isHovered, isPinned]);
 
   if (isCollapsed) {
+    const showFlyout = isHovered || isPinned;
+
     return (
-      <div className="relative group">
+      <div
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <button
-          className={`w-full flex items-center justify-center px-0 py-2.5 rounded-lg transition-all duration-150
-            ${hasActiveChild ? 'bg-primary/10 text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+          ref={triggerRef}
+          onClick={handleClick}
+          title={group.label}
+          className={`w-full flex items-center justify-center px-0 py-2.5 rounded-lg transition-all duration-150 cursor-pointer ${
+            hasActiveChild || isPinned
+              ? "bg-primary/20 text-gray-900 dark:text-gray-100 font-semibold"
+              : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+          }`}
         >
-          <Icon size={20} className={hasActiveChild ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'} />
+          <Icon
+            size={20}
+            className={
+              hasActiveChild || isPinned
+                ? "text-gray-900 dark:text-gray-100"
+                : "text-gray-400 dark:text-gray-500"
+            }
+          />
         </button>
-        <div className="absolute left-full top-0 ml-3 w-56 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg py-2 z-50 opacity-0 pointer-events-none translate-x-1 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-x-0 transition-all duration-150">
-          <p className="px-3 pb-1.5 text-[11px] font-bold text-gray-400 dark:text-gray-500">{group.label}</p>
-          {group.children.map((child) => {
-            const isChildActive = activePath === child.path || (child.path !== '/' && activePath.startsWith(child.path));
-            return (
-              <Link
-                key={child.path}
-                to={child.path}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors
-                  ${isChildActive ? 'bg-primary/10 text-gray-900 dark:text-gray-100 font-bold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}
-              >
-                <span className="truncate flex-1">{child.label}</span>
-              </Link>
-            );
-          })}
-        </div>
+
+        {showFlyout && (
+          <div
+            ref={flyoutRef}
+            style={{ top: `${flyoutTop}px` }}
+            className="fixed left-16 ml-2 w-60 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-xl py-2 px-1.5 z-50 animate-in fade-in zoom-in-95 duration-150"
+            onMouseEnter={() => {
+              if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+            }}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className="px-3 py-2 border-b border-border-light dark:border-border-dark mb-1 flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                {group.label}
+              </span>
+              {isPinned && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/15 text-text-light dark:text-primary">
+                  Đã ghim
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-0.5">
+              {group.children.map((child) => {
+                const isChildActive =
+                  activePath === child.path ||
+                  (child.path !== "/" && activePath.startsWith(child.path));
+                const ChildIcon = child.icon;
+
+                return (
+                  <Link
+                    key={child.path}
+                    to={child.path}
+                    onClick={handleCloseFlyout}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      isChildActive
+                        ? "bg-primary/15 text-text-light dark:text-primary font-semibold"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    {ChildIcon && <ChildIcon size={16} className="shrink-0" />}
+                    <span className="truncate flex-1">{child.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -196,7 +331,7 @@ const GroupNavItem = ({ group, activePath, isOpen, isCollapsed, onToggle }) => {
         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150
           ${
             hasActiveChild
-              ? 'bg-primary/10 text-gray-900 dark:text-gray-100 font-bold'
+              ? 'text-gray-900 dark:text-gray-100 font-semibold'
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100 font-medium'
           }`}
       >
@@ -230,7 +365,7 @@ const GroupNavItem = ({ group, activePath, isOpen, isCollapsed, onToggle }) => {
    4. CHÍNH - SIDEBAR COMPONENT
 ═══════════════════════════════════════════════════════════ */
 const Sidebar = () => {
-  const { isCollapsed, toggle } = useSidebar();
+  const { isCompact: isCollapsed, toggle } = useSidebar();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -266,8 +401,8 @@ const Sidebar = () => {
     <aside
       className={`
         fixed top-0 left-0 h-full z-40 flex flex-col
-        bg-white dark:bg-gray-900
-        border-r border-gray-200 dark:border-gray-800
+        bg-surface-light dark:bg-[#16171b]
+        border-r border-border-light dark:border-border-dark
         transition-all duration-300 ease-in-out
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
@@ -287,7 +422,7 @@ const Sidebar = () => {
           <Dumbbell className="text-primary w-5 h-5" />
         </div>
         {!isCollapsed && (
-          <span className="font-black text-lg tracking-tight text-primary leading-none">
+          <span className="font-bold text-lg tracking-tight text-primary leading-none">
             Gym Fitness
           </span>
         )}
@@ -298,7 +433,7 @@ const Sidebar = () => {
         {visibleMenu.map((section) => (
           <div key={section.section}>
             {!isCollapsed && (
-              <p className="px-3 mb-1.5 text-[11px] font-bold text-gray-400 dark:text-gray-600 select-none">
+              <p className="px-3 mb-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500 select-none">
                 {section.section}
               </p>
             )}

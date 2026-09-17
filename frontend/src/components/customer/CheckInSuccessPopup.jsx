@@ -60,7 +60,7 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
   }
 
   return (
-    <div className="pointer-events-auto w-[520px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 font-display animate-in slide-in-from-right-10 duration-500">
+    <div className="pointer-events-auto w-[min(520px,calc(100vw-24px))] bg-surface-light dark:bg-surface-dark rounded-xl shadow-xl overflow-hidden border border-border-light dark:border-border-dark font-display animate-in slide-in-from-right-10 duration-500">
       {/* Progress bar đếm ngược */}
       <div className="w-full h-1 bg-gray-100 dark:bg-gray-700">
         <div
@@ -78,7 +78,7 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
 
           {/* CỘT TRÁI: ẢNH HỘI VIÊN */}
           <div className="flex-shrink-0 w-44 bg-gray-50 dark:bg-gray-900/50 flex flex-col items-center justify-center p-4 border-r border-gray-100 dark:border-gray-700">
-            <div className="w-32 h-32 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 shadow-md mb-3 flex-shrink-0">
+            <div className="w-32 h-32 rounded-xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm mb-3 flex-shrink-0">
               {customer.avatarUrl ? (
                 <img src={customer.avatarUrl} alt={customer.name} className="w-full h-full object-cover" />
               ) : customer.avatar && customer.avatar !== "👤" ? (
@@ -101,8 +101,8 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
             {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="min-w-0">
-                <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-0.5">{statusLabel}</p>
-                <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 leading-tight truncate">
+                <p className="text-xs font-semibold text-green-600 mb-0.5">{statusLabel}</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
                   {customer.name}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
@@ -123,7 +123,7 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
             <div className="space-y-2 flex-1">
               {/* Gói tập */}
               <div className="flex flex-col gap-0.5 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
-                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Package size={11} /> Gói Tập
                 </span>
                 <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate" title={customer.packageType}>
@@ -134,7 +134,7 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
               {/* Hàng 2: Thời hạn + Check-in time */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col gap-0.5 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
-                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                     <CalendarDays size={11} /> Còn lại
                   </span>
                   <span className={`font-bold text-sm ${daysLeft <= 7 ? 'text-red-600' : daysLeft <= 14 ? 'text-yellow-600' : 'text-green-600'}`}>
@@ -142,7 +142,7 @@ const CheckInSuccessPopup = ({ customer, onClose }) => {
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
-                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                     <Clock size={11} /> Thời gian
                   </span>
                   <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">

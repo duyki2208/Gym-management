@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarRange, Calendar, ChevronDown, Search } from "lucide-react";
+import { CalendarRange, Calendar, ChevronDown, Search, History as HistoryIcon, UserPlus, Users, DollarSign, QrCode } from "lucide-react";
+import StatCard from "../components/common/StatCard";
 // Import từ file service vừa tạo
 import { customerService, checkInService } from "../services/customerService";
 import reportService from "../services/reportService";
@@ -222,18 +223,6 @@ const History = () => {
     return labels[filterType] || "Thời gian";
   };
 
-  const StatCard = ({ title, value, subText }) => (
-    <div className="flex flex-col gap-2 rounded-xl bg-surface-light dark:bg-surface-dark p-6 border border-border-light dark:border-border-dark shadow-sm min-w-0 w-full">
-      <p className="text-text-light dark:text-text-dark text-base font-medium break-words">
-        {title}
-      </p>
-      <p className="text-text-light dark:text-text-dark text-3xl font-bold break-words break-all">
-        {value}
-      </p>
-      <p className="text-sm text-gray-500 font-medium break-words whitespace-pre-wrap">{subText}</p>
-    </div>
-  );
-
   if (loading && rawCustomers.length === 0)
     return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
 
@@ -242,36 +231,38 @@ const History = () => {
       className="space-y-6 animate-fade-in font-display pb-10"
       ref={dropdownRef}
     >
-      {/* Header & Filters */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <h1 className="text-text-light dark:text-text-dark text-3xl font-bold">
-          Lịch sử & Thống kê
-        </h1>
-        <div className="flex gap-2">
+      {/* ── Page header ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
+            <HistoryIcon size={24} className="text-primary" /> Lịch sử hoạt động & thống kê
+          </h1>
+          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
+            Theo dõi lưu lượng check-in, số lượng hội viên mới và chỉ số tăng trưởng chi nhánh
+          </p>
+        </div>
+
+        <div className="flex gap-2 flex-wrap shrink-0">
           {/* Tuần & Ngày */}
           <div className="relative">
             <button
               onClick={() =>
                 setActiveDropdown(activeDropdown === "week" ? null : "week")
               }
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                ["today", "yesterday", "this_week"].includes(filterType)
-                  ? "bg-green-100 border-green-200 text-green-700"
-                  : "bg-white dark:bg-gray-800 border-border-light text-gray-600"
-              }`}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-800 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-xs md:text-sm font-medium transition-colors cursor-pointer"
             >
-              <CalendarRange size={18} />
+              <CalendarRange size={16} />
               Tuần & Ngày
-              <ChevronDown size={18} />
+              <ChevronDown size={16} />
             </button>
             {activeDropdown === "week" && (
-              <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-10 border border-gray-100 overflow-hidden">
+              <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-20 border border-border-light dark:border-border-dark overflow-hidden py-1 text-gray-800 dark:text-gray-200">
                 <button
                   onClick={() => {
                     setFilterType("today");
                     setActiveDropdown(null);
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm"
+                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 text-xs font-bold"
                 >
                   Hôm nay
                 </button>
@@ -280,7 +271,7 @@ const History = () => {
                     setFilterType("yesterday");
                     setActiveDropdown(null);
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm"
+                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 text-xs font-bold"
                 >
                   Hôm qua
                 </button>
@@ -289,7 +280,7 @@ const History = () => {
                     setFilterType("this_week");
                     setActiveDropdown(null);
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm border-t"
+                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 text-xs font-bold border-t border-border-light dark:border-border-dark"
                 >
                   Tuần này
                 </button>
@@ -302,24 +293,20 @@ const History = () => {
               onClick={() =>
                 setActiveDropdown(activeDropdown === "month" ? null : "month")
               }
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                ["this_month", "last_month"].includes(filterType)
-                  ? "bg-green-100 border-green-200 text-green-700"
-                  : "bg-white dark:bg-gray-800 border-border-light text-gray-600"
-              }`}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-800 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-xs md:text-sm font-medium transition-colors cursor-pointer"
             >
-              <Calendar size={18} />
+              <Calendar size={16} />
               Tháng
-              <ChevronDown size={18} />
+              <ChevronDown size={16} />
             </button>
             {activeDropdown === "month" && (
-              <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-10 border border-gray-100 overflow-hidden">
+              <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-20 border border-border-light dark:border-border-dark overflow-hidden py-1 text-gray-800 dark:text-gray-200">
                 <button
                   onClick={() => {
                     setFilterType("this_month");
                     setActiveDropdown(null);
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm"
+                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 text-xs font-bold"
                 >
                   Tháng này
                 </button>
@@ -328,7 +315,7 @@ const History = () => {
                     setFilterType("last_month");
                     setActiveDropdown(null);
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm border-t"
+                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 text-xs font-bold border-t border-border-light dark:border-border-dark"
                 >
                   Tháng trước
                 </button>
@@ -338,27 +325,39 @@ const History = () => {
         </div>
       </div>
 
-      {/* Grid Thống kê */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Grid Thống kê Chuẩn Hóa */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
-          title="Khách mới đăng ký"
+          label="Khách mới đăng ký"
           value={stats.totalCustomers}
-          subText={`Trong ${getLabel().toLowerCase()}`}
+          subtitle={`Trong ${getLabel().toLowerCase()}`}
+          icon={UserPlus}
+          color="emerald"
+          loading={loading}
         />
         <StatCard
-          title="Khách đang hoạt động"
+          label="Khách đang hoạt động"
           value={stats.activeCustomers}
-          subText="Tổng số hiện tại"
+          subtitle="Tổng số hiện tại"
+          icon={Users}
+          color="blue"
+          loading={loading}
         />
         <StatCard
-          title={`Doanh thu (${getLabel()})`}
+          label={`Doanh thu (${getLabel()})`}
           value={formatCurrency(stats.revenue)}
-          subText="Từ khách đăng ký mới"
+          subtitle="Từ khách đăng ký mới"
+          icon={DollarSign}
+          color="primary"
+          loading={loading}
         />
         <StatCard
-          title={`Lượt Check-in (${getLabel()})`}
+          label={`Lượt Check-in (${getLabel()})`}
           value={stats.periodCheckins}
-          subText="Lượt ra vào"
+          subtitle="Lượt ra vào phòng tập"
+          icon={QrCode}
+          color="purple"
+          loading={loading}
         />
       </div>
 

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import reportService from '../../services/reportService';
 import { staffService } from '../../services/customerService';
+import { getIconColor, getIconTone } from '../../utils/iconTone';
 import toast from 'react-hot-toast';
 import PTSessionReportModal from './PTSessionReportModal';
 
@@ -14,20 +15,14 @@ const STATUS_MAP = {
   cancelled: { label: 'Đã huỷ / Vi phạm', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800', icon: XCircle },
 };
 
-const KPICard = ({ icon: Icon, label, value, sub, tone }) => {
-  const toneMap = {
-    primary: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
-    red: 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
-    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-  };
+const KPICard = ({ icon: Icon, label, value, sub }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 transition-all hover:shadow-md">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${toneMap[tone]}`}>
+    <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-5 transition-all hover:shadow-md">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${getIconTone(Icon)}`}>
         <Icon size={20} />
       </div>
-      <p className="text-2xl font-black text-gray-800 dark:text-gray-100">{value}</p>
-      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
+      <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
       {sub && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
     </div>
   );
@@ -120,10 +115,10 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
   return (
     <div className="space-y-6">
       {/* Header trang */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100">Buổi Tập PT</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Buổi tập PT</h2>
           </div>
           <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Theo dõi lịch sử buổi tập và đối soát phiên dạy PT</p>
         </div>
@@ -157,22 +152,22 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
 
           <button
             onClick={() => setIsAuditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white text-xs font-bold shadow-sm shrink-0 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white text-xs font-semibold shadow-sm shrink-0 transition"
           >
-            <ClipboardCheck size={15} /> Đối Soát Buổi Tập PT
+            <ClipboardCheck size={15} /> Đối soát buổi tập PT
           </button>
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-text-light text-xs md:text-sm font-bold shadow-sm shrink-0 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-text-light text-xs md:text-sm font-semibold shadow-sm shrink-0 transition-all cursor-pointer"
           >
-            <Download size={16} /> Xuất File Excel
+            <Download size={16} /> Xuất Excel
           </button>
         </div>
       </div>
 
       {/* 1. KPI tổng quan của hệ thống */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={Dumbbell}
           label={`Tổng buổi đã dạy (${selectedMonth}/${selectedYear})`}
@@ -246,7 +241,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
         {/* Data Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-background-light dark:bg-surface-dark/80 text-text-light dark:text-text-dark font-bold text-xs border-b border-border-light dark:border-border-dark">
+            <thead className="bg-background-light dark:bg-surface-dark/80 text-text-light dark:text-text-dark font-semibold tracking-wide text-xs border-b border-border-light dark:border-border-dark">
               <tr>
                 <th className="px-4 py-3.5">Thời gian</th>
                 <th className="px-4 py-3.5">Hội viên</th>
@@ -282,28 +277,28 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 return (
                   <tr key={s._id || s.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition-colors">
                     {/* 1. Thời gian */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 font-medium whitespace-nowrap">
+                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       {new Date(s.date).toLocaleString('vi-VN', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                       })}
                     </td>
                     {/* 2. Hội viên */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 font-medium">
+                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">
                       {custName}
                     </td>
                     {/* 3. SĐT */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 font-medium">{custPhone}</td>
+                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">{custPhone}</td>
                     {/* 4. Gói tập */}
-                    <td className="px-4 py-3.5 font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">
                       {s.packageName || 'Gói PT'}
                     </td>
                     {/* 5. Số buổi */}
-                    <td className="px-4 py-3.5 font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                    <td className="px-4 py-3.5 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       {s.usedSessions ?? 0}/{s.totalSessions ?? 0}
                     </td>
                     {/* 6. PT hướng dẫn */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 font-medium">{ptName}</td>
+                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">{ptName}</td>
                     {/* 7. Trạng thái */}
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${st.color}`}>
@@ -324,10 +319,10 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
       </div>
 
       {/* 4. Card TOP PT Xuất Sắc (Dưới cùng của trang) */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-5">
         <div className="flex items-center gap-2 mb-1">
-          <Award size={18} className="text-amber-500" />
-          <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">TOP PT Xuất Sắc</p>
+          <Award size={18} className={getIconColor(Award)} />
+          <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Top PT xuất sắc</p>
         </div>
         <p className="text-[11px] text-gray-400 mb-4">Xếp hạng theo số buổi hoàn thành trong tháng {selectedMonth}/{selectedYear}</p>
         
@@ -337,14 +332,14 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
           )}
           {leaderboard.map((pt, idx) => (
             <div key={pt.name || idx} className="bg-gray-50 dark:bg-gray-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700/60 flex items-center gap-3">
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                 idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
               }`}>
                 {idx + 1}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-gray-800 dark:text-gray-100 truncate">{pt.name}</p>
-                <p className="text-[11px] font-black text-gray-900 dark:text-gray-100 mt-0.5">{pt.sessions} buổi</p>
+                <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{pt.name}</p>
+                <p className="text-[11px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{pt.sessions} buổi</p>
               </div>
             </div>
           ))}

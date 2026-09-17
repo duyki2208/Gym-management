@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Building2,
   Coins,
@@ -154,6 +154,7 @@ const Settings = () => {
   // === 1. THÔNG TIN CHUNG & CHỈ TIÊU DOANH THU ===
   const [gymName, setGymName] = useState("Gym Admin Fitness");
   const [address, setAddress] = useState("123 Đường ABC, Quận 1");
+  const [facilityKey, setFacilityKey] = useState("");
   const [targetRevenue, setTargetRevenue] = useState(100000000);
 
   // === 2. HOA HỒNG & KPI ===
@@ -234,7 +235,7 @@ const Settings = () => {
   const [cameraRtspUrl, setCameraRtspUrl] = useState("");
 
   // Nạp cấu hình theo chi nhánh đang active trên thanh Header
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       const res = await settingsService.get(currentBranchCode);
@@ -287,17 +288,21 @@ const Settings = () => {
         setFaceMatchThreshold(d.faceMatchThreshold ?? 0.6);
         setCameraRtspUrl(d.cameraRtspUrl || "");
       }
+      if (user?.role === "admin") {
+        const facilityRes = await settingsService.getFacilityKey(currentBranchCode);
+        setFacilityKey(facilityRes?.data?.facilityKey || "");
+      }
     } catch (error) {
       console.error("Lỗi nạp cấu hình:", error);
       toast.error("Không thể tải cấu hình chi nhánh");
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentBranchCode, user?.role]);
 
   useEffect(() => {
     loadSettings();
-  }, [currentBranchCode]);
+  }, [loadSettings]);
 
   // Lưu cài đặt
   const handleSave = async () => {
@@ -309,6 +314,10 @@ const Settings = () => {
       toast.error("Tên phòng tập không được để trống!");
       return;
     }
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{2,63}$/.test(facilityKey.trim())) {
+      toast.error("Mã cơ sở phải dài 3-64 ký tự và chỉ gồm chữ, số hoặc dấu gạch ngang!");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -316,6 +325,7 @@ const Settings = () => {
         {
           gymName,
           address,
+          facilityKey: facilityKey.trim(),
           targetRevenue: Number(targetRevenue),
           ptSessionPrice: Number(ptSessionPrice),
           ptCommissionRate: Number(ptCommissionRate),
@@ -502,10 +512,10 @@ const Settings = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6">
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-6 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Cài đặt Hệ thống</h1>
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Cài đặt hệ thống</h1>
             
           </div>
           <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
@@ -516,7 +526,7 @@ const Settings = () => {
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          className="h-10 px-5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all shadow-lg shadow-primary/25 disabled:opacity-50 flex items-center gap-2 self-start sm:self-auto"
+          className="h-10 px-5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2 self-start sm:self-auto"
         >
           {saving ? (
             <>
@@ -535,10 +545,10 @@ const Settings = () => {
       {/* Main Layout 2 Cột (Master - Detail) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* CỘT TRÁI: MENU DỌC (VERTICAL SIDEBAR) */}
-        <div className="lg:col-span-4 xl:col-span-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4 shadow-sm space-y-6">
+        <div className="lg:col-span-4 xl:col-span-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm space-y-6">
           {MENU_GROUPS.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1.5">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark px-3 mb-1">
+              <div className="text-[11px] font-medium text-text-muted-light dark:text-text-muted-dark px-3 mb-1">
                 {group.title}
               </div>
               <div className="space-y-1">
@@ -566,7 +576,7 @@ const Settings = () => {
         </div>
 
         {/* CỘT PHẢI: NỘI DUNG CẤU HÌNH CHI TIẾT */}
-        <div className="lg:col-span-8 xl:col-span-9 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 shadow-sm min-h-[520px]">
+        <div className="lg:col-span-8 xl:col-span-9 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-sm min-h-[520px]">
           {loading ? (
             <div className="p-16 text-center text-text-muted-light dark:text-text-muted-dark space-y-3">
               <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
@@ -597,6 +607,29 @@ const Settings = () => {
                         onChange={(e) => setGymName(e.target.value)}
                         placeholder="Gym Admin Fitness - Cầu Giấy"
                       />
+                    </div>
+
+                    <div>
+                      <label htmlFor="facility_key" className={labelClass}>
+                        Mã cơ sở <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="facility_key"
+                        type="text"
+                        className={inputClass}
+                        value={facilityKey}
+                        onChange={(e) => setFacilityKey(e.target.value)}
+                        placeholder="dvertofit"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        minLength={3}
+                        maxLength={64}
+                        disabled={user?.role !== "admin"}
+                      />
+                      <p className="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        Người dùng phải nhập đúng mã này cùng tên đăng nhập và mật khẩu.
+                      </p>
                     </div>
 
                     <div>
@@ -862,7 +895,7 @@ const Settings = () => {
 
                     {/* === Form Soạn tay thông báo (Gửi ngay) === */}
                     {activeReminderSubTab === "manual" && (
-                      <div className="space-y-5 p-5 rounded-2xl bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark">
+                      <div className="space-y-5 p-5 rounded-xl bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark">
                         {/* Header của mục Soạn tay */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-light dark:border-border-dark">
                           <div>
@@ -880,7 +913,7 @@ const Settings = () => {
 
                         {/* 1. Chọn nhóm đối tượng nhận */}
                         <div className="space-y-2">
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
                             1. Nhóm đối tượng nhận tin
                           </label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -937,7 +970,7 @@ const Settings = () => {
 
                         {/* 2. Chọn kênh phát tin: Email & Zalo */}
                         <div className="space-y-2">
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
                             2. Kênh phát thông báo
                           </label>
                           <div className="flex flex-wrap items-center gap-6 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
@@ -995,7 +1028,7 @@ const Settings = () => {
 
                         {/* 3. Tiêu đề thông báo */}
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                             3. Tiêu đề thông báo <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -1009,7 +1042,7 @@ const Settings = () => {
 
                         {/* 4. Nội dung chi tiết */}
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                             4. Nội dung thông báo <span className="text-red-500">*</span>
                           </label>
                           <textarea
@@ -1023,7 +1056,7 @@ const Settings = () => {
 
                         {/* 5. Đính kèm tài liệu */}
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                             5. Đính kèm tài liệu / Thông báo (PDF, Word, Ảnh)
                           </label>
                           <div className="flex items-center gap-3">
@@ -1073,7 +1106,7 @@ const Settings = () => {
                             type="button"
                             onClick={handleSendManualNotification}
                             disabled={manualSending}
-                            className="h-11 px-6 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-lg shadow-primary/25 disabled:opacity-50 flex items-center justify-center gap-2 transition-all self-end sm:self-auto"
+                            className="h-11 px-6 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 transition-all self-end sm:self-auto"
                           >
                             {manualSending ? (
                               <>
@@ -1093,10 +1126,10 @@ const Settings = () => {
 
                     {/* Form soạn thảo mẫu thông báo tự động (Mẫu 1, 2, 3) */}
                     {activeReminderSubTab !== "manual" && reminderTemplates[activeReminderSubTab] && (
-                      <div className="space-y-4 p-5 rounded-2xl bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark">
+                      <div className="space-y-4 p-5 rounded-xl bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark">
                         {/* Kênh gửi: Email & Zalo */}
                         <div className="flex flex-wrap items-center gap-6 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
-                          <span className="text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
+                          <span className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
                             Kênh phát tin:
                           </span>
                           <label className="flex items-center gap-2 text-xs font-semibold text-text-light dark:text-text-dark cursor-pointer">
@@ -1192,7 +1225,7 @@ const Settings = () => {
 
                         {/* Tiêu đề email */}
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                             Tiêu đề thông báo
                           </label>
                           <input
@@ -1213,7 +1246,7 @@ const Settings = () => {
 
                         {/* Nội dung tin nhắn / email */}
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                             Nội dung chi tiết
                           </label>
                           <textarea
@@ -1234,7 +1267,7 @@ const Settings = () => {
 
                         {/* Đính kèm file văn bản / bảng giá mặc định */}
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                          <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                             File đính kèm tự động gửi kèm (Bảng giá ưu đãi, nội quy phòng tập)
                           </label>
                           <div className="flex items-center gap-3">
@@ -1309,7 +1342,7 @@ const Settings = () => {
                     </button>
                   </div>
 
-                  <div className="border border-border-light dark:border-border-dark rounded-2xl overflow-x-auto">
+                  <div className="border border-border-light dark:border-border-dark rounded-xl overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-background-light/80 dark:bg-background-dark/80 text-text-muted-light dark:text-text-muted-dark border-b border-border-light dark:border-border-dark">
                         <tr>
@@ -1376,7 +1409,7 @@ const Settings = () => {
                   
 
                   {/* Thông tin VietQR Ngân hàng */}
-                  <div className="p-5 rounded-2xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
+                  <div className="p-5 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
                     <h4 className="text-sm font-bold text-primary flex items-center gap-1.5">
                       <QrCode size={16} /> Thông tin Tài khoản Nhận tiền (VietQR Napas 24/7)
                     </h4>
@@ -1426,7 +1459,7 @@ const Settings = () => {
                   </div>
 
                   {/* Cấu hình kết nối SePay */}
-                  <div className="p-5 rounded-2xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
+                  <div className="p-5 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold text-primary flex items-center gap-1.5">
                         <CreditCard size={16} /> Cấu hình SePay Webhook & API Key
@@ -1480,7 +1513,7 @@ const Settings = () => {
                   </div>
 
                   {/* Máy quẹt thẻ POS */}
-                  <div className="p-5 rounded-2xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
+                  <div className="p-5 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-4">
                     <h4 className="text-sm font-bold text-primary flex items-center gap-1.5">
                       <CreditCard size={16} /> Thiết bị quẹt thẻ POS tại quầy
                     </h4>

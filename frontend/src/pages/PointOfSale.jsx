@@ -4,6 +4,7 @@ import { customerService } from '../services/customerService';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, User, Package, QrCode, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { getIconColor } from '../utils/iconTone';
 
 const PointOfSale = ({ onFinish, onClose }) => {
   const [products, setProducts] = useState([]);
@@ -170,7 +171,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
       {onClose && (
         <div className="flex justify-between items-center bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
            <h2 className="text-xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-             <ShoppingCart className="text-primary" /> Bán Hàng (POS)
+             <ShoppingCart className={getIconColor(ShoppingCart)} /> Bán hàng (POS)
            </h2>
            <button onClick={onClose} className="px-4 py-2 bg-background-light dark:bg-background-dark hover:bg-border-light dark:hover:bg-border-dark text-text-light dark:text-text-dark font-bold rounded-lg text-xs transition-colors flex items-center gap-1 border border-border-light dark:border-border-dark cursor-pointer">
               ✕ Đóng POS
@@ -215,7 +216,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                    <div 
                       key={p._id} 
                       onClick={() => addToCart(p)}
-                      className={`aspect-square relative border rounded-xl p-3 bg-surface-light dark:bg-surface-dark cursor-pointer hover:shadow-lg transition-all group flex flex-col justify-between overflow-hidden ${p.stockQuantity <= 0 ? 'opacity-50 grayscale border-border-light dark:border-border-dark' : 'border-border-light dark:border-border-dark hover:border-primary/40'}`}
+                      className={`aspect-square relative border rounded-xl p-3 bg-surface-light dark:bg-surface-dark cursor-pointer hover:shadow-md transition-all group flex flex-col justify-between overflow-hidden ${p.stockQuantity <= 0 ? 'opacity-50 grayscale border-border-light dark:border-border-dark' : 'border-border-light dark:border-border-dark hover:border-primary/40'}`}
                    >
                        <div className="absolute top-2 right-2 z-10 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark">
                           Kho: {p.stockQuantity}
@@ -229,7 +230,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                        </div>
                        <div>
                           <p className="font-bold text-text-light dark:text-text-dark text-xs sm:text-sm line-clamp-1">{p.name}</p>
-                          <p className="font-black text-primary text-xs sm:text-sm mt-0.5">{p.sellPrice.toLocaleString()} đ</p>
+                          <p className="font-semibold text-primary text-xs sm:text-sm mt-0.5">{p.sellPrice.toLocaleString()} đ</p>
                        </div>
                    </div>
                 ))}
@@ -239,14 +240,14 @@ const PointOfSale = ({ onFinish, onClose }) => {
          {/* Right Side: Cart Workspace */}
          <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl flex flex-col shadow-sm border border-border-light dark:border-border-dark h-full overflow-hidden relative">
             <div className="p-4 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
-               <h3 className="font-bold text-xl text-text-light dark:text-text-dark flex items-center gap-2 mb-4">Giỏ Hàng <span className="bg-primary text-text-light text-xs font-bold px-2 py-1 rounded-full">{cart.length}</span></h3>
+               <h3 className="font-semibold text-xl text-text-light dark:text-text-dark flex items-center gap-2 mb-4">Giỏ hàng <span className="bg-primary text-text-light text-xs font-semibold px-2 py-1 rounded-full">{cart.length}</span></h3>
                <div className="flex gap-2 p-1 bg-background-light dark:bg-background-dark rounded-lg w-full border border-border-light dark:border-border-dark">
                   <button 
                      className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all cursor-pointer ${isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`} 
-                     onClick={() => setIsWalkIn(true)}>Khách Lẻ</button>
+                     onClick={() => setIsWalkIn(true)}>Khách lẻ</button>
                   <button 
                      className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all cursor-pointer ${!isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`} 
-                     onClick={() => setIsWalkIn(false)}>Hội Viên</button>
+                     onClick={() => setIsWalkIn(false)}>Hội viên</button>
                </div>
                {!isWalkIn && (
                   <select 
@@ -256,7 +257,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      className="w-full mt-3 p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none text-sm bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary"
                      onChange={(e) => setSelectedCustomer(customers.find(c => c._id === e.target.value))}
                   >
-                     <option value="">-- Chọn Hội Viên --</option>
+                     <option value="">-- Chọn hội viên --</option>
                      {customers.map(c => <option key={c._id} value={c._id}>{c.name} ({c.phone})</option>)}
                   </select>
                )}
@@ -282,7 +283,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                         </div>
                         <div className="flex flex-col items-end justify-between">
                            <button onClick={() => removeFromCart(c.product._id)} className="text-red-400 hover:text-red-600 transition-colors p-1 cursor-pointer"><Trash2 size={16}/></button>
-                           <p className="font-black text-text-light dark:text-text-dark text-sm">{(c.sellPrice * c.quantity).toLocaleString()} đ</p>
+                           <p className="font-semibold text-text-light dark:text-text-dark text-sm">{(c.sellPrice * c.quantity).toLocaleString()} đ</p>
                         </div>
                      </div>
                   ))
@@ -291,8 +292,8 @@ const PointOfSale = ({ onFinish, onClose }) => {
 
             <div className="p-5 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark mt-auto">
                <div className="flex justify-between items-end mb-4">
-                  <span className="text-subtle-light dark:text-subtle-dark font-bold uppercase tracking-wide text-xs">Thanh toán</span>
-                  <span className="text-3xl font-black text-primary">{totalAmount.toLocaleString()} <span className="text-lg opacity-70">đ</span></span>
+                  <span className="text-subtle-light dark:text-subtle-dark font-medium text-xs">Thanh toán</span>
+                  <span className="text-3xl font-bold text-primary">{totalAmount.toLocaleString()} <span className="text-lg opacity-70">đ</span></span>
                </div>
                <div className="grid grid-cols-2 gap-3">
                    <button 
@@ -301,7 +302,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      disabled={cart.length === 0}
                    >
                      <Banknote size={20} className="mb-1" />
-                     Tiền Mặt
+                     Tiền mặt
                    </button>
                    <button 
                      onClick={() => handleCheckout('Chuyển khoản QR')}
@@ -319,7 +320,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
       {/* INVOICE MODAL (Thanh toán xong hiện Bill kèm QR) */}
       {showInvoice && lastOrder && (
          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-center items-center p-4">
-             <div className="bg-surface-light dark:bg-surface-dark rounded-xl w-full max-w-sm shadow-2xl overflow-hidden border border-border-light dark:border-border-dark animate-in fade-in zoom-in duration-300">
+             <div className="bg-surface-light dark:bg-surface-dark rounded-xl w-full max-w-sm shadow-xl overflow-hidden border border-border-light dark:border-border-dark animate-in fade-in zoom-in duration-300">
                  {orderStatus === 'Chờ thanh toán' ? (
                       <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-center text-white">
                           <p className="text-white font-bold text-lg">Đơn hàng: {lastOrder._id?.substr(-8).toUpperCase()}</p>
@@ -329,7 +330,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                             <CheckCircle size={32} className="text-white" />
                          </div>
-                         <h2 className="text-2xl font-black">HÓA ĐƠN ({lastOrder._id?.substr(-4)})</h2>
+                         <h2 className="text-2xl font-bold">Hóa đơn #{lastOrder._id?.substr(-4)}</h2>
                          <p className="text-emerald-50 mt-1">Gym Fitness Center • Đã thanh toán</p>
                      </div>
                   )}
@@ -345,7 +346,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      </div>
                      <div className="flex justify-between items-center mb-4 text-lg">
                         <span className="font-bold text-subtle-light dark:text-subtle-dark">Tổng cộng</span>
-                        <span className="font-black text-text-light dark:text-text-dark">{lastOrder.totalAmount.toLocaleString()} đ</span>
+                        <span className="font-bold text-text-light dark:text-text-dark">{lastOrder.totalAmount.toLocaleString()} đ</span>
                      </div>
 
                      {/* Dynamic QR Code VietQR - chỉ hiện mã QR thuần */}

@@ -31,7 +31,7 @@ const auditLogger = (req, res, next) => {
         if (req.method === "DELETE" && req.deletedCustomerDetails) {
           details = req.deletedCustomerDetails;
         } else {
-          const sensitiveKeys = ["password", "token", "accessToken", "refreshToken", "faceDescriptor", "faceEmbedding"];
+          const sensitiveKeys = ["password", "facilityKey", "token", "accessToken", "refreshToken", "faceDescriptor", "faceEmbedding"];
           sensitiveKeys.forEach((key) => {
             if (details[key] !== undefined) {
               details[key] = "[FILTERED]";

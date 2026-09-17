@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, UserCog, Search } from "lucide-react";
 import { staffService } from "../services/customerService";
 import StaffModal from "../components/staff/StaffModal";
 import StaffDetailModal from "../components/staff/StaffDetailModal";
@@ -8,6 +8,8 @@ import { useConfirm } from "../context/ConfirmContext";
 
 const Staff = () => {
   const [list, setList] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [modal, setModal] = useState(false);
   const [detailStaff, setDetailStaff] = useState(null);
   const [todaySchedules, setTodaySchedules] = useState([]);
@@ -109,19 +111,75 @@ const Staff = () => {
     }
   };
 
+  const filteredList = list.filter((s) => {
+    const name = (s.fullName || s.name || "").toLowerCase();
+    const username = (s.username || "").toLowerCase();
+    const phone = (s.phone || "").toLowerCase();
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      !searchTerm ||
+      name.includes(q) ||
+      username.includes(q) ||
+      phone.includes(q);
+
+    const matchesRole = roleFilter === "all" || s.role === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
+
   return (
     <div className="flex flex-col gap-6 font-display">
-      {/* Action bar */}
-      <div className="flex justify-end">
+      {/* Page header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
+            <UserCog size={24} className="text-primary" /> Quản lý đội ngũ nhân sự
+          </h2>
+          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
+            Phân quyền tài khoản, quản lý huấn luyện viên (PT), tư vấn viên (Sale) và lễ tân
+          </p>
+        </div>
         {isAdmin && (
           <button
             onClick={() => { setEdit(null); setModal(true); }}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-primary text-text-light text-xs md:text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-primary text-text-light text-xs md:text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
           >
             <Plus size={18} />
-            Thêm mới
+            Thêm nhân viên
           </button>
         )}
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex-wrap">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
+          <Search size={18} className="absolute left-3.5 top-3 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Tìm theo tên, username, số điện thoại..."
+            className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-gray-400 transition-colors"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="w-52">
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="w-full h-10 px-3 text-xs font-bold rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-gray-700 dark:text-gray-300"
+          >
+            <option value="all">Tất cả chức vụ</option>
+            <option value="admin">Quản trị viên (Admin)</option>
+            <option value="manager">Quản lý (Manager)</option>
+            <option value="sm">Trưởng nhóm Sale (SM)</option>
+            <option value="pm">Trưởng nhóm PT (PM)</option>
+            <option value="om">Quản lý vận hành (OM)</option>
+            <option value="pt">Huấn luyện viên (PT)</option>
+            <option value="sale">Tư vấn viên (Sale)</option>
+            <option value="accountant">Kế toán (Accountant)</option>
+            <option value="reception">Lễ tân (Reception)</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
@@ -143,8 +201,8 @@ const Staff = () => {
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : list.length > 0 ? (
-                list.map((s) => {
+              ) : filteredList.length > 0 ? (
+                filteredList.map((s) => {
                   const shiftData = todaySchedules.find(sch => sch.staff && (sch.staff._id === (s._id || s.id) || sch.staff === (s._id || s.id)));
                   const shift = shiftData ? shiftData.shiftType : "Nghỉ";
                   

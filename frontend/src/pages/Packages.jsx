@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { packageService } from "../services/customerService";
 import PackageModal from "../components/package/PackageModal";
 import { useConfirm } from "../context/ConfirmContext";
+import { getIconColor } from "../utils/iconTone";
 
 const Packages = () => {
   const [list, setList] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [modal, setModal] = useState(false);
   const [edit, setEdit] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -59,39 +61,54 @@ const Packages = () => {
     }
   };
 
+  const filteredList = list.filter((p) =>
+    (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="flex flex-col gap-6">
-
-      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
-        <div className="relative flex-1 max-w-2xl">
-          <Search size={18} className="absolute left-3 top-2.5 text-subtle-light dark:text-subtle-dark" />
-          <input
-            id="pkgSearchInput"
-            name="pkgSearch"
-            type="text"
-            aria-label="Tìm kiếm gói tập theo tên"
-            className="w-full pl-10 pr-4 h-10 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white dark:bg-gray-800 dark:text-gray-100 transition-colors"
-            placeholder="Tìm tên gói tập..."
-          />
+    <div className="flex flex-col gap-6 font-display">
+      {/* Page header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
+            <Package size={24} className={getIconColor(Package)} /> Quản lý gói tập
+          </h2>
+          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
+            Cấu hình danh mục gói hội viên, thời hạn sử dụng, phân loại và giá bán niêm yết
+          </p>
         </div>
-
-        <div className="flex-1" />
-
         {isAdmin && (
           <button
             onClick={() => {
               setEdit(null);
               setModal(true);
             }}
-            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 shrink-0 shadow-sm transition-all"
+            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-semibold hover:bg-primary/90 shrink-0 shadow-sm transition-all cursor-pointer"
           >
             <Plus size={18} />
-            <span>Thêm gói</span>
+            <span>Thêm gói tập</span>
           </button>
         )}
       </div>
 
-      <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
+      {/* Search Bar */}
+      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div className="relative flex-1 max-w-md">
+          <Search size={18} className="absolute left-3.5 top-3 text-gray-400" />
+          <input
+            id="pkgSearchInput"
+            name="pkgSearch"
+            type="text"
+            aria-label="Tìm kiếm gói tập theo tên"
+            className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-gray-400 transition-colors"
+            placeholder="Tìm tên gói tập..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
             <tr>
@@ -102,9 +119,9 @@ const Packages = () => {
               {isAdmin && <th className="px-6 py-4 text-center">HÀNH ĐỘNG</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-light dark:divide-border-dark">
-            {list.length > 0 ? (
-              list.map((p) => (
+          <tbody className="divide-y divide-border-light dark:border-border-dark">
+            {filteredList.length > 0 ? (
+              filteredList.map((p) => (
                 <tr
                   key={p._id || p.id}
                   className="hover:bg-primary/10 transition-colors"

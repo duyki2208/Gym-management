@@ -5,7 +5,7 @@ const KPIProgressWidget = ({ title, current, target, unit = "đ", icon: Icon = T
   const percent = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
   
   return (
-    <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+    <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-primary/10 text-primary rounded-lg">

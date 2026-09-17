@@ -25,6 +25,8 @@ import { teamTaskService } from "../services/teamTaskService";
 import { useQuery } from '@tanstack/react-query';
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
+import StatCard from "../components/common/StatCard";
+import { getIconColor, getIconTone } from "../utils/iconTone";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -91,6 +93,7 @@ const Dashboard = () => {
   };
   
   const peakHours = dashboardData?.peakHours || [];
+  const hasPeakHourData = peakHours.some((hour) => Number(hour.count) > 0);
   
   const activities = (dashboardData?.recentActivities || []).map(act => ({
      id: act.id || act._id,
@@ -128,7 +131,7 @@ const Dashboard = () => {
     return (
       <div className="flex flex-col gap-6">
         {/* Tầng 1: KPI Cards cho PT */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Buổi dạy tháng này"
             value={`${ptStats.achieved} / ${ptStats.target}`}
@@ -173,7 +176,7 @@ const Dashboard = () => {
             icon={ClipboardList}
             colorClass={
               stats.upcomingTask 
-                ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-extrabold" 
+                ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-semibold"
                 : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
             }
             onClick={() => handleCardClick("tasks")}
@@ -190,7 +193,7 @@ const Dashboard = () => {
               {activities.length > 0 ? (
                 activities.map((act) => (
                   <div key={act.id} className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0">
-                    <div className="flex items-center justify-center size-10 rounded-full shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                    <div className={`flex items-center justify-center size-10 rounded-full shrink-0 ${getIconTone(Dumbbell)}`}>
                       <Dumbbell size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -262,7 +265,7 @@ const Dashboard = () => {
     return (
       <div className="flex flex-col gap-6">
         {/* Tầng 1: KPI Cards cho Sale */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Doanh số chốt tháng này"
             value={`${saleStats.revenue.achieved.toLocaleString("vi-VN")} đ`}
@@ -307,7 +310,7 @@ const Dashboard = () => {
             icon={ClipboardList}
             colorClass={
               stats.upcomingTask 
-                ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-extrabold" 
+                ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-semibold"
                 : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
             }
             onClick={() => handleCardClick("tasks")}
@@ -396,7 +399,7 @@ const Dashboard = () => {
     <div className="flex flex-col gap-6">
       
       {/* Tầng 1: KPI Cards cho Nhân viên vận hành */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* 1. Tổng doanh thu tháng này */}
         <StatCard
@@ -452,7 +455,7 @@ const Dashboard = () => {
           icon={ClipboardList}
           colorClass={
             stats.upcomingTask 
-              ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-extrabold" 
+              ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-semibold"
               : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
           }
           onClick={() => handleCardClick("tasks")}
@@ -464,13 +467,13 @@ const Dashboard = () => {
         {/* Biểu đồ Giờ cao điểm hôm nay (Giữ nguyên cấu trúc bar chart div) */}
         <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
           <div className="flex items-center gap-2 mb-6">
-            <Clock className="text-primary" size={20} />
+            <Clock className={getIconColor(Clock)} size={20} />
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
               Khung giờ check-in hôm nay (Giờ cao điểm)
             </h3>
           </div>
-          <div className="h-64 flex items-end justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
-            {peakHours.map((h, i) => {
+          <div className={`h-64 ${hasPeakHourData ? "flex items-end justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-2" : "flex items-center justify-center"}`}>
+            {hasPeakHourData ? peakHours.map((h, i) => {
               const max = Math.max(...peakHours.map((p) => p.count)) || 1;
               const height = (h.count / max) * 100;
               return (
@@ -492,7 +495,19 @@ const Dashboard = () => {
                   <span className="text-[10px] text-gray-400 font-medium">{h.hour}h</span>
                 </div>
               );
-            })}
+            }) : (
+              <div className="flex max-w-sm flex-col items-center text-center">
+                <div className={`mb-3 flex size-11 items-center justify-center rounded-full ${getIconTone(Activity)}`}>
+                  <Activity size={20} />
+                </div>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">
+                  Hôm nay chưa có lượt check-in
+                </p>
+                <p className="mt-1 text-xs font-normal text-text-muted-light dark:text-text-muted-dark">
+                  Biểu đồ sẽ hiện theo khung giờ ngay khi có dữ liệu.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -551,7 +566,7 @@ const Dashboard = () => {
             <div className="bg-green-50/50 p-4 rounded-xl border border-green-100 flex justify-between items-center">
               <div>
                 <p className="text-sm text-green-700 font-bold">Tổng doanh thu tuần này</p>
-                <p className="text-2xl font-black text-green-600 mt-1">
+                <p className="text-2xl font-bold text-green-600 mt-1">
                   {stats.weeklyRevenue.reduce((sum, d) => sum + d.revenue, 0).toLocaleString("vi-VN")} đ
                 </p>
               </div>
@@ -682,11 +697,11 @@ const Modal = ({ title, onClose, children }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-scale-in"
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl w-full max-w-4xl overflow-hidden animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
-          <h3 className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">{title}</h3>
+          <h3 className="text-lg font-semibold text-text-light dark:text-text-dark tracking-tight">{title}</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-border-light dark:hover:bg-border-dark transition-colors text-subtle-light dark:text-subtle-dark cursor-pointer">
             <X size={20} />
           </button>
@@ -856,11 +871,11 @@ const TeamTasksModal = ({ onClose }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in"
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
-          <h3 className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">Ghi Chú Ca Trực Hôm Nay</h3>
+          <h3 className="text-lg font-semibold text-text-light dark:text-text-dark tracking-tight">Ghi chú ca trực hôm nay</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-border-light dark:hover:bg-border-dark transition-colors text-subtle-light dark:text-subtle-dark cursor-pointer">
             <X size={20} />
           </button>
@@ -976,7 +991,7 @@ const TeamTasksModal = ({ onClose }) => {
                         </button>
                       )}
                       <div className="min-w-0">
-                        <span className={`inline-block text-[11px] font-black uppercase px-2 py-0.5 rounded mr-2 ${expired && !t.isCompleted ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400"}`}>
+                        <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded mr-2 ${expired && !t.isCompleted ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400"}`}>
                           {t.timeSlot}
                         </span>
                         <p className={`inline-block text-sm font-medium truncate align-middle ${t.isCompleted ? "line-through text-gray-400 dark:text-gray-600" : expired ? "text-red-600/90 dark:text-red-400 font-semibold" : "text-gray-800 dark:text-gray-200"}`}>
@@ -1016,42 +1031,5 @@ const TeamTasksModal = ({ onClose }) => {
     </div>
   );
 };
-
-// Component Card nhỏ cho KPI
-const StatCard = ({ label, value, change, type, icon: Icon, colorClass, onClick }) => (
-  <div 
-    onClick={onClick}
-    className={`flex flex-col rounded-xl p-6 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer min-w-0 w-full ${colorClass || 'border-border-light dark:border-border-dark'}`}
-  >
-    <div className={`absolute right-4 top-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-300 ${colorClass ? colorClass.split(' ')[0] : ''}`}>
-      <Icon size={64} />
-    </div>
-    
-    <div className="flex items-center gap-2 mb-4 min-w-0">
-      <div className={`p-2 rounded-lg shrink-0 ${colorClass || 'bg-background-light dark:bg-background-dark text-subtle-light dark:text-subtle-dark'}`}>
-        <Icon size={20} />
-      </div>
-      <p className="text-text-light dark:text-text-dark text-sm font-bold uppercase tracking-wider break-words flex-1">
-        {label}
-      </p>
-    </div>
-
-    <div className="flex flex-col z-10 min-w-0">
-      <p className={`tracking-tight text-2xl font-bold break-words break-all ${colorClass ? colorClass.split(' ')[0] : 'text-blue-600'}`}>
-        {value}
-      </p>
-      
-      {change && (
-        <span
-          className={`text-sm font-bold mt-2 break-words whitespace-pre-wrap ${
-            type === "positive" ? "text-green-500" : type === "negative" ? "text-red-500" : type === "warning" ? "text-yellow-500" : "text-gray-500"
-          }`}
-        >
-          {change}
-        </span>
-      )}
-    </div>
-  </div>
-);
 
 export default Dashboard;

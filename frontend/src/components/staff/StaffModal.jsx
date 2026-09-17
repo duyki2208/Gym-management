@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { UserCog } from "lucide-react";
+import BaseModal from "../common/BaseModal";
+import FormField, { inputClassName } from "../common/FormField";
+import Button from "../common/Button";
 
 const StaffModal = ({ staff, onSave, onClose }) => {
-  // Hàm helper mạnh mẽ hơn để xử lý ngày tháng
   const formatDateForInput = (dateValue) => {
     if (!dateValue) return "";
     try {
       const date = new Date(dateValue);
-      // Kiểm tra tính hợp lệ của ngày
       if (isNaN(date.getTime())) return "";
-      // Trả về định dạng YYYY-MM-DD chuẩn cho input date
       return date.toISOString().split("T")[0];
     } catch (e) {
       return "";
@@ -28,21 +28,11 @@ const StaffModal = ({ staff, onSave, onClose }) => {
   });
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  useEffect(() => {
     if (staff) {
       setFormData({
         name: staff.fullName || staff.name || "",
         username: staff.username || "",
-        password: "", // Không hiển thị password khi sửa
+        password: "",
         role: staff.role || "pt",
         phone: staff.phone || "",
         dob: formatDateForInput(staff.dob),
@@ -50,7 +40,6 @@ const StaffModal = ({ staff, onSave, onClose }) => {
         activeCustomers: staff.activeCustomers || 0,
       });
     } else {
-      // Reset form khi tạo mới
       setFormData({
         name: "",
         username: "",
@@ -66,7 +55,6 @@ const StaffModal = ({ staff, onSave, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Chuẩn bị dữ liệu để gửi lên server
     const dataToSend = {
       fullName: formData.name,
       username: formData.username,
@@ -76,12 +64,10 @@ const StaffModal = ({ staff, onSave, onClose }) => {
       specialty: formData.specialty || undefined,
     };
 
-    // Chỉ thêm password nếu có (khi tạo mới hoặc khi sửa và có nhập password mới)
     if (formData.password) {
       dataToSend.password = formData.password;
     }
 
-    // Nếu đang sửa, thêm _id
     if (staff && staff._id) {
       dataToSend._id = staff._id;
     }
@@ -90,186 +76,136 @@ const StaffModal = ({ staff, onSave, onClose }) => {
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
+    <BaseModal
+      isOpen={true}
+      onClose={onClose}
+      title={staff ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}
+      subtitle="Thiết lập tài khoản, vai trò và thông tin cá nhân của nhân sự"
+      icon={<UserCog size={22} />}
+      maxWidth="max-w-md"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Hủy bỏ
+          </Button>
+          <Button type="submit" form="staffModalForm" variant="primary">
+            Lưu thông tin
+          </Button>
+        </>
+      }
     >
-      <div 
-        className="bg-white rounded-lg w-full max-w-md p-6 shadow-xl relative"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800">
-            {staff ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+      <form id="staffModalForm" onSubmit={handleSubmit} className="space-y-4">
+        <FormField id="staff_name" label="Họ và tên" required>
+          <input
+            id="staff_name"
+            name="name"
+            type="text"
+            required
+            className={inputClassName}
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Nguyễn Văn A"
+          />
+        </FormField>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField id="staff_username" label="Tên đăng nhập" required>
+            <input
+              id="staff_username"
+              name="username"
+              type="text"
+              required={!staff}
+              disabled={!!staff}
+              className={`${inputClassName} ${staff ? "opacity-75 cursor-not-allowed" : ""}`}
+              value={formData.username}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+              placeholder="username"
+            />
+          </FormField>
+
+          <FormField
+            id="staff_password"
+            label={staff ? "Mật khẩu mới" : "Mật khẩu"}
+            required={!staff}
           >
-            <X size={20} />
-          </button>
+            <input
+              id="staff_password"
+              name="password"
+              type="password"
+              required={!staff}
+              className={inputClassName}
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              placeholder={staff ? "Để trống nếu không đổi" : "••••••••"}
+            />
+          </FormField>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Tên */}
-          <div>
-            <label htmlFor="staff_name" className="block text-sm font-medium mb-1.5 text-gray-700">
-              Họ và tên <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="staff_name"
-              name="name"
-              type="text"
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField id="staff_role" label="Chức vụ" required>
+            <select
+              id="staff_role"
+              name="role"
               required
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Username */}
-            <div>
-              <label htmlFor="staff_username" className="block text-sm font-medium mb-1.5 text-gray-700">
-                Tên đăng nhập <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="staff_username"
-                name="username"
-                type="text"
-                required={!staff}
-                disabled={!!staff}
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500"
-                value={formData.username}
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-              />
-              {staff && (
-                <p className="text-xs text-gray-500 mt-1">
-                 
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="staff_password" className="block text-sm font-medium mb-1.5 text-gray-700">
-                {staff
-                  ? "Mật khẩu mới"
-                  : 'Mật khẩu '}
-              </label>
-              <input
-                id="staff_password"
-                name="password"
-                type="password"
-                required={!staff}
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Chức vụ */}
-            <div>
-              <label htmlFor="staff_role" className="block text-sm font-medium mb-1.5 text-gray-700">
-                Chức vụ <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="staff_role"
-                name="role"
-                required
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
-                value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
-              >
-                <option value="pt">PT</option>
-                <option value="sale">Sale</option>
-                <option value="reception">Lễ tân</option>
-                <option value="sm">SM (Sale Manager)</option>
-                <option value="pm">PM (PT Manager)</option>
-                <option value="om">OM (Operation Manager)</option>
-              </select>
-            </div>
-
-            {/* SĐT */}
-            <div>
-              <label htmlFor="staff_phone" className="block text-sm font-medium mb-1.5 text-gray-700">
-                Số điện thoại
-              </label>
-              <input
-                id="staff_phone"
-                name="phone"
-                type="tel"
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          {/* Ngày sinh */}
-          <div>
-            <label htmlFor="staff_dob" className="block text-sm font-medium mb-1.5 text-gray-700">
-              Ngày sinh
-            </label>
-            <input
-              id="staff_dob"
-              name="dob"
-              type="date"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700"
-              value={formData.dob}
-              onChange={(e) =>
-                setFormData({ ...formData, dob: e.target.value })
-              }
-            />
-          </div>
-
-          {/* Chuyên môn */}
-          <div>
-            <label htmlFor="staff_specialty" className="block text-sm font-medium mb-1.5 text-gray-700">
-              Chuyên môn / Mô tả
-            </label>
-            <input
-              id="staff_specialty"
-              name="specialty"
-              type="text"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              value={formData.specialty}
-              onChange={(e) =>
-                setFormData({ ...formData, specialty: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors"
+              className={inputClassName}
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             >
-              Hủy bỏ
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-primary text-background-dark rounded-lg hover:bg-primary/90 font-bold shadow-lg shadow-primary/25 transition-colors"
-            >
-              Lưu thông tin
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <option value="pt">PT</option>
+              <option value="sale">Sale</option>
+              <option value="reception">Lễ tân</option>
+              <option value="sm">SM (Sale Manager)</option>
+              <option value="pm">PM (PT Manager)</option>
+              <option value="om">OM (Operation Manager)</option>
+            </select>
+          </FormField>
+
+          <FormField id="staff_phone" label="Số điện thoại">
+            <input
+              id="staff_phone"
+              name="phone"
+              type="tel"
+              className={inputClassName}
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+              placeholder="0987654321"
+            />
+          </FormField>
+        </div>
+
+        <FormField id="staff_dob" label="Ngày sinh">
+          <input
+            id="staff_dob"
+            name="dob"
+            type="date"
+            className={inputClassName}
+            value={formData.dob}
+            onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+          />
+        </FormField>
+
+        <FormField id="staff_specialty" label="Chuyên môn / Mô tả">
+          <input
+            id="staff_specialty"
+            name="specialty"
+            type="text"
+            className={inputClassName}
+            value={formData.specialty}
+            onChange={(e) =>
+              setFormData({ ...formData, specialty: e.target.value })
+            }
+            placeholder="Ví dụ: Giảm cân, Tăng cơ, Yoga..."
+          />
+        </FormField>
+      </form>
+    </BaseModal>
   );
 };
+
 export default StaffModal;

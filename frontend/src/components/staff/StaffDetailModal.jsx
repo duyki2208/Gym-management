@@ -109,13 +109,13 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col relative text-gray-800 dark:text-gray-200"
+        className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-xl flex flex-col relative text-gray-800 dark:text-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-2xl font-black uppercase tracking-wide text-blue-600 dark:text-blue-400">
-            Hồ sơ Nhân viên
+          <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+            Hồ sơ nhân viên
           </h2>
           <button
             onClick={onClose}
@@ -128,8 +128,8 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8 flex flex-col md:flex-row gap-8">
           {/* Thông tin cá nhân */}
-          <div className="w-full md:w-1/3 flex flex-col items-center bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-            <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 border-4 border-white dark:border-gray-800 shadow-lg flex items-center justify-center mb-3">
+          <div className="w-full md:w-1/3 flex flex-col items-center bg-background-light dark:bg-background-dark rounded-xl p-6 border border-border-light dark:border-border-dark">
+            <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 border-4 border-white dark:border-gray-800 shadow-sm flex items-center justify-center mb-3">
               <UserCircle2 size={48} className="text-blue-500" />
             </div>
             <h3 className="text-xl font-bold mb-1 text-center">
@@ -157,7 +157,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
 
             <div className="w-full space-y-3">
               <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-gray-100/80 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                <span className="text-xs font-bold text-gray-500 uppercase">
+                <span className="text-xs font-medium text-gray-500">
                   Ngày sinh
                 </span>
                 <span className="font-medium text-lg">
@@ -165,13 +165,13 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
                 </span>
               </div>
               <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-gray-100/80 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                <span className="text-xs font-bold text-gray-500 uppercase">
+                <span className="text-xs font-medium text-gray-500">
                   Số điện thoại
                 </span>
                 <span className="font-medium text-lg">{staff.phone || "N/A"}</span>
               </div>
               <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-gray-100/80 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                <span className="text-xs font-bold text-gray-500 uppercase">
+                <span className="text-xs font-medium text-gray-500">
                   Chuyên môn
                 </span>
                 <span className="font-medium">{staff.specialty || "-"}</span>

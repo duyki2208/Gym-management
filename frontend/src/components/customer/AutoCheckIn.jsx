@@ -165,7 +165,7 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
           Giao Diện Quét
         </h3>
 
-        <div className="relative rounded-2xl overflow-hidden border-4 border-gray-100 dark:border-gray-700 bg-black shadow-inner w-full max-w-sm aspect-[4/3]">
+        <div className="relative rounded-xl overflow-hidden border border-border-light dark:border-border-dark bg-black shadow-inner w-full max-w-sm aspect-[4/3]">
           <video
             ref={videoRef}
             onPlay={handleVideoPlay}
@@ -190,7 +190,7 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
           <p className="text-sm font-bold text-blue-700 uppercase mb-2">Lần nhận diện gần nhất</p>
           {lastMatched ? (
             <div>
-              <p className="text-2xl font-black text-gray-900 dark:text-gray-100">{lastMatched.name}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{lastMatched.name}</p>
               <p className="text-sm text-gray-500 mt-1">Mã: <span className="font-bold">{lastMatched.code}</span></p>
               <p className="text-xs text-green-600 mt-1">
                 Độ chính xác: {(lastMatched.confidence * 100).toFixed(1)}%

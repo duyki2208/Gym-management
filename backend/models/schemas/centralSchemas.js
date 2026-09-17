@@ -40,6 +40,17 @@ const branchSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    // HMAC-SHA256 của mã cơ sở dùng tại màn hình đăng nhập.
+    // Không lưu facility key dạng rõ trong database.
+    loginKeyHash: {
+      type: String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+    loginKeyCiphertext: { type: String, select: false },
+    loginKeyIv: { type: String, select: false },
+    loginKeyAuthTag: { type: String, select: false },
     isActive: {
       type: Boolean,
       default: true,

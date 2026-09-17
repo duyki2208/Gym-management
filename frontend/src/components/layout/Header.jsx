@@ -106,6 +106,85 @@ const ROLE_LABEL = {
   pt: 'PT', sale: 'Sale', reception: 'Lễ tân',
 };
 
+const NOTIFICATION_META = {
+  expiring_customer: {
+    actionLabel: 'Sắp hết hạn',
+    path: '/customers?status=expiring',
+    iconClass: 'bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400',
+    statusClass: 'text-amber-600 dark:text-amber-400',
+  },
+  team_task: {
+    actionLabel: 'Cần thực hiện ngay',
+    path: '/?openTasks=true',
+    iconClass: 'bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400',
+    statusClass: 'text-rose-600 dark:text-rose-400',
+  },
+  kpi_warning: {
+    actionLabel: 'Cần cải thiện KPI',
+    path: '/',
+    iconClass: 'bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400',
+    statusClass: 'text-rose-600 dark:text-rose-400',
+  },
+  commission_ready: {
+    actionLabel: 'Kỳ hoa hồng đã sẵn sàng',
+    path: '/commissions',
+    iconClass: 'bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400',
+    statusClass: 'text-blue-600 dark:text-blue-400',
+  },
+  stock_alert: {
+    actionLabel: 'Cần nhập thêm hàng',
+    path: '/products/inventory',
+    iconClass: 'bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400',
+    statusClass: 'text-amber-600 dark:text-amber-400',
+  },
+  revenue_milestone: {
+    actionLabel: 'Đang tiến gần mục tiêu',
+    path: '/reports/revenue',
+    iconClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400',
+    statusClass: 'text-emerald-600 dark:text-emerald-400',
+  },
+};
+
+const getNotificationMeta = (notification) => {
+  const base = NOTIFICATION_META[notification.type] || {
+    actionLabel: 'Cần kiểm tra',
+    path: '/',
+    iconClass: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+    statusClass: 'text-gray-600 dark:text-gray-400',
+  };
+
+  if (notification.type !== 'expiring_customer') return base;
+
+  const daysLeft = Number(notification.daysLeft);
+  if (!Number.isFinite(daysLeft)) {
+    return { ...base, actionLabel: 'Kiểm tra hạn gói tập' };
+  }
+  if (daysLeft <= 0) {
+    return {
+      ...base,
+      actionLabel: 'Đã hết hạn',
+      iconClass: 'bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400',
+      statusClass: 'text-rose-600 dark:text-rose-400',
+    };
+  }
+  return {
+    ...base,
+    actionLabel: `Còn ${daysLeft} ngày`,
+    iconClass: daysLeft <= 3
+      ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
+      : base.iconClass,
+    statusClass: daysLeft <= 3
+      ? 'text-rose-600 dark:text-rose-400'
+      : base.statusClass,
+  };
+};
+
+const formatNotificationDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('vi-VN');
+};
+
 const GlobalSearch = () => {
   const navigate = useNavigate();
   const [query, setQuery]     = useState('');
@@ -160,7 +239,7 @@ const GlobalSearch = () => {
       {/* Input */}
       <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 ${
         open
-          ? 'border-primary bg-white dark:bg-gray-800 shadow-lg shadow-primary/10'
+          ? 'border-primary bg-white dark:bg-gray-800 shadow-sm'
           : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300'
       }`}>
         <Search size={15} className={`shrink-0 transition-colors ${open ? 'text-primary' : 'text-gray-400'}`} />
@@ -185,7 +264,7 @@ const GlobalSearch = () => {
 
       {/* Dropdown — chỉ hiện khi có query */}
       {open && query.trim() && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
 
           {/* Loading */}
           {loading && (
@@ -211,7 +290,7 @@ const GlobalSearch = () => {
           {/* Customers */}
           {!loading && results.customers.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
+              <p className="px-4 pt-3 pb-1 text-[11px] font-medium text-gray-400">
                 👤 Khách hàng ({results.customers.length})
               </p>
               {results.customers.map(c => (
@@ -237,7 +316,7 @@ const GlobalSearch = () => {
           {/* Staff */}
           {!loading && results.staff.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+              <p className="px-4 pt-3 pb-1 text-[11px] font-medium text-gray-400 border-t border-gray-100 dark:border-gray-800">
                 👥 Nhân viên ({results.staff.length})
               </p>
               {results.staff.map(s => (
@@ -261,7 +340,7 @@ const GlobalSearch = () => {
           {/* Packages */}
           {!loading && results.packages.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+              <p className="px-4 pt-3 pb-1 text-[11px] font-medium text-gray-400 border-t border-gray-100 dark:border-gray-800">
                 🎟️ Gói tập ({results.packages.length})
               </p>
               {results.packages.map(pkg => (
@@ -283,7 +362,7 @@ const GlobalSearch = () => {
           {/* Products */}
           {!loading && results.products.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+              <p className="px-4 pt-3 pb-1 text-[11px] font-medium text-gray-400 border-t border-gray-100 dark:border-gray-800">
                 📦 Sản phẩm ({results.products.length})
               </p>
               {results.products.map(p => (
@@ -305,7 +384,7 @@ const GlobalSearch = () => {
           {/* Leads */}
           {!loading && results.leads.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 border-t border-gray-100 dark:border-gray-800">
+              <p className="px-4 pt-3 pb-1 text-[11px] font-medium text-gray-400 border-t border-gray-100 dark:border-gray-800">
                 📋 Leads ({results.leads.length})
               </p>
               {results.leads.map(lead => (
@@ -378,7 +457,7 @@ const NotificationBell = () => {
       >
         <Bell size={18} />
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-black rounded-full leading-none">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full leading-none">
             {count > 9 ? '9+' : count}
           </span>
         )}
@@ -389,9 +468,9 @@ const NotificationBell = () => {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-2">
               <Bell size={16} className="text-primary" />
-              <span className="font-bold text-sm text-gray-800 dark:text-gray-100">Thông báo</span>
+          <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">Thông báo</span>
               {count > 0 && (
-                <span className="bg-red-100 text-red-600 text-[10px] font-black px-1.5 py-0.5 rounded-full">{count}</span>
+                <span className="bg-red-100 text-red-600 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{count}</span>
               )}
             </div>
             <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -409,35 +488,38 @@ const NotificationBell = () => {
                 <p className="text-sm text-gray-400">Không có thông báo</p>
               </div>
             )}
-            {!loading && notifications.map(n => (
-              <button
-                key={n.id}
-                onClick={() => {
-                  if (n.type === 'team_task') {
-                    navigate('/?openTasks=true');
-                  } else {
-                    navigate('/customers?status=expiring');
-                  }
-                  setOpen(false);
-                }}
-                className="w-full flex items-start gap-3 px-4 py-3 hover:bg-orange-50/60 dark:hover:bg-orange-900/10 text-left transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0"
-              >
-                <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${n.type === 'team_task' ? 'bg-red-100 text-red-500' : n.daysLeft <= 3 ? 'bg-red-100 text-red-500' : 'bg-orange-100 text-orange-500'}`}>
-                  <AlertCircle size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{n.title}</p>
-                  <p className="text-xs text-gray-400 truncate">{n.subtitle}</p>
-                  <p className={`text-xs font-bold mt-0.5 ${n.type === 'team_task' ? 'text-red-500' : n.severity === 'high' ? 'text-red-500' : 'text-orange-500'}`}>
-                    {n.type === 'team_task' ? 'Cần thực hiện ngay' : n.daysLeft <= 0 ? 'Đã hết hạn' : `Còn ${n.daysLeft} ngày`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 text-gray-300 dark:text-gray-600 shrink-0">
-                  <Clock size={12} />
-                  <span className="text-[10px]">{n.type === 'team_task' ? 'Hôm nay' : new Date(n.endDate).toLocaleDateString('vi-VN')}</span>
-                </div>
-              </button>
-            ))}
+            {!loading && notifications.map((n) => {
+              const meta = getNotificationMeta(n);
+              const notificationDate = formatNotificationDate(n.endDate);
+
+              return (
+                <button
+                  key={`${n.type}-${n.id}`}
+                  onClick={() => {
+                    navigate(meta.path);
+                    setOpen(false);
+                  }}
+                  className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60 text-left transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
+                >
+                  <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${meta.iconClass}`}>
+                    <AlertCircle size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-2">{n.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{n.subtitle}</p>
+                    <p className={`text-xs font-semibold mt-1 ${meta.statusClass}`}>
+                      {meta.actionLabel}
+                    </p>
+                  </div>
+                  {(n.type === 'team_task' || notificationDate) && (
+                    <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500 shrink-0">
+                      <Clock size={12} />
+                      <span className="text-[10px]">{n.type === 'team_task' ? 'Hôm nay' : notificationDate}</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {count > 0 && (
@@ -494,7 +576,7 @@ const UserMenu = () => {
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center text-white font-black text-sm select-none shadow-sm">
+        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm select-none shadow-sm">
           {initials}
         </div>
         <div className="hidden lg:block text-left">
@@ -548,7 +630,7 @@ const formatBranchButtonLabel = (rawName) => {
     .replace(/^GymPro\s*[-:]\s*/i, '')
     .replace(/^Trụ sở\s+/i, '')
     .replace(/^Chi nhánh\s+/i, '')
-    .replace(/^Cơ sở\s*[:\-]?\s*/i, '')
+    .replace(/^Cơ sở\s*[:-]?\s*/i, '')
     .trim();
   return `Cơ sở : ${clean}`;
 };
@@ -559,7 +641,7 @@ const cleanBranchName = (rawName) => {
     .replace(/^GymPro\s*[-:]\s*/i, '')
     .replace(/^Trụ sở\s+/i, '')
     .replace(/^Chi nhánh\s+/i, '')
-    .replace(/^Cơ sở\s*[:\-]?\s*/i, '')
+    .replace(/^Cơ sở\s*[:-]?\s*/i, '')
     .trim();
 };
 
@@ -575,19 +657,21 @@ const BranchSelector = () => {
   const currentBranchCode = user?.activeBranch || user?.branchCode || 'HN01';
 
   useEffect(() => {
+    if (!isCentral) {
+      setBranches([]);
+      return;
+    }
+
     const fetchBranches = async () => {
       const list = await authService.getBranches();
       if (list && list.length > 0) {
         setBranches(list);
       } else {
-        setBranches([
-          { code: 'HN01', name: 'Cầu Giấy - Hà Nội', address: 'Số 123 Đường Cầu Giấy, Quận Cầu Giấy, Hà Nội' },
-          { code: 'HCM01', name: 'Quận 1 - Hồ Chí Minh', address: 'Số 456 Đường Nguyễn Thị Minh Khai, Quận 1, TP.HCM' },
-        ]);
+        setBranches([]);
       }
     };
     fetchBranches();
-  }, []);
+  }, [isCentral]);
 
   // Lắng nghe sự kiện cập nhật Cài đặt để đổi tên/địa chỉ button ngay tức thì mà không cần reload
   useEffect(() => {
@@ -616,8 +700,8 @@ const BranchSelector = () => {
 
   const activeBranchObj = branches.find((b) => b.code === currentBranchCode) || {
     code: currentBranchCode,
-    name: currentBranchCode === 'HN01' ? 'Cầu Giấy - Hà Nội' : 'Quận 1 - Hồ Chí Minh',
-    address: currentBranchCode === 'HN01' ? 'Số 123 Đường Cầu Giấy, Quận Cầu Giấy, Hà Nội' : 'Số 456 Đường Nguyễn Thị Minh Khai, Quận 1, TP.HCM',
+    name: user?.branchName || 'Cơ sở hiện tại',
+    address: '',
   };
 
   const handleSelectBranch = async (branchCode) => {
@@ -670,8 +754,8 @@ const BranchSelector = () => {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown">
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <p className="font-bold text-xs text-gray-700 dark:text-gray-200 uppercase tracking-wider">
-              Chọn Chi Nhánh Làm Việc
+            <p className="font-medium text-sm text-gray-700 dark:text-gray-200">
+              Chọn chi nhánh làm việc
             </p>
           </div>
 
@@ -684,12 +768,12 @@ const BranchSelector = () => {
                   onClick={() => handleSelectBranch(b.code)}
                   className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer border-b border-gray-50 dark:border-gray-800/50 last:border-0 ${
                     isSelected
-                      ? 'bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-semibold'
+                      ? 'bg-primary/10 text-gray-900 dark:text-primary font-medium'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                   }`}
                 >
                   <div className="min-w-0 flex-1 pr-2">
-                    <p className="font-bold text-sm text-gray-800 dark:text-gray-100 truncate">
+                    <p className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
                       {cleanBranchName(b.name)}
                     </p>
                     {b.address && (
@@ -698,7 +782,7 @@ const BranchSelector = () => {
                       </p>
                     )}
                   </div>
-                  {isSelected && <Check size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />}
+                  {isSelected && <Check size={18} className="text-emerald-600 dark:text-primary shrink-0" />}
                 </button>
               );
             })}
@@ -749,4 +833,3 @@ const Header = () => {
 };
 
 export default Header;
-

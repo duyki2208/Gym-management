@@ -1,6 +1,14 @@
 import api from "./api";
 
 export const settingsService = {
+  getFacilityKey: async (branchCode) => {
+    const config = branchCode
+      ? { headers: { "x-branch-code": branchCode } }
+      : {};
+    const response = await api.get("/settings/facility-key", config);
+    return response.data;
+  },
+
   get: async (branchCode) => {
     try {
       const config = {};

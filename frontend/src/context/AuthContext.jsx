@@ -16,9 +16,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (facilityKey, username, password) => {
     try {
-      const userData = await authService.login(username, password);
+      const userData = await authService.login(facilityKey, username, password);
       setUser(userData);
       return { success: true };
     } catch (error) {
@@ -38,7 +38,11 @@ export const AuthProvider = ({ children }) => {
   const switchBranch = async (branchCode) => {
     try {
       const result = await authService.switchBranch(branchCode);
-      const updatedUser = { ...user, activeBranch: result.activeBranch };
+      const updatedUser = {
+        ...user,
+        activeBranch: result.activeBranch,
+        branchName: result.branchName || user?.branchName,
+      };
       setUser(updatedUser);
       return { success: true, ...result };
     } catch (error) {

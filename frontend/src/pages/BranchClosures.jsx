@@ -259,44 +259,41 @@ Ban Quản Lý Chi Nhánh`
 
   return (
     <div className={embedded ? "space-y-6" : "space-y-6 max-w-7xl mx-auto p-4 sm:p-6"}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-6 rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <CalendarOff size={22} />
-            </div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              Quản lý Đóng / Mở Chi Nhánh
-            </h1>
-          </div>
-         
+      {/* Page header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
+            <CalendarOff size={24} className="text-primary" /> Quản lý đóng / mở chi nhánh
+          </h1>
+          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
+            Ghi nhận lịch đóng cửa bảo trì, tự động bù hạn cho hội viên và gửi thông báo qua email
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0 flex-wrap">
           <button
             onClick={() => {
               setRefreshing(true);
               fetchClosures();
             }}
             disabled={refreshing}
-            className="h-10 px-3.5 rounded-xl border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm font-medium"
+            className="h-10 px-3.5 rounded-xl bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-800 text-text-light dark:text-text-dark transition-colors flex items-center gap-2 text-sm font-medium border border-border-light dark:border-border-dark cursor-pointer"
           >
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
             Làm mới
           </button>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="h-10 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all shadow-lg shadow-primary/25 flex items-center gap-2"
+            className="h-10 px-4 rounded-xl bg-primary hover:bg-primary/90 text-text-light text-sm font-semibold transition-all shadow-sm flex items-center gap-2 cursor-pointer"
           >
             <Plus size={18} />
-            Tạo sự kiện đóng cửa & Bù hạn
+            Tạo lịch đóng cửa
           </button>
         </div>
       </div>
 
       {/* Danh sách sự kiện đóng cửa */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
         <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
           <h2 className="font-bold text-text-light dark:text-text-dark text-base flex items-center gap-2">
             Lịch sử các đợt đóng cửa tại chi nhánh ({closures.length})
@@ -327,7 +324,7 @@ Ban Quản Lý Chi Nhánh`
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 text-text-muted-light dark:text-text-muted-dark text-xs uppercase tracking-wider font-semibold">
+                <tr className="border-b border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 text-text-muted-light dark:text-text-muted-dark text-xs tracking-wide font-semibold">
                   <th className="py-3.5 px-4">Sự kiện & Lý do</th>
                   <th className="py-3.5 px-4">Thời gian đóng cửa</th>
                   <th className="py-3.5 px-4">Phân loại</th>
@@ -464,7 +461,7 @@ Ban Quản Lý Chi Nhánh`
       {/* ================= MODAL TẠO SỰ KIỆN ĐÓNG CỬA ================= */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl w-full max-w-3xl overflow-hidden shadow-xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -566,7 +563,7 @@ Ban Quản Lý Chi Nhánh`
               {/* CARD TÍNH TOÁN BÙ HẠN DỰ KIẾN (PREVIEW) */}
               <div className="p-4 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark flex items-center gap-1.5">
+                  <span className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark flex items-center gap-1.5">
                     <Info size={14} className="text-primary" /> Dự toán tác động bù hạn tự động
                   </span>
                   {loadingPreview && (
@@ -640,7 +637,7 @@ Ban Quản Lý Chi Nhánh`
                 <button
                   type="submit"
                   disabled={submittingCreate}
-                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all shadow-lg shadow-primary/25 disabled:opacity-50 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
                   {submittingCreate ? (
                     <>
@@ -663,7 +660,7 @@ Ban Quản Lý Chi Nhánh`
       {/* ================= MODAL SOẠN EMAIL THÔNG BÁO (KIỂU GMAIL) ================= */}
       {isMailOpen && selectedClosure && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl w-full max-w-3xl overflow-hidden shadow-xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             {/* Header kiểu Gmail */}
             <div className="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -717,7 +714,7 @@ Ban Quản Lý Chi Nhánh`
 
               {/* Tiêu đề */}
               <div>
-                <label htmlFor="mail_subject" className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                <label htmlFor="mail_subject" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                   Tiêu đề email (Subject) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -732,7 +729,7 @@ Ban Quản Lý Chi Nhánh`
 
               {/* Nội dung */}
               <div>
-                <label htmlFor="mail_body" className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1">
+                <label htmlFor="mail_body" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
                   Nội dung email (Body) <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -748,7 +745,7 @@ Ban Quản Lý Chi Nhánh`
 
               {/* Đính kèm file Word / PDF */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark mb-1.5">
+                <label className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1.5">
                   Đính kèm file văn bản / thông báo chi nhánh (Word, PDF, ảnh)
                 </label>
                 <div className="flex items-center gap-3">
@@ -796,7 +793,7 @@ Ban Quản Lý Chi Nhánh`
                 <button
                   type="submit"
                   disabled={sendingMail}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
                   {sendingMail ? (
                     <>
@@ -819,7 +816,7 @@ Ban Quản Lý Chi Nhánh`
       {/* ================= MODAL CHI TIẾT SỰ KIỆN & GÓI TẬP ================= */}
       {isDetailOpen && selectedClosure && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl w-full max-w-4xl overflow-hidden shadow-xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -931,7 +928,7 @@ Ban Quản Lý Chi Nhánh`
       {/* ================= MODAL XÁC NHẬN HOÀN TÁC (REVERSE) ================= */}
       {isReverseOpen && selectedClosure && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl w-full max-w-md overflow-hidden shadow-xl p-6 space-y-4">
             <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
               <AlertTriangle size={26} />
             </div>
@@ -959,7 +956,7 @@ Ban Quản Lý Chi Nhánh`
                 type="button"
                 onClick={handleConfirmReverse}
                 disabled={submittingReverse}
-                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all shadow-lg shadow-red-600/25 disabled:opacity-50 flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
               >
                 {submittingReverse ? (
                   <>

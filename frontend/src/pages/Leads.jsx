@@ -17,6 +17,7 @@ import {
   TrendingUp,
   MessageSquare,
 } from "lucide-react";
+import { getIconColor } from "../utils/iconTone";
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -205,14 +206,14 @@ const Leads = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 font-display p-6 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 font-display max-w-7xl mx-auto">
       {/* Header Summary */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-xl text-white shadow-lg shadow-indigo-600/20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div>
-          <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
-            <Users size={28} /> Quản Lý Khách Hàng Tiềm Năng
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2 text-text-light dark:text-text-dark">
+            <Users size={24} className={getIconColor(Users)} /> Quản lý khách hàng tiềm năng
           </h2>
-          <p className="text-blue-100/90 text-sm mt-1">
+          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
             Theo dõi, chăm sóc khách hàng và chuyển đổi thành hội viên chính thức
           </p>
         </div>
@@ -221,9 +222,9 @@ const Leads = () => {
             setFormData({ name: "", phone: "", email: "", source: "facebook", assignedSale: "", note: "" });
             setShowAddModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-text-light rounded-xl font-bold hover:bg-primary/90 shadow-md transition-all shrink-0 cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-text-light rounded-xl font-semibold hover:bg-primary/90 shadow-sm transition-all shrink-0 cursor-pointer"
         >
-          <Plus size={18} /> Thêm Lead Mới
+          <Plus size={18} /> Thêm khách tiềm năng
         </button>
       </div>
 
@@ -275,7 +276,7 @@ const Leads = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark text-xs font-bold text-text-light dark:text-text-dark uppercase tracking-wider">
+                <tr className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
                   <th className="px-6 py-4">Tên & Thông tin liên hệ</th>
                   <th className="px-6 py-4">Nguồn khách</th>
                   <th className="px-6 py-4">Trạng thái</th>
@@ -367,13 +368,13 @@ const Leads = () => {
       {/* Add Lead Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
-          <form onSubmit={handleCreateLead} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-md w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white">
-              <h3 className="font-bold text-lg">Thêm khách hàng tiềm năng</h3>
+          <form onSubmit={handleCreateLead} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-surface-light dark:bg-surface-dark px-6 py-4 border-b border-border-light dark:border-border-dark shrink-0">
+              <h3 className="font-semibold text-lg text-text-light dark:text-text-dark">Thêm khách hàng tiềm năng</h3>
             </div>
-            <div className="p-6 flex flex-col gap-4">
+            <div className="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Tên khách hàng *</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tên khách hàng *</label>
                 <input
                   type="text"
                   required
@@ -383,7 +384,7 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Số điện thoại *</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Số điện thoại *</label>
                 <input
                   type="tel"
                   required
@@ -393,7 +394,7 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Email</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Email</label>
                 <input
                   type="email"
                   className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
@@ -401,9 +402,9 @@ const Leads = () => {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nguồn khách</label>
+                  <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Nguồn khách</label>
                   <select
                     className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.source}
@@ -417,7 +418,7 @@ const Leads = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nhân viên phụ trách</label>
+                  <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Nhân viên phụ trách</label>
                   <select
                     className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.assignedSale}
@@ -433,7 +434,7 @@ const Leads = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Ghi chú chăm sóc đầu tiên</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Ghi chú chăm sóc đầu tiên</label>
                 <textarea
                   rows={3}
                   placeholder="Ví dụ: Quan tâm gói tập 3 tháng, muốn tập thử..."
@@ -443,17 +444,17 @@ const Leads = () => {
                 />
               </div>
             </div>
-            <div className="px-6 py-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+            <div className="px-6 py-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark rounded-lg font-bold hover:bg-border-light dark:hover:bg-border-dark text-sm cursor-pointer"
+                className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark rounded-lg font-medium hover:bg-border-light dark:hover:bg-border-dark text-sm cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary text-text-light rounded-lg font-bold hover:bg-primary/90 text-sm shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 bg-primary text-text-light rounded-lg font-semibold hover:bg-primary/90 text-sm shadow-sm transition-all cursor-pointer"
               >
                 Lưu lại
               </button>
@@ -465,13 +466,13 @@ const Leads = () => {
       {/* Edit Lead Modal */}
       {showEditModal && selectedLead && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
-          <form onSubmit={handleUpdateLead} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-md w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white">
-              <h3 className="font-bold text-lg">Cập nhật khách hàng tiềm năng</h3>
+          <form onSubmit={handleUpdateLead} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-surface-light dark:bg-surface-dark px-6 py-4 border-b border-border-light dark:border-border-dark shrink-0">
+              <h3 className="font-semibold text-lg text-text-light dark:text-text-dark">Cập nhật khách hàng tiềm năng</h3>
             </div>
-            <div className="p-6 flex flex-col gap-4">
+            <div className="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Tên khách hàng *</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tên khách hàng *</label>
                 <input
                   type="text"
                   required
@@ -481,7 +482,7 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Số điện thoại *</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Số điện thoại *</label>
                 <input
                   type="tel"
                   required
@@ -491,7 +492,7 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Email</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Email</label>
                 <input
                   type="email"
                   className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
@@ -499,9 +500,9 @@ const Leads = () => {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nguồn khách</label>
+                  <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Nguồn khách</label>
                   <select
                     className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.source}
@@ -515,7 +516,7 @@ const Leads = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Trạng thái</label>
+                  <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Trạng thái</label>
                   <select
                     className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                     value={formData.status}
@@ -530,7 +531,7 @@ const Leads = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-1">Nhân viên phụ trách</label>
+                <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Nhân viên phụ trách</label>
                 <select
                   className="w-full p-2.5 border border-border-light dark:border-border-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   value={formData.assignedSale}
@@ -545,17 +546,17 @@ const Leads = () => {
                 </select>
               </div>
             </div>
-            <div className="px-6 py-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+            <div className="px-6 py-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark rounded-lg font-bold hover:bg-border-light dark:hover:bg-border-dark text-sm cursor-pointer"
+                className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark rounded-lg font-medium hover:bg-border-light dark:hover:bg-border-dark text-sm cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary text-text-light rounded-lg font-bold hover:bg-primary/90 text-sm shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 bg-primary text-text-light rounded-lg font-semibold hover:bg-primary/90 text-sm shadow-sm transition-all cursor-pointer"
               >
                 Cập nhật
               </button>
@@ -568,10 +569,10 @@ const Leads = () => {
       {showDetailsModal && selectedLead && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white flex justify-between items-center shrink-0">
+            <div className="bg-surface-light dark:bg-surface-dark px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-bold text-lg">{selectedLead.name}</h3>
-                <p className="text-xs text-blue-100">{selectedLead.phone}</p>
+                <h3 className="font-semibold text-lg text-text-light dark:text-text-dark">{selectedLead.name}</h3>
+                <p className="text-xs text-subtle-light dark:text-subtle-dark">{selectedLead.phone}</p>
               </div>
               {getStatusBadge(selectedLead.status)}
             </div>
@@ -601,7 +602,7 @@ const Leads = () => {
 
             {/* Add New Note */}
             <form onSubmit={handleAddNote} className="p-6 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark shrink-0">
-              <label className="block text-xs font-bold text-subtle-light dark:text-subtle-dark uppercase mb-2">Thêm ghi chú chăm sóc mới</label>
+              <label className="block text-xs font-medium text-subtle-light dark:text-subtle-dark mb-2">Thêm ghi chú chăm sóc mới</label>
               <div className="flex gap-2">
                 <input
                   type="text"

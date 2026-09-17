@@ -207,7 +207,7 @@ const ImportGoods = () => {
 
             <div className="bg-primary/10 p-4 rounded-xl border border-primary/20 flex justify-between items-center mt-auto">
                <span className="font-bold text-text-light dark:text-text-dark text-lg">Tổng cộng:</span>
-               <span className="text-3xl font-black text-primary">{calculateTotal().toLocaleString()} <span className="text-lg opacity-70">VNĐ</span></span>
+               <span className="text-3xl font-bold text-primary">{calculateTotal().toLocaleString()} <span className="text-lg opacity-70">VNĐ</span></span>
             </div>
          </div>
       </div>

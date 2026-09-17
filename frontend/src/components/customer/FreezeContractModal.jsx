@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Snowflake, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import BaseModal from '../common/BaseModal';
+import FormField, { inputClassName } from '../common/FormField';
+import Button from '../common/Button';
 
 const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) => {
   const [startDate, setStartDate] = useState('');
@@ -67,35 +70,30 @@ const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =>
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
-              <Snowflake size={22} />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">Bảo Lưu Hợp Đồng</h3>
-              <p className="text-xs text-gray-500 font-medium">HĐ: {customerPackage.contractCode || 'N/A'} - {customerPackage.packageName}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold px-2"
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Bảo Lưu Hợp Đồng"
+      subtitle={`HĐ: ${customerPackage.contractCode || 'N/A'} - ${customerPackage.packageName}`}
+      icon={<Snowflake size={22} />}
+      maxWidth="max-w-lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Hủy bỏ
+          </Button>
+          <Button
+            type="submit"
+            form="freezeContractForm"
+            variant="primary"
+            disabled={submitting}
           >
-            ✕
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 flex-1 overflow-y-auto">
+            {submitting ? 'Đang xử lý...' : 'Xác Nhận Bảo Lưu'}
+          </Button>
+        </>
+      }
+    >
+      <form id="freezeContractForm" onSubmit={handleSubmit} className="space-y-4">
           {/* Reason Category selection */}
           <div>
             <label className="block text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-2">
@@ -213,26 +211,8 @@ const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =>
 
           
 
-          {/* Submit buttons */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-xl shadow-sm transition-all"
-            >
-              {submitting ? 'Đang xử lý...' : 'Xác Nhận Bảo Lưu'}
-            </button>
-          </div>
         </form>
-      </div>
-    </div>
+    </BaseModal>
   );
 };
 

@@ -6,6 +6,7 @@
     "test": "jest --runInBand --detectOpenHandles --forceExit",
     "start": "node server.js",
     "migrate:multibranch": "node scripts/migrate-to-multibranch.js",
+    "facility-key:set": "node scripts/set-facility-login-key.js",
     "seed:hcm": "node scripts/seed-demo-branch.js"
   },
   "jest": {

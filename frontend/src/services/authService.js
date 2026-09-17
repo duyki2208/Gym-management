@@ -3,9 +3,9 @@ import { LOCAL_STORAGE_KEYS } from '../utils/constants';
 
 export const authService = {
   // Hàm đăng nhập
-  login: async (username, password) => {
+  login: async (facilityKey, username, password) => {
     try {
-      const response = await api.post('/auth/login', { username, password });
+      const response = await api.post('/auth/login', { facilityKey, username, password });
       const data = response.data;
 
       // Lưu thông tin vào localStorage (bao gồm cả role)
@@ -81,6 +81,7 @@ export const authService = {
       const currentUser = authService.getCurrentUser();
       if (currentUser) {
         currentUser.activeBranch = data.activeBranch;
+        currentUser.branchName = data.branchName || currentUser.branchName;
         localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(currentUser));
       }
       return data;

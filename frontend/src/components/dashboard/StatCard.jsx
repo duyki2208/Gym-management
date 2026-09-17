@@ -3,7 +3,7 @@ import React from "react";
 const StatCard = ({ label, value, change, type, icon: Icon, colorClass, onClick }) => (
   <div 
     onClick={onClick}
-    className={`flex flex-col rounded-2xl p-6 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer min-w-0 w-full ${colorClass || 'border-border-light dark:border-border-dark'}`}
+    className={`flex flex-col rounded-xl p-5 border bg-surface-light dark:bg-surface-dark relative overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-pointer min-w-0 w-full ${colorClass || 'border-border-light dark:border-border-dark'}`}
   >
     <div className="flex items-center justify-between mb-4">
       <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark line-clamp-1">{label}</span>

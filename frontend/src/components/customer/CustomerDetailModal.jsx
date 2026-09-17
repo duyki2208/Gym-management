@@ -391,7 +391,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-6xl h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row relative"
+        className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-6xl h-[90vh] overflow-hidden shadow-xl flex flex-col md:flex-row relative"
         onClick={(e) => e.stopPropagation()}
       >
          
@@ -405,7 +405,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
         {/* LEFT PANEL: Identity (Static) */}
         <div className="w-full md:w-[350px] bg-gray-50/70 dark:bg-gray-900/60 p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
-            <div className="w-64 h-64 aspect-square rounded-3xl overflow-hidden shadow-xl border-4 border-white dark:border-gray-800 mb-6 bg-white dark:bg-gray-800 flex-shrink-0">
+            <div className="w-64 h-64 aspect-square rounded-xl overflow-hidden shadow-sm border border-border-light dark:border-border-dark mb-6 bg-white dark:bg-gray-800 flex-shrink-0">
                 {customer.avatarUrl ? (
                    <img 
                      src={customer.avatarUrl} 
@@ -428,7 +428,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
             <button
                onClick={() => setShowFaceModal(true)}
                disabled={isSavingFace}
-               className="mb-4 px-4 py-2 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2"
+               className="mb-4 px-4 py-2 bg-blue-50 text-blue-700 font-semibold border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2"
             >
                <ScanFace size={20} />
                {isSavingFace ? "Đang lưu..." : (customer.faceEmbedding && customer.faceEmbedding.length > 0 ? "Chụp lại nhận diện" : "Chụp nhận diện")}
@@ -440,7 +440,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
              <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 mb-5">
                 {customer.code || "NO CODE"}
              </span>
-             <div className={`py-2 px-5 rounded-full text-xs font-extrabold border flex items-center gap-2 font-display ${getStatusColor(customer.endDate, customer.status)}`}>
+             <div className={`py-2 px-5 rounded-full text-xs font-semibold border flex items-center gap-2 font-display ${getStatusColor(customer.endDate, customer.status)}`}>
                  <span className={`w-2 h-2 rounded-full ${
                      customer.status === "transferred" || getStatusText(customer.endDate, customer.status) === "Đã chuyển nhượng" ? "bg-slate-500" :
                      customer.status === "frozen" ? "bg-purple-500" :
@@ -452,12 +452,12 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
             </div>
             
              <div className="mt-6 w-full space-y-3.5">
-                 <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                     <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Ngày tạo</span>
+                 <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                     <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Ngày tạo</span>
                      <span className="font-medium text-base text-gray-800 dark:text-gray-200">{customer.createdAt ? format(new Date(customer.createdAt), "dd/MM/yyyy") : format(new Date(), "dd/MM/yyyy")}</span>
                  </div>
-                 <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                     <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Còn lại</span>
+                 <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                     <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Còn lại</span>
                      <span className="font-medium text-base text-gray-800 dark:text-gray-200">
                        {customer.status === "transferred" || getStatusText(customer.endDate, customer.status) === "Đã chuyển nhượng"
                          ? "0 ngày"
@@ -536,7 +536,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                      <div className="space-y-8 animate-fade-in-up">
                          {/* 1. Basic Info */}
                          <section>
-                             <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
+                             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                  1. Thông tin khách hàng
                              </h3>
                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
@@ -555,7 +555,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
                          {/* 2. Package Info */}
                          <section>
-                             <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
+                             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                  2. Thông tin gói tập  
                              </h3>
                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
@@ -612,7 +612,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
 
                          {/* 3. Notes & Services */}
                          <section>
-                             <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
+                             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                  3. Ghi chú & Dịch vụ thêm
                              </h3>
                              <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
@@ -694,7 +694,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
                  {activeTab === 'workout' && (
                      <div className="animate-fade-in-up flex flex-col gap-6 h-full">
                         {/* Summary & Action Area */}
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 bg-blue-50/50 border border-blue-100 rounded-2xl gap-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900">Tiến độ Gói tập 1:1</h3>
                                 <p className="text-sm text-gray-500 mt-1">
@@ -1005,7 +1005,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
          {/* FREEZE MODAL */}
          {freezeModalOpen && (
              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-                 <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                 <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md p-6 shadow-xl relative">
                      <button
                          onClick={() => setFreezeModalOpen(false)}
                          className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors"
@@ -1079,7 +1079,7 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
          {/* UNFREEZE MODAL */}
          {unfreezeModalOpen && (
              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-                 <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                 <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md p-6 shadow-xl relative">
                      <button
                          onClick={() => setUnfreezeModalOpen(false)}
                          className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors"

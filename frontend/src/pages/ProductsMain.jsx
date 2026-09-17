@@ -6,9 +6,9 @@ import ImportGoods from './ImportGoods';
 import { Store, ShoppingCart, Download, PackageSearch } from 'lucide-react';
 
 const titleMap = {
-  pos: { label: 'Bán Hàng', icon: ShoppingCart },
-  inventory: { label: 'Quản Lý Tồn Kho', icon: PackageSearch },
-  import: { label: 'Lập Phiếu Nhập Hàng', icon: Download },
+  pos: { label: 'Bán hàng', icon: ShoppingCart },
+  inventory: { label: 'Quản lý tồn kho', icon: PackageSearch },
+  import: { label: 'Lập phiếu nhập hàng', icon: Download },
 };
 
 const ProductsMain = () => {
@@ -19,20 +19,22 @@ const ProductsMain = () => {
   const activeTab = ['pos', 'inventory', 'import'].includes(subPath) ? subPath : 'pos';
 
   const CurrentIcon = titleMap[activeTab]?.icon || Store;
-  const currentLabel = titleMap[activeTab]?.label || 'Cửa Hàng';
+  const currentLabel = titleMap[activeTab]?.label || 'Cửa hàng';
 
   return (
     <div className="flex flex-col h-full rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
-      {/* Header trang cửa hàng - Không còn tab thừa ở giữa */}
-      <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-between z-10 w-full px-6 py-4">
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark tracking-tight flex items-center gap-3">
-          <CurrentIcon className="text-primary w-7 h-7" />
-          {currentLabel}
-        </h1>
-      </div>
+      {/* Trang tồn kho đã có header riêng trong ProductList */}
+      {activeTab !== 'inventory' && (
+        <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-between z-10 w-full px-6 py-4">
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark tracking-tight flex items-center gap-3">
+            <CurrentIcon className="text-primary w-7 h-7" />
+            {currentLabel}
+          </h1>
+        </div>
+      )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-6">
+      <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-3 sm:p-5 lg:p-6">
         {activeTab === 'pos' && <SalesOrderList />}
         {activeTab === 'inventory' && <ProductList />}
         {activeTab === 'import' && <ImportGoods onFinish={() => {}} />}

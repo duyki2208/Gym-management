@@ -7,15 +7,20 @@ import {
   PlusCircle,
   Check,
   User,
+  Users,
   Pencil,
   Trash2,
   SearchX,
+  SlidersHorizontal,
+  X,
+  Filter,
 } from "lucide-react";
 import { customerService, packageService, staffService } from "../services/customerService";
 import CustomerModal from "../components/customer/CustomerModal"; // Existing Edit/Add Modal
 import CustomerDetailModal from "../components/customer/CustomerDetailModal"; // New Detail Modal
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
+import { getIconColor } from "../utils/iconTone";
 
 const getCustomerStatus = (startDate, endDate, status) => {
   if (status === "frozen") return { status: "frozen", label: "Bảo lưu" };
@@ -72,6 +77,33 @@ const CustomerList = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+
+  const advancedFilterCount = [
+    filterPayment !== "all",
+    filterContract !== "all",
+    filterAssignedStaff !== "all",
+    Boolean(filterStartDateFrom || filterStartDateTo || filterEndDateFrom || filterEndDateTo),
+  ].filter(Boolean).length;
+
+  const hasAnyFilter =
+    searchTerm !== "" ||
+    filterStatus !== "all" ||
+    filterPackage !== "all" ||
+    advancedFilterCount > 0;
+
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("all");
+    setFilterPackage("all");
+    setFilterPayment("all");
+    setFilterContract("all");
+    setFilterAssignedStaff("all");
+    setFilterStartDateFrom("");
+    setFilterStartDateTo("");
+    setFilterEndDateFrom("");
+    setFilterEndDateTo("");
+  };
 
   // Auto-open modal if 'id' param is present
   useEffect(() => {
@@ -272,337 +304,309 @@ const CustomerList = () => {
   return (
     <div className="flex flex-col gap-6 font-display">
 
-      {/* ── Card bao quanh: Search + Add + Filter ── */}
-      <div className="flex flex-col gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      {/* ── Khối 1: Tiêu đề trang và thao tác chính ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
+            <Users size={26} className={getIconColor(Users)} /> Quản lý hội viên & hợp đồng
+          </h2>
+          <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal mt-1">
+            Theo dõi hồ sơ hội viên, thời hạn gói tập, tiến độ thanh toán và lịch sử giao dịch
+          </p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <button
+            onClick={() => handleExportExcel()}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 h-10 px-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark rounded-xl text-sm font-semibold transition-all hover:border-primary disabled:opacity-50 cursor-pointer"
+          >
+            <Download size={16} />
+            {isExporting ? "Đang xuất..." : "Xuất Excel"}
+          </button>
+          {isAdmin && (
+            <button
+              onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
+              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-sm font-semibold hover:bg-primary-hover shadow-sm transition-all cursor-pointer"
+            >
+              <Plus size={18} />
+              Thêm Hội Viên Mới
+            </button>
+          )}
+        </div>
+      </div>
 
-        {/* Row 1: Search + Quick Actions + Add */}
+      {/* ── Khối 2: Filter Bar Cải Tiến (Phân cấp Primary & Secondary) ── */}
+      <div className="flex flex-col gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        {/* Hàng 1: Primary Filters + Ô tìm kiếm + Nút Nâng cao */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[240px] max-w-md">
-            <Search size={18} className="absolute left-3 top-2.5 text-gray-500" />
+          {/* Ô tìm kiếm nổi bật */}
+          <div className="relative flex-1 min-w-[260px]">
+            <Search size={18} className="absolute left-3.5 top-3 text-gray-400" />
             <input
               id="customerListSearchInput"
               name="customerListSearch"
               type="text"
               aria-label="Tìm kiếm hội viên theo tên hoặc số điện thoại"
-              className="w-full pl-10 pr-4 h-10 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white dark:bg-gray-800 dark:text-gray-100 transition-colors"
-              placeholder="Tìm tên, SĐT..."
+              className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-gray-400 transition-colors"
+              placeholder="Tìm theo tên, SĐT, mã hội viên..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex-1" />
+          {/* Primary Dropdown 1: Trạng thái */}
+          <div className="w-44">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className={`w-full h-10 px-3 text-sm font-medium rounded-xl border transition-all cursor-pointer ${
+                filterStatus !== "all"
+                  ? "border-primary bg-primary/10 text-text-light dark:text-primary font-semibold"
+                  : "border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              <option value="all">Trạng thái: Tất cả</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="not_activated">Chưa kích hoạt</option>
+              <option value="expiring">Sắp hết hạn</option>
+              <option value="expired">Hết hạn</option>
+              <option value="frozen">Bảo lưu</option>
+            </select>
+          </div>
 
-          {/* Export Excel Button */}
+          {/* Primary Dropdown 2: Gói tập */}
+          <div className="w-44">
+            <select
+              value={filterPackage}
+              onChange={(e) => setFilterPackage(e.target.value)}
+              className={`w-full h-10 px-3 text-sm font-medium rounded-xl border transition-all cursor-pointer ${
+                filterPackage !== "all"
+                  ? "border-primary bg-primary/10 text-text-light dark:text-primary font-semibold"
+                  : "border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              <option value="all">Gói tập: Tất cả</option>
+              {packages.map((pkg) => (
+                <option key={pkg._id || pkg.name} value={pkg.name}>
+                  {pkg.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Nút toggle Bộ lọc nâng cao */}
           <button
-            onClick={() => handleExportExcel()}
-            disabled={isExporting}
-            className="flex items-center gap-1.5 h-10 px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shrink-0 shadow-sm disabled:opacity-50"
+            type="button"
+            onClick={() => setShowAdvancedFilter((prev) => !prev)}
+            className={`flex items-center gap-2 h-10 px-3.5 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
+              showAdvancedFilter || advancedFilterCount > 0
+                ? "border-primary bg-primary/10 text-text-light dark:text-primary shadow-sm"
+                : "border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+            }`}
           >
-            <Download size={16} />
-            {isExporting ? "Đang xuất..." : "Xuất Excel"}
+            <SlidersHorizontal size={16} />
+            <span>Bộ lọc nâng cao</span>
+            {advancedFilterCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-primary text-text-light dark:text-background-dark text-[11px] font-semibold flex items-center justify-center">
+                {advancedFilterCount}
+              </span>
+            )}
           </button>
-
-          {/* Nút Thêm Khách */}
-          {isAdmin && (
-            <button
-              onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
-              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 shrink-0 shadow-sm transition-all"
-            >
-              <Plus size={18} />
-              Thêm Khách
-            </button>
-          )}
         </div>
 
-        {/* Row 2: Bộ lọc Trạng thái (không icon) */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusDropdown(prev => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                filterStatus !== 'all'
-                  ? 'bg-green-100 text-green-800 border-green-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
-              }`}
-            >
-              Trạng thái
-              {filterStatus !== 'all' && (
-                <span className="ml-1 bg-green-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  {[{value:'active',label:'Đang tập'},{value:'not_activated',label:'Chưa KH'},{value:'expiring',label:'Sắp hết hạn'},{value:'expired',label:'Hết hạn'},{value:'frozen',label:'Bảo lưu'}].find(t=>t.value===filterStatus)?.label}
-                </span>
-              )}
-            </button>
- 
-            {showStatusDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-                {[
-                  { value: 'all',           label: 'Tất cả'          },
-                  { value: 'active',        label: 'Đang hoạt động'  },
-                  { value: 'not_activated', label: 'Chưa kích hoạt'  },
-                  { value: 'expiring',      label: 'Sắp hết hạn'     },
-                  { value: 'expired',       label: 'Hết hạn'          },
-                  { value: 'frozen',        label: 'Bảo lưu'         },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setFilterStatus(opt.value); setShowStatusDropdown(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-                      filterStatus === opt.value ? 'font-bold text-green-800 bg-green-50' : 'text-gray-600'
-                    }`}
-                  >
-                    {opt.label}
-                    {filterStatus === opt.value && (
-                      <Check size={16} className="text-green-600 ml-auto" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowPaymentDropdown(prev => !prev);
-                setShowStatusDropdown(false); setShowContractDropdown(false); setShowPackageDropdown(false);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                filterPayment !== 'all'
-                  ? 'bg-blue-100 text-blue-800 border-blue-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
-              }`}
-            >
-              Thanh toán
-              {filterPayment !== 'all' && (
-                <span className="ml-1 bg-blue-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  {[{value:'paid',label:'Đã thanh toán'},{value:'deposit',label:'Đặt cọc'},{value:'unpaid',label:'Chưa thanh toán'}].find(t=>t.value===filterPayment)?.label}
-                </span>
-              )}
-            </button>
+        {/* Panel Secondary Filters (mở ra khi click Bộ lọc nâng cao) */}
+        {showAdvancedFilter && (
+          <div className="p-4 bg-background-light dark:bg-background-dark/50 rounded-xl border border-border-light dark:border-border-dark grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in duration-150">
+            <div>
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Thanh toán
+              </label>
+              <select
+                value={filterPayment}
+                onChange={(e) => setFilterPayment(e.target.value)}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark font-medium"
+              >
+                <option value="all">Tất cả hình thức</option>
+                <option value="paid">Đã thanh toán đủ</option>
+                <option value="deposit">Đặt cọc</option>
+              </select>
+            </div>
 
-            {showPaymentDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-                {[
-                  { value: 'all',     label: 'Tất cả'          },
-                  { value: 'paid',    label: 'Đã thanh toán'  },
-                  { value: 'deposit', label: 'Đặt cọc'  },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setFilterPayment(opt.value); setShowPaymentDropdown(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-                      filterPayment === opt.value ? 'font-bold text-blue-800 bg-blue-50' : 'text-gray-600'
-                    }`}
-                  >
-                    {opt.label}
-                    {filterPayment === opt.value && (
-                      <Check size={16} className="text-blue-600 ml-auto" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+            <div>
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Nguồn hợp đồng
+              </label>
+              <select
+                value={filterContract}
+                onChange={(e) => setFilterContract(e.target.value)}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark font-medium"
+              >
+                <option value="all">Tất cả nguồn</option>
+                <option value="new">Khách mới</option>
+                <option value="renew">Gia hạn</option>
+                <option value="upgrade">Nâng cấp</option>
+              </select>
+            </div>
 
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowContractDropdown(prev => !prev);
-                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowPackageDropdown(false);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                filterContract !== 'all'
-                  ? 'bg-purple-100 text-purple-800 border-purple-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
-              }`}
-            >
-              Nguồn khách
-              {filterContract !== 'all' && (
-                <span className="ml-1 bg-purple-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  {[{value:'new',label:'Mới'},{value:'renew',label:'Gia hạn'},{value:'upgrade',label:'Nâng cấp'}].find(t=>t.value===filterContract)?.label}
-                </span>
-              )}
-            </button>
-
-            {showContractDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-                {[
-                  { value: 'all',     label: 'Tất cả'          },
-                  { value: 'new',     label: 'Khách mới'  },
-                  { value: 'renew',   label: 'Gia hạn'  },
-                  { value: 'upgrade', label: 'Nâng cấp'     },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setFilterContract(opt.value); setShowContractDropdown(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-                      filterContract === opt.value ? 'font-bold text-purple-800 bg-purple-50' : 'text-gray-600'
-                    }`}
-                  >
-                    {opt.label}
-                    {filterContract === opt.value && (
-                      <Check size={16} className="text-purple-600 ml-auto" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowPackageDropdown(prev => !prev);
-                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowContractDropdown(false);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                filterPackage !== 'all'
-                  ? 'bg-orange-100 text-orange-800 border-orange-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
-              }`}
-            >
-              Gói tập
-              {filterPackage !== 'all' && (
-                <span className="ml-1 bg-orange-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  {filterPackage}
-                </span>
-              )}
-            </button>
-
-            {showPackageDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px] max-h-[300px] overflow-y-auto">
-                <button
-                  onClick={() => { setFilterPackage('all'); setShowPackageDropdown(false); }}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterPackage === 'all' ? 'font-bold text-orange-800 bg-orange-50' : 'text-gray-600'}`}
-                >
-                  Tất cả
-                  {filterPackage === 'all' && (
-                    <Check size={16} className="text-orange-600 ml-auto" />
-                  )}
-                </button>
-                {packages.map(pkg => (
-                  <button
-                    key={pkg._id || pkg.name}
-                    onClick={() => { setFilterPackage(pkg.name); setShowPackageDropdown(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterPackage === pkg.name ? 'font-bold text-orange-800 bg-orange-50' : 'text-gray-600'}`}
-                  >
-                    {pkg.name}
-                    {filterPackage === pkg.name && (
-                      <Check size={16} className="text-orange-600 ml-auto" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* STAFF FILTER */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowStaffDropdown(prev => !prev);
-                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowContractDropdown(false); setShowPackageDropdown(false); setShowDateDropdown(false);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                filterAssignedStaff !== 'all'
-                  ? 'bg-teal-100 text-teal-800 border-teal-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
-              }`}
-            >
-              Nhân viên
-              {filterAssignedStaff !== 'all' && (
-                <span className="ml-1 bg-teal-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  {staffList.find(s=>s._id===filterAssignedStaff || s.id===filterAssignedStaff)?.name || staffList.find(s=>s._id===filterAssignedStaff || s.id===filterAssignedStaff)?.fullName || "Đã lọc"}
-                </span>
-              )}
-            </button>
-
-            {showStaffDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px] max-h-[300px] overflow-y-auto">
-                <button
-                  onClick={() => { setFilterAssignedStaff('all'); setShowStaffDropdown(false); }}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterAssignedStaff === 'all' ? 'font-bold text-teal-800 bg-teal-50' : 'text-gray-600'}`}
-                >
-                  Tất cả
-                  {filterAssignedStaff === 'all' && (
-                    <Check size={16} className="text-teal-600 ml-auto" />
-                  )}
-                </button>
-                {staffList.map(staff => (
-                  <button
-                    key={staff._id || staff.id}
-                    onClick={() => { setFilterAssignedStaff(staff._id || staff.id); setShowStaffDropdown(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${filterAssignedStaff === (staff._id || staff.id) ? 'font-bold text-teal-800 bg-teal-50' : 'text-gray-600'}`}
-                  >
+            <div>
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Nhân viên tư vấn
+              </label>
+              <select
+                value={filterAssignedStaff}
+                onChange={(e) => setFilterAssignedStaff(e.target.value)}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark font-medium"
+              >
+                <option value="all">Tất cả nhân viên</option>
+                {staffList.map((staff) => (
+                  <option key={staff._id || staff.id} value={staff._id || staff.id}>
                     {staff.name || staff.fullName} ({staff.role})
-                    {filterAssignedStaff === (staff._id || staff.id) && (
-                      <Check size={16} className="text-teal-600 ml-auto" />
-                    )}
-                  </button>
+                  </option>
                 ))}
-              </div>
-            )}
-          </div>
+              </select>
+            </div>
 
-          {/* DATE RANGE FILTER */}
-          <div className="relative">
+            <div>
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Ngày bắt đầu
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={filterStartDateFrom}
+                  onChange={(e) => setFilterStartDateFrom(e.target.value)}
+                  className="w-full h-9 px-2 text-xs rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark"
+                  title="Từ ngày"
+                />
+                <span className="text-gray-400 text-xs">-</span>
+                <input
+                  type="date"
+                  value={filterStartDateTo}
+                  onChange={(e) => setFilterStartDateTo(e.target.value)}
+                  className="w-full h-9 px-2 text-xs rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark"
+                  title="Đến ngày"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Hàng 2: Dải Active Filter Tags */}
+        {hasAnyFilter && (
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border-light dark:border-border-dark">
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <Filter size={13} /> Đang lọc theo:
+            </span>
+
+            {searchTerm && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-primary/15 text-text-light dark:text-primary">
+                Tìm: "{searchTerm}"
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
+            {filterStatus !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                Trạng thái: {
+                  {
+                    active: "Đang hoạt động",
+                    not_activated: "Chưa kích hoạt",
+                    expiring: "Sắp hết hạn",
+                    expired: "Hết hạn",
+                    frozen: "Bảo lưu",
+                  }[filterStatus] || filterStatus
+                }
+                <button
+                  onClick={() => setFilterStatus("all")}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
+            {filterPackage !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                Gói: {filterPackage}
+                <button
+                  onClick={() => setFilterPackage("all")}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
+            {filterPayment !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300">
+                Thanh toán: {filterPayment === "paid" ? "Đã thanh toán" : "Đặt cọc"}
+                <button
+                  onClick={() => setFilterPayment("all")}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
+            {filterContract !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
+                Nguồn: {
+                  { new: "Khách mới", renew: "Gia hạn", upgrade: "Nâng cấp" }[
+                    filterContract
+                  ] || filterContract
+                }
+                <button
+                  onClick={() => setFilterContract("all")}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
+            {filterAssignedStaff !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-teal-500/15 text-teal-700 dark:text-teal-300">
+                NV: {staffList.find((s) => s._id === filterAssignedStaff || s.id === filterAssignedStaff)?.name || "Đã chọn"}
+                <button
+                  onClick={() => setFilterAssignedStaff("all")}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
+            {(filterStartDateFrom || filterStartDateTo) && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                Ngày bắt đầu: {filterStartDateFrom || "..."} → {filterStartDateTo || "..."}
+                <button
+                  onClick={() => { setFilterStartDateFrom(""); setFilterStartDateTo(""); }}
+                  className="hover:text-red-500 ml-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+
             <button
-              onClick={() => {
-                setShowDateDropdown(prev => !prev);
-                setShowStatusDropdown(false); setShowPaymentDropdown(false); setShowContractDropdown(false); setShowPackageDropdown(false); setShowStaffDropdown(false);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                (filterStartDateFrom || filterStartDateTo || filterEndDateFrom || filterEndDateTo)
-                  ? 'bg-rose-100 text-rose-800 border-rose-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:text-gray-800'
-              }`}
+              onClick={clearAllFilters}
+              className="ml-auto text-xs font-bold text-red-500 hover:text-red-600 hover:underline cursor-pointer transition-colors"
             >
-              Ngày hợp đồng
-              {(filterStartDateFrom || filterStartDateTo || filterEndDateFrom || filterEndDateTo) && (
-                <span className="ml-1 bg-rose-700 text-white rounded-full px-1.5 text-[10px] font-black">
-                  Đã lọc
-                </span>
-              )}
+              Xóa tất cả bộ lọc
             </button>
-
-            {showDateDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-4 min-w-[320px]">
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="filterStartDateFrom" className="block text-xs font-bold text-gray-700 mb-1">Ngày bắt đầu gói</label>
-                    <div className="flex items-center gap-2">
-                      <input id="filterStartDateFrom" name="filterStartDateFrom" aria-label="Ngày bắt đầu từ ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateFrom} onChange={e=>setFilterStartDateFrom(e.target.value)} title="Từ ngày"/>
-                      <span className="text-gray-400 font-bold">-</span>
-                      <input id="filterStartDateTo" name="filterStartDateTo" aria-label="Ngày bắt đầu đến ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterStartDateTo} onChange={e=>setFilterStartDateTo(e.target.value)} title="Đến ngày"/>
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="filterEndDateFrom" className="block text-xs font-bold text-gray-700 mb-1">Ngày hết hạn gói</label>
-                    <div className="flex items-center gap-2">
-                      <input id="filterEndDateFrom" name="filterEndDateFrom" aria-label="Ngày hết hạn từ ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateFrom} onChange={e=>setFilterEndDateFrom(e.target.value)} title="Từ ngày"/>
-                      <span className="text-gray-400 font-bold">-</span>
-                      <input id="filterEndDateTo" name="filterEndDateTo" aria-label="Ngày hết hạn đến ngày" type="date" className="w-full text-xs p-1.5 border rounded outline-none focus:border-rose-400" value={filterEndDateTo} onChange={e=>setFilterEndDateTo(e.target.value)} title="Đến ngày"/>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                    <button onClick={()=>{
-                      setFilterStartDateFrom(""); setFilterStartDateTo(""); setFilterEndDateFrom(""); setFilterEndDateTo("");
-                    }} className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Xóa lọc</button>
-                    <button onClick={()=>setShowDateDropdown(false)} className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 transition-colors text-white rounded-lg font-bold">Đóng</button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-
-      </div> {/* end card */}
-
+        )}
+      </div>
 
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
+          <thead className="bg-background-light dark:bg-background-dark uppercase text-xs font-semibold tracking-wide text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark">
             <tr>
               <th className="p-4 w-[5%]"></th>
               <th className="p-4 pl-8 w-[25%]">HỌ VÀ TÊN</th>
@@ -638,18 +642,18 @@ const CustomerList = () => {
                        </div>
                     </td>
                     <td className="p-4 pl-8">
-                        <div className="font-medium text-text-light dark:text-text-dark text-base">{c.name}</div>
-                        <div className="text-xs text-subtle-light dark:text-subtle-dark font-light mt-0.5">{c.code}</div>
+                        <div className="font-normal text-text-light dark:text-text-dark text-sm">{c.name}</div>
+                        <div className="text-xs text-subtle-light dark:text-subtle-dark font-normal mt-0.5">{c.code}</div>
                     </td>
-                    <td className="p-4 text-base font-medium text-text-light dark:text-text-dark">
+                    <td className="p-4 text-sm font-normal text-text-light dark:text-text-dark">
                         {c.phone}
                     </td>
                     <td className="p-4 pl-8">
-                        <span className="text-base font-medium text-text-light dark:text-text-dark">{c.packageType}</span>
+                        <span className="text-sm font-normal text-text-light dark:text-text-dark">{c.packageType}</span>
                     </td>
                     <td className="p-4">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
                           st.status === "active"
                             ? "bg-green-50 text-green-700 border-green-200"
                             : st.status === "frozen"

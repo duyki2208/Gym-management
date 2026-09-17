@@ -3,8 +3,9 @@ import toast from 'react-hot-toast';
 import commissionService from '../services/commissionService';
 import { staffService } from '../services/customerService';
 import { useAuth } from '../context/AuthContext';
-import { RotateCcw, Download } from 'lucide-react';
+import { RotateCcw, Download, Coins, Dumbbell, Wallet } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import StatCard from '../components/common/StatCard';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -35,57 +36,32 @@ const StatusBadge = ({ status }) => {
 
 // ── TỔNG HỢP COMPONENT ──────────────────────────────────────────
 const SummaryCards = ({ summary, loading }) => {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 animate-pulse border border-border-light dark:border-border-dark">
-            <div className="h-4 bg-background-light dark:bg-background-dark rounded w-24 mb-3" />
-            <div className="h-8 bg-background-light dark:bg-background-dark rounded w-36" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (!summary) return null;
-
-  const cards = [
-    {
-      label: 'Hoa hồng PT',
-      amount: summary.pt?.totalAmount || 0,
-      sub: `${summary.pt?.totalSessions || 0} buổi • ${summary.pt?.staffCount || 0} PT`,
-      status: summary.pt?.periodStatus,
-      gradient: 'from-blue-500 to-blue-600',
-    },
-    {
-      label: 'Hoa hồng Sale',
-      amount: summary.sale?.totalAmount || 0,
-      sub: `${summary.sale?.totalContracts || 0} HĐ • ${summary.sale?.staffCount || 0} Sale`,
-      status: summary.sale?.periodStatus,
-      gradient: 'from-emerald-500 to-emerald-600',
-    },
-    {
-      label: 'Tổng phải trả',
-      amount: summary.grandTotal || 0,
-      sub: 'Tổng cộng PT + Sale',
-      gradient: 'from-violet-500 to-violet-600',
-    },
-  ];
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      {cards.map((c, i) => (
-        <div key={i} className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-subtle-light dark:text-subtle-dark">{c.label}</p>
-            {c.status && <StatusBadge status={c.status} />}
-          </div>
-          <p className={`text-2xl font-black bg-gradient-to-r ${c.gradient} bg-clip-text text-transparent`}>
-            {formatCurrency(c.amount)}
-          </p>
-          <p className="text-xs text-subtle-light dark:text-subtle-dark mt-1">{c.sub}</p>
-        </div>
-      ))}
+      <StatCard
+        label="Hoa hồng PT"
+        value={summary ? formatCurrency(summary.pt?.totalAmount || 0) : "0 ₫"}
+        subtitle={summary ? `${summary.pt?.totalSessions || 0} buổi • ${summary.pt?.staffCount || 0} PT` : undefined}
+        icon={Dumbbell}
+        color="blue"
+        loading={loading}
+      />
+      <StatCard
+        label="Hoa hồng Sale"
+        value={summary ? formatCurrency(summary.sale?.totalAmount || 0) : "0 ₫"}
+        subtitle={summary ? `${summary.sale?.totalContracts || 0} HĐ • ${summary.sale?.staffCount || 0} Sale` : undefined}
+        icon={Coins}
+        color="emerald"
+        loading={loading}
+      />
+      <StatCard
+        label="Tổng hoa hồng phải trả"
+        value={summary ? formatCurrency(summary.grandTotal || 0) : "0 ₫"}
+        subtitle="Tổng cộng chi phí hoa hồng PT + Sale"
+        icon={Wallet}
+        color="primary"
+        loading={loading}
+      />
     </div>
   );
 };
@@ -111,7 +87,7 @@ const PTCommissionTable = ({ data, loading }) => {
                 {s.totalSessions} buổi dạy • Hoa hồng: {formatCurrency(s.totalAmount)}
               </p>
             </div>
-            <span className="text-xl font-black text-blue-600">{formatCurrency(s.totalAmount)}</span>
+            <span className="text-xl font-bold text-blue-600">{formatCurrency(s.totalAmount)}</span>
           </div>
 
           {/* Details table */}
@@ -172,7 +148,7 @@ const SaleCommissionTable = ({ data, loading }) => {
                 {s.totalContracts} hợp đồng (Mới: {s.newContracts} | Gia hạn: {s.renewContracts} | Nâng gói: {s.upgradeContracts})
               </p>
             </div>
-            <span className="text-xl font-black text-emerald-600">{formatCurrency(s.totalAmount)}</span>
+            <span className="text-xl font-bold text-emerald-600">{formatCurrency(s.totalAmount)}</span>
           </div>
 
           {/* Details table */}
@@ -474,55 +450,63 @@ const Commissions = () => {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* ── Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      {/* ── Page header ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100">Hoa hồng</h1>
-          <p className="text-sm text-gray-400">Quản lý hoa hồng PT & Sale theo tháng</p>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
+            <Coins size={24} className="text-primary" /> Quản lý hoa hồng
+          </h1>
+          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
+            Bảng tính hoa hồng PT và Sale theo kỳ, đối soát hợp đồng và chốt kỳ thanh toán
+          </p>
         </div>
 
-        {/* Month/Year Selector */}
-        <div className="flex items-center gap-2">
+        {/* Month/Year Selector & Quick Actions */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="text-sm border border-border-light dark:border-border-dark rounded-lg px-3 py-2 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary outline-none cursor-pointer"
+            className="text-xs font-medium border border-border-light dark:border-border-dark rounded-xl px-3 py-2 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark outline-none cursor-pointer"
           >
-            {months.map(m => (
-              <option key={m} value={m}>Tháng {m}</option>
+            {months.map((m) => (
+              <option key={m} value={m} className="text-gray-900">
+                Tháng {m}
+              </option>
             ))}
           </select>
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="text-sm border border-border-light dark:border-border-dark rounded-lg px-3 py-2 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary outline-none cursor-pointer"
+            className="text-xs font-medium border border-border-light dark:border-border-dark rounded-xl px-3 py-2 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark outline-none cursor-pointer"
           >
-            {years.map(y => (
-              <option key={y} value={y}>{y}</option>
+            {years.map((y) => (
+              <option key={y} value={y} className="text-gray-900">
+                {y}
+              </option>
             ))}
           </select>
 
-          {isManager && (activeTab === 'pt' || activeTab === 'sale') && (
+          {isManager && (activeTab === "pt" || activeTab === "sale") && (
             <button
               onClick={exportToExcel}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/90 text-text-light rounded-xl text-xs md:text-sm font-bold transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs md:text-sm font-bold transition-all shadow-sm cursor-pointer"
             >
               <Download size={16} />
               Xuất Excel
             </button>
           )}
-          
+
           {isAdminLike && (
-            <div className="flex gap-1.5 ml-2">
+            <div className="flex gap-1.5 ml-1">
               <button
-                onClick={() => handleCreatePeriod('pt')}
-                className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded-lg font-bold transition-colors"
+                onClick={() => handleCreatePeriod("pt")}
+                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl font-semibold transition-colors border border-blue-700/20 shadow-sm cursor-pointer"
               >
                 Chốt PT
               </button>
               <button
-                onClick={() => handleCreatePeriod('sale')}
-                className="text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-2 rounded-lg font-bold transition-colors"
+                onClick={() => handleCreatePeriod("sale")}
+                className="text-xs bg-primary hover:bg-primary/90 text-text-light px-3 py-2 rounded-xl font-semibold transition-colors shadow-sm cursor-pointer"
               >
                 Chốt Sale
               </button>
@@ -685,7 +669,7 @@ const Commissions = () => {
       {/* ── Rollback Confirmation Modal ── */}
       {rollbackModalOpen && selectedPeriodForRollback && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface-light dark:bg-surface-dark w-full max-w-md rounded-xl shadow-2xl border border-border-light dark:border-border-dark p-6 space-y-4">
+          <div className="bg-surface-light dark:bg-surface-dark w-full max-w-md rounded-xl shadow-xl border border-border-light dark:border-border-dark p-6 space-y-4">
             <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
               <div className="p-2.5 bg-amber-500/10 rounded-xl">
                 <RotateCcw size={22} />
@@ -722,7 +706,7 @@ const Commissions = () => {
 
             <div>
               <label className="block text-xs font-bold text-text-light dark:text-text-dark mb-1">
-                Gõ lại tên kỳ để xác nhận: <span className="font-black text-amber-600">T{selectedPeriodForRollback.month}/{selectedPeriodForRollback.year}-{selectedPeriodForRollback.type.toUpperCase()}</span>
+                Gõ lại tên kỳ để xác nhận: <span className="font-semibold text-amber-600">T{selectedPeriodForRollback.month}/{selectedPeriodForRollback.year}-{selectedPeriodForRollback.type.toUpperCase()}</span>
               </label>
               <input
                 type="text"

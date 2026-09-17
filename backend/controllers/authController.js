@@ -11,6 +11,15 @@ const {
   generateRefreshToken,
   hashToken,
 } = require("../utils/generateTokens");
+const { hashFacilityKey } = require("../utils/facilityKey");
+
+const LOGIN_FAILED_RESPONSE = {
+  code: "INVALID_CREDENTIALS",
+  message: "Thông tin đăng nhập không chính xác.",
+};
+const DUMMY_PASSWORD_HASH = "$2b$12$ylLPFJDR9XIcizdE5QDDk.JcYJghnha83HTGEl1VGmUu3E6wuY/.u";
+
+const rejectLogin = (res) => res.status(401).json(LOGIN_FAILED_RESPONSE);
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -25,33 +34,34 @@ const REFRESH_COOKIE_OPTIONS = {
 // -----------------------------------------------------------------------
 const loginUser = async (req, res) => {
   try {
-    const { username, password, branchCode: reqBranchCode } = req.body;
+    const { facilityKey, username, password } = req.body;
 
     const centralModels = req.centralModels || (await getCentralModels());
+    const loginKeyHash = hashFacilityKey(facilityKey);
+    const branch = await centralModels.Branch.findOne({
+      loginKeyHash,
+      isActive: true,
+    });
 
-    // 1. Tra cứu LoginIndex tại CSDL Trung tâm (cho nhân viên chi nhánh)
-    const loginIndex = await centralModels.LoginIndex.findOne({ username });
+    // Chỉ tra cứu tài khoản trong đúng tenant đã được mã cơ sở ánh xạ.
+    // Không dùng facilityKey làm branchCode và không trả mapping này về trước đăng nhập.
+    const loginIndex = branch
+      ? await centralModels.LoginIndex.findOne({ username, branchCode: branch.code })
+      : null;
 
     if (loginIndex) {
       // === LUỒNG 1: BRANCH USER (sale, pt, reception, om, sm, pm) ===
-      const branchCode = loginIndex.branchCode;
+      const branchCode = branch.code;
       const branchModels = await getBranchModels(branchCode);
 
-      const user = await branchModels.User.findOne({ username });
-      if (!user) {
-        return res.status(404).json({ message: "Không tìm thấy thông tin nhân viên tại chi nhánh." });
-      }
+      const user = await branchModels.User.findOne({
+        _id: loginIndex.userId,
+        username,
+      });
 
-      if (user.isActive === false) {
-        return res.status(401).json({
-          code: "USER_DEACTIVATED",
-          message: "Tài khoản của bạn đã bị vô hiệu hóa / khóa.",
-        });
-      }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Mật khẩu không đúng!" });
+      const isMatch = await bcrypt.compare(password, user?.password || DUMMY_PASSWORD_HASH);
+      if (!user || user.isActive === false || !isMatch) {
+        return rejectLogin(res);
       }
 
       const accessToken = generateAccessToken(user._id, user.role, {
@@ -83,6 +93,7 @@ const loginUser = async (req, res) => {
           fullName: user.fullName,
           role: user.role,
           branchCode,
+          branchName: branch.name,
           isCentral: false,
         },
       });
@@ -90,20 +101,12 @@ const loginUser = async (req, res) => {
 
     // === LUỒNG 2: CENTRAL USER (admin, accountant) ===
     const centralUser = await centralModels.CentralUser.findOne({ username });
-    if (!centralUser) {
-      return res.status(404).json({ message: "Tài khoản không tồn tại!" });
-    }
-
-    if (centralUser.isActive === false) {
-      return res.status(401).json({
-        code: "USER_DEACTIVATED",
-        message: "Tài khoản quản trị đã bị vô hiệu hóa / khóa.",
-      });
-    }
-
-    const isCentralMatch = await bcrypt.compare(password, centralUser.password);
-    if (!isCentralMatch) {
-      return res.status(400).json({ message: "Mật khẩu không đúng!" });
+    const isCentralMatch = await bcrypt.compare(
+      password,
+      centralUser?.password || DUMMY_PASSWORD_HASH
+    );
+    if (!branch || !centralUser || centralUser.isActive === false || !isCentralMatch) {
+      return rejectLogin(res);
     }
 
     const allowedBranches =
@@ -111,18 +114,9 @@ const loginUser = async (req, res) => {
         ? centralUser.allowedBranches
         : (centralUser.role === "admin" ? ["*"] : []);
 
-    let activeBranch = "HN01";
-    if (reqBranchCode) {
-      const normalizedReqBranch = String(reqBranchCode).trim().toUpperCase();
-      if (!allowedBranches.includes("*") && !allowedBranches.includes(normalizedReqBranch)) {
-        return res.status(403).json({
-          code: "BRANCH_ACCESS_DENIED",
-          message: `Bạn không có quyền đăng nhập vào chi nhánh ${normalizedReqBranch}`,
-        });
-      }
-      activeBranch = normalizedReqBranch;
-    } else {
-      activeBranch = allowedBranches.includes("*") ? "HN01" : (allowedBranches[0] || "HN01");
+    const activeBranch = branch.code;
+    if (!allowedBranches.includes("*") && !allowedBranches.includes(activeBranch)) {
+      return rejectLogin(res);
     }
 
     const accessToken = generateAccessToken(centralUser._id, centralUser.role, {
@@ -156,13 +150,17 @@ const loginUser = async (req, res) => {
         role: centralUser.role,
         allowedBranches,
         activeBranch,
+        branchName: branch.name,
         isCentral: true,
       },
     });
 
   } catch (error) {
     console.error("Lỗi login:", error);
-    res.status(500).json({ message: "Lỗi Server: " + error.message });
+    res.status(500).json({
+      code: "AUTH_SERVICE_ERROR",
+      message: "Không thể xử lý đăng nhập lúc này. Vui lòng thử lại sau.",
+    });
   }
 };
 

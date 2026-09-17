@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AlertTriangle, AlertCircle, Search, Mail, Calendar, Clock, UserCheck } from 'lucide-react';
 import reportService from '../../services/reportService';
 import toast from 'react-hot-toast';
+import { getIconColor, getIconTone } from '../../utils/iconTone';
 
 const ChurnPrediction = () => {
   const [data, setData] = useState({ highRisk: [], mediumRisk: [], lowRisk: [] });
@@ -76,8 +77,8 @@ const ChurnPrediction = () => {
     <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden font-display">
       <div className="p-5 border-b border-border-light dark:border-border-dark flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-base md:text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-            <AlertTriangle className="text-amber-500" size={20} />
+          <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+            <AlertTriangle className={getIconColor(AlertTriangle)} size={20} />
             Cảnh báo khách hàng rời bỏ (Churn)
           </h2>
           <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Dự đoán hội viên gói duy trì có nguy cơ không gia hạn dựa trên tần suất check-in và hạn gói tập</p>
@@ -120,11 +121,11 @@ const ChurnPrediction = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700/60">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-background-light/60 dark:bg-background-dark/40 border-b border-border-light dark:border-border-dark">
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nguy cơ cao</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight break-words">
+            <p className="text-2xl md:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight break-words">
               {data.highRisk?.length || 0} <span className="text-sm font-semibold text-gray-400">hội viên</span>
             </p>
             <p className="text-xs text-gray-400 mt-2">Nghỉ &gt; 21 ngày hoặc hạn &le; 7 ngày</p>
@@ -137,12 +138,12 @@ const ChurnPrediction = () => {
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nguy cơ trung bình</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight break-words">
+            <p className="text-2xl md:text-3xl font-bold text-amber-600 dark:text-amber-400 tracking-tight break-words">
               {data.mediumRisk?.length || 0} <span className="text-sm font-semibold text-gray-400">hội viên</span>
             </p>
             <p className="text-xs text-gray-400 mt-2">Nghỉ &gt; 14 ngày hoặc hạn &le; 14 ngày</p>
           </div>
-          <div className="w-11 h-11 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/30">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${getIconTone(Clock)}`}>
             <Clock size={22} />
           </div>
         </div>
@@ -150,12 +151,12 @@ const ChurnPrediction = () => {
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cần rà soát hồ sơ</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-purple-600 dark:text-purple-400 tracking-tight break-words">
+            <p className="text-2xl md:text-3xl font-bold text-purple-600 dark:text-purple-400 tracking-tight break-words">
               {data.missingData?.length || 0} <span className="text-sm font-semibold text-gray-400">hồ sơ</span>
             </p>
             <p className="text-xs text-gray-400 mt-2">Thiếu hoặc sai ngày hết hạn gói</p>
           </div>
-          <div className="w-11 h-11 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/30">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${getIconTone(AlertTriangle)}`}>
             <AlertTriangle size={22} />
           </div>
         </div>
@@ -163,12 +164,12 @@ const ChurnPrediction = () => {
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 flex items-start justify-between min-w-0 w-full gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tỷ lệ an toàn</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight break-words">
+            <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight break-words">
               {Math.round(((data.lowRisk?.length || 0) / ((allCustomers.length + (data.lowRisk?.length || 0)) || 1)) * 100)}%
             </p>
             <p className="text-xs text-gray-400 mt-2">Hội viên duy trì tập luyện đều đặn</p>
           </div>
-          <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/30">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${getIconTone(UserCheck)}`}>
             <UserCheck size={22} />
           </div>
         </div>
@@ -177,7 +178,7 @@ const ChurnPrediction = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-bold text-text-light dark:text-text-dark">
+            <tr className="border-b border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark/80 text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
               <th className="p-4">Khách hàng</th>
               <th className="p-4">Mức độ nguy cơ</th>
               <th className="p-4">Thời gian vắng mặt</th>
