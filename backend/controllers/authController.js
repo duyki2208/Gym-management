@@ -11,7 +11,7 @@ const {
   generateRefreshToken,
   hashToken,
 } = require("../utils/generateTokens");
-const { hashFacilityKey } = require("../utils/facilityKey");
+const { hashFacilityKey, getCandidateFacilityHashes } = require("../utils/facilityKey");
 const { resolvePermissionsForRole } = require("../middleware/permissions");
 
 const LOGIN_FAILED_RESPONSE = {
@@ -38,11 +38,25 @@ const loginUser = async (req, res) => {
     const { facilityKey, username, password } = req.body;
 
     const centralModels = req.centralModels || (await getCentralModels());
-    const loginKeyHash = hashFacilityKey(facilityKey);
-    const branch = await centralModels.Branch.findOne({
-      loginKeyHash,
+    const candidateHashes = getCandidateFacilityHashes
+      ? getCandidateFacilityHashes(facilityKey)
+      : [hashFacilityKey(facilityKey)];
+    let branch = await centralModels.Branch.findOne({
+      loginKeyHash:
+        candidateHashes.length === 1
+          ? candidateHashes[0]
+          : { $in: candidateHashes },
       isActive: true,
     });
+
+    // Fallback: Cho phép người dùng nhập trực tiếp mã cơ sở (ví dụ HN01, HCM01)
+    if (!branch) {
+      const normalizedCode = String(facilityKey || "").trim().toUpperCase();
+      branch = await centralModels.Branch.findOne({
+        code: normalizedCode,
+        isActive: true,
+      });
+    }
 
     // Chỉ tra cứu tài khoản trong đúng tenant đã được mã cơ sở ánh xạ.
     // Không dùng facilityKey làm branchCode và không trả mapping này về trước đăng nhập.

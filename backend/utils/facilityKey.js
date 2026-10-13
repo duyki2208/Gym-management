@@ -69,19 +69,65 @@ const encryptFacilityKey = (value) => {
   };
 };
 
+const getLegacyFacilityLookupPepper = () => {
+  const rootSecret = process.env.JWT_REFRESH_SECRET;
+  if (!rootSecret || rootSecret.length < 32) return null;
+  return crypto
+    .createHmac("sha256", rootSecret)
+    .update("gympro:facility-lookup:v1", "utf8")
+    .digest();
+};
+
+const getCandidateFacilityHashes = (value) => {
+  const normalized = assertValidFacilityKey(value);
+  const primaryPepper = getFacilityLookupPepper();
+  const primaryHash = crypto
+    .createHmac("sha256", primaryPepper)
+    .update(normalized, "utf8")
+    .digest("hex");
+
+  const legacyPepper = getLegacyFacilityLookupPepper();
+  if (!legacyPepper) return [primaryHash];
+
+  const legacyHash = crypto
+    .createHmac("sha256", legacyPepper)
+    .update(normalized, "utf8")
+    .digest("hex");
+
+  return primaryHash === legacyHash ? [primaryHash] : [primaryHash, legacyHash];
+};
+
 const decryptFacilityKey = ({ loginKeyCiphertext, loginKeyIv, loginKeyAuthTag }) => {
   if (!loginKeyCiphertext || !loginKeyIv || !loginKeyAuthTag) return "";
 
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    getFacilityEncryptionKey(),
-    Buffer.from(loginKeyIv, "base64")
-  );
-  decipher.setAuthTag(Buffer.from(loginKeyAuthTag, "base64"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(loginKeyCiphertext, "base64")),
-    decipher.final(),
-  ]).toString("utf8");
+  const candidateKeys = [getFacilityEncryptionKey()];
+  const legacyPepper = getLegacyFacilityLookupPepper();
+  if (legacyPepper) {
+    candidateKeys.push(
+      crypto
+        .createHmac("sha256", legacyPepper)
+        .update("gympro:facility-encryption:v1", "utf8")
+        .digest()
+    );
+  }
+
+  for (const key of candidateKeys) {
+    try {
+      const decipher = crypto.createDecipheriv(
+        "aes-256-gcm",
+        key,
+        Buffer.from(loginKeyIv, "base64")
+      );
+      decipher.setAuthTag(Buffer.from(loginKeyAuthTag, "base64"));
+      return Buffer.concat([
+        decipher.update(Buffer.from(loginKeyCiphertext, "base64")),
+        decipher.final(),
+      ]).toString("utf8");
+    } catch {
+      // Tiếp tục thử khóa tiếp theo nếu pepper đã thay đổi
+    }
+  }
+  return "";
 };
 
 module.exports = {
@@ -89,6 +135,8 @@ module.exports = {
   normalizeFacilityKey,
   assertValidFacilityKey,
   hashFacilityKey,
+  getCandidateFacilityHashes,
   encryptFacilityKey,
   decryptFacilityKey,
 };
+
