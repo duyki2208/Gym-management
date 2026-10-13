@@ -1,57 +1,46 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
+const {
+  DOCUMENT_UPLOAD_TYPES,
+  createMemoryUpload,
+  validateUploadedFile,
+} = require("../middleware/secureUpload");
 const closureController = require("../controllers/closureController");
-const { protect, authorize } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/authMiddleware");
+const { PERMISSIONS, requirePermission } = require("../middleware/permissions");
 
 // Cấu hình Multer lưu file vào bộ nhớ (memoryStorage) để chuyển base64 sang Brevo API
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // Tối đa 10MB
-  fileFilter: (req, file, cb) => {
-    // Chấp nhận các loại tài liệu: .doc, .docx, .pdf, .png, .jpg
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "image/jpeg",
-      "image/png",
-    ];
-    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(pdf|doc|docx|png|jpg|jpeg)$/i)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Chỉ chấp nhận file Word (.doc, .docx), PDF (.pdf) hoặc hình ảnh"));
-    }
-  },
+const upload = createMemoryUpload({
+  maxBytes: 10 * 1024 * 1024,
+  allowedTypes: DOCUMENT_UPLOAD_TYPES,
 });
 
-const ALLOWED_ROLES = ["admin", "manager", "sm", "pm", "om"];
-
 // GET /api/v1/closures - Danh sách sự kiện đóng cửa
-router.get("/", protect, authorize(...ALLOWED_ROLES), closureController.getAllClosures);
+router.get("/", protect, requirePermission(PERMISSIONS.CLOSURE_MANAGE), closureController.getAllClosures);
 
 // POST /api/v1/closures/preview - Xem trước tính toán bù hạn
-router.post("/preview", protect, authorize(...ALLOWED_ROLES), closureController.previewClosureCompensation);
+router.post("/preview", protect, requirePermission(PERMISSIONS.CLOSURE_MANAGE), closureController.previewClosureCompensation);
 
 // POST /api/v1/closures - Tạo sự kiện đóng cửa & bù hạn
-router.post("/", protect, authorize(...ALLOWED_ROLES), closureController.createClosure);
+router.post("/", protect, requirePermission(PERMISSIONS.CLOSURE_MANAGE), closureController.createClosure);
 
 // GET /api/v1/closures/:id - Chi tiết sự kiện & danh sách gói tập
-router.get("/:id", protect, authorize(...ALLOWED_ROLES), closureController.getClosureDetails);
+router.get("/:id", protect, requirePermission(PERMISSIONS.CLOSURE_MANAGE), closureController.getClosureDetails);
 
 // POST /api/v1/closures/:id/reverse - Hoàn tác bù hạn
-router.post("/:id/reverse", protect, authorize(...ALLOWED_ROLES), closureController.reverseClosure);
+router.post("/:id/reverse", protect, requirePermission(PERMISSIONS.CLOSURE_MANAGE), closureController.reverseClosure);
 
 // POST /api/v1/closures/:id/send-email - Gửi email thông báo (kèm file)
 router.post(
   "/:id/send-email",
   protect,
-  authorize(...ALLOWED_ROLES),
+  requirePermission(PERMISSIONS.CLOSURE_MANAGE),
   upload.single("attachment"),
+  validateUploadedFile(DOCUMENT_UPLOAD_TYPES),
   closureController.sendClosureNotificationEmail
 );
 
 // GET /api/v1/closures/:id/mail-progress - Lấy tiến độ gửi email
-router.get("/:id/mail-progress", protect, authorize(...ALLOWED_ROLES), closureController.getMailProgress);
+router.get("/:id/mail-progress", protect, requirePermission(PERMISSIONS.CLOSURE_MANAGE), closureController.getMailProgress);
 
 module.exports = router;

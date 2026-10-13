@@ -5,10 +5,20 @@ const User = require("../models/User");
 
 let mongoServer;
 
+// Windows CI/desktop hosts can take over 30 seconds to spawn mongod when the
+// binary is cold or antivirus is scanning it. Keep the suite deterministic
+// without weakening individual assertions.
+jest.setTimeout(60000);
+
 // Khởi chạy cơ sở dữ liệu giả lập trong RAM trước khi chạy các file test
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
+  mongoServer = await MongoMemoryServer.create({
+    instance: { launchTimeout: 60000 },
+  });
+  // HN01 resolves to the database name from MONGO_URI. Keeping the default
+  // mongoose connection on the same database makes legacy model proxies and
+  // request-scoped branch models observe the same test data.
+  const mongoUri = mongoServer.getUri("gym_management");
   
   // Gán URI giả lập vào environment để connectDB đọc
   process.env.MONGO_URI = mongoUri;
@@ -70,7 +80,17 @@ const createTestUserAndGetToken = async (role) => {
   });
   await user.save();
   
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = jwt.sign(
+    {
+      id: user._id,
+      role,
+      branchCode: "HN01",
+      activeBranch: "HN01",
+      allowedBranches: role === "admin" ? ["*"] : ["HN01"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
   return { token, user };
 };
 

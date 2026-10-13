@@ -69,7 +69,7 @@ const migrate = async () => {
       await centralModels.Branch.findOneAndUpdate(
         { code: b.code },
         { $set: b },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
       );
       console.log(`  [OK] Chi nhánh: ${b.name} (${b.code})`);
     }
@@ -112,7 +112,7 @@ const migrate = async () => {
               userId: u._id,
             },
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: "after" }
         );
         loginIndexCount++;
         console.log(`  -> Branch User: ${u.username} (${u.role}) -> LoginIndex (HN01)`);

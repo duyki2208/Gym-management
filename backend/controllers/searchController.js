@@ -20,6 +20,7 @@ const User = require('../models/User');
 const Package = require('../models/Package');
 const Lead = require('../models/Lead');
 const Product = require('../models/Product');
+const { PERMISSIONS, resolvePermissions } = require('../middleware/permissions');
 
 // Các nhóm tìm kiếm hợp lệ
 const ALL_CATEGORIES = ['customers', 'staff', 'packages', 'leads', 'products'];
@@ -43,6 +44,9 @@ const globalSearch = async (req, res) => {
     const requestedCategories = categories
       ? categories.split(',').map(c => c.trim()).filter(c => ALL_CATEGORIES.includes(c))
       : ALL_CATEGORIES;
+    const permissions = await resolvePermissions(req);
+    const can = (permission) =>
+      permissions.includes('*') || permissions.includes(permission);
 
     // Regex tìm kiếm (không phân biệt hoa thường)
     const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -50,7 +54,7 @@ const globalSearch = async (req, res) => {
     // Chạy song song — chỉ query category được yêu cầu
     const searchPromises = {};
 
-    if (requestedCategories.includes('customers')) {
+    if (requestedCategories.includes('customers') && can(PERMISSIONS.CUSTOMER_READ)) {
       searchPromises.customers = Customer.find({
         $or: [
           { name: regex },
@@ -84,14 +88,18 @@ const globalSearch = async (req, res) => {
         .lean();
     }
 
-    if (requestedCategories.includes('leads')) {
-      searchPromises.leads = Lead.find({
+    if (requestedCategories.includes('leads') && can(PERMISSIONS.LEAD_READ)) {
+      const leadQuery = {
         $or: [
           { name: regex },
           { phone: regex },
           { email: regex },
         ],
-      })
+      };
+      if (!can(PERMISSIONS.LEAD_READ_ALL)) {
+        leadQuery.assignedSale = req.user._id;
+      }
+      searchPromises.leads = Lead.find(leadQuery)
         .select('_id name phone status source createdAt')
         .limit(maxLimit)
         .lean();

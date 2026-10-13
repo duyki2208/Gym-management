@@ -1,0 +1,92 @@
+name: Staging readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_load_test:
+        description: Run the read-only traffic-mix load test
+        type: boolean
+        default: false
+      run_topology_check:
+        description: Verify replica set, Redis, and every backend instance
+        type: boolean
+        default: true
+      duration_seconds:
+        description: Load-test duration (10-3600 seconds)
+        type: number
+        default: 60
+      concurrency:
+        description: Concurrent workers (1-100)
+        type: number
+        default: 8
+      approved_by:
+        description: Release owner approving this evidence run
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  staging-checks:
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+      STAGING_ACCESS_TOKEN: ${{ secrets.STAGING_ACCESS_TOKEN }}
+      STAGING_LOGIN_FACILITY_KEY: ${{ secrets.STAGING_LOGIN_FACILITY_KEY }}
+      STAGING_LOGIN_USERNAME: ${{ secrets.STAGING_LOGIN_USERNAME }}
+      STAGING_LOGIN_PASSWORD: ${{ secrets.STAGING_LOGIN_PASSWORD }}
+      STAGING_FRONTEND_URL: ${{ vars.STAGING_FRONTEND_URL }}
+      STAGING_EXPECTED_API_BASE_URL: ${{ vars.STAGING_EXPECTED_API_BASE_URL }}
+      SMOKE_REQUIRE_LOGIN_FLOW: "true"
+      SMOKE_REQUIRE_FRONTEND_FLOW: "true"
+      RELEASE_SHA: ${{ github.sha }}
+      EVIDENCE_EXECUTED_BY: ${{ github.actor }}
+      EVIDENCE_APPROVED_BY: ${{ inputs.approved_by }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Staging smoke test
+        env:
+          EVIDENCE_OUTPUT: staging-smoke.json
+        run: npm run smoke:staging
+      - name: Verify production-like topology
+        if: inputs.run_topology_check
+        env:
+          MONGO_URI: ${{ secrets.STAGING_MONGO_URI }}
+          REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
+          INSTANCE_BASE_URLS: ${{ secrets.STAGING_INSTANCE_BASE_URLS }}
+          TRANSACTION_PROBE_DB: ${{ secrets.STAGING_TRANSACTION_PROBE_DB }}
+          REQUIRE_TRANSACTION_PROBE: "true"
+          CONFIRM_TRANSACTION_PROBE: "yes"
+          REQUIRE_MULTI_INSTANCE_SESSION: "true"
+          EVIDENCE_OUTPUT: staging-topology.json
+        run: npm run verify:topology
+      - name: Read-only staging load test
+        if: inputs.run_load_test
+        env:
+          LOAD_DURATION_SECONDS: ${{ inputs.duration_seconds }}
+          LOAD_CONCURRENCY: ${{ inputs.concurrency }}
+          LOAD_REQUIRE_RELEASE_SHA: "true"
+          EVIDENCE_OUTPUT: staging-load.json
+        run: npm run load:staging
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-readiness-${{ github.run_id }}
+          path: |
+            backend/staging-smoke.json
+            backend/staging-topology.json
+            backend/staging-load.json
+          if-no-files-found: warn
+          retention-days: 90

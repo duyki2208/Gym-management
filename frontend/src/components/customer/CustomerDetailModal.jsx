@@ -224,16 +224,6 @@ const CustomerDetailModal = ({ customer, packages = [], onClose, onUpdate }) => 
   };
 
 
-  const handleFreezeClick = (pkgId) => {
-    setSelectedPkgId(pkgId);
-    setFreezeData({
-      reason: "",
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-    });
-    setFreezeModalOpen(true);
-  };
-
   const confirmFreeze = async () => {
     if (!freezeData.reason) {
       toast.error("Vui lòng nhập lý do bảo lưu");

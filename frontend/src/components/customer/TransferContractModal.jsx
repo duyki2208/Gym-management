@@ -42,7 +42,7 @@ const TransferContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) 
         const roleStr = (u.role || '').toLowerCase();
         const allowed = ['admin', 'manager', 'accountant', 'sm', 'pm', 'om'];
         setIsAdmin(allowed.includes(roleStr));
-      } catch (e) {
+      } catch {
         setIsAdmin(false);
       }
       setTransferMode('new');

@@ -8,8 +8,17 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 const FACE_SERVICE_URL = process.env.FACE_SERVICE_URL || 'http://localhost:5001';
-const INTERNAL_SECRET = process.env.INTERNAL_SERVICE_SECRET || 'gympro_internal_secret';
 const TIMEOUT_MS = 8000;
+
+const getInternalSecret = () => {
+  const secret = process.env.INTERNAL_SERVICE_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'INTERNAL_SERVICE_SECRET phải được cấu hình với tối thiểu 32 ký tự'
+    );
+  }
+  return secret;
+};
 
 /**
  * Gửi ảnh lên Python service để lấy embedding 512 chiều.
@@ -24,7 +33,7 @@ async function getEmbedding(imageBuffer, branchCode = 'HN01') {
 
   const headers = {
     ...form.getHeaders(),
-    'X-Internal-Secret': INTERNAL_SECRET,
+    'X-Internal-Secret': getInternalSecret(),
     'X-Branch-Code': branchCode,
   };
 
@@ -43,15 +52,18 @@ async function getEmbedding(imageBuffer, branchCode = 'HN01') {
  * @param {string} [branchCode] - Mã chi nhánh
  * @returns {{ matched: boolean, member_id?: string, confidence?: number, reason?: string }}
  */
-async function recognize(imageBuffer, candidates, branchCode = 'HN01') {
+async function recognize(imageBuffer, candidates, branchCode = 'HN01', threshold = null) {
   const form = new FormData();
   form.append('image', imageBuffer, { filename: 'frame.jpg', contentType: 'image/jpeg' });
   form.append('candidates', JSON.stringify(candidates));
   form.append('branchCode', branchCode);
+  if (threshold !== null && threshold !== undefined) {
+    form.append('threshold', String(threshold));
+  }
 
   const headers = {
     ...form.getHeaders(),
-    'X-Internal-Secret': INTERNAL_SECRET,
+    'X-Internal-Secret': getInternalSecret(),
     'X-Branch-Code': branchCode,
   };
 
@@ -76,4 +88,4 @@ async function isHealthy() {
   }
 }
 
-module.exports = { getEmbedding, recognize, isHealthy };
+module.exports = { getEmbedding, recognize, isHealthy, getInternalSecret };

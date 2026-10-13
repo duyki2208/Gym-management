@@ -65,9 +65,9 @@ input[type="number"] {
   background-color: #25262e !important;
 }
 
-/* Sidebar & Header specific dark mode colors */
+/* App shell surfaces only. Do not recolor semantic headers inside pages. */
 .dark aside,
-.dark header {
+.dark .app-header {
   background-color: #141518 !important;
   border-color: #272830 !important;
 }

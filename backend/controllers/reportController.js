@@ -12,8 +12,32 @@ const Product = require("../models/Product");
 const TeamTask = require("../models/TeamTask");
 const CommissionPeriod = require("../models/CommissionPeriod");
 const Lead = require("../models/Lead");
+const SaleOrder = require("../models/SaleOrder");
 const ExcelJS = require("exceljs");
 const { startOfMonth, endOfMonth, subDays, subMonths, addDays, startOfDay, endOfDay, eachDayOfInterval, format } = require("date-fns");
+const { PERMISSIONS, userHasPermission } = require("../middleware/permissions");
+
+const defaultModels = {
+  Customer,
+  Package,
+  CheckIn,
+  Transaction,
+  User,
+  Commission,
+  KPITarget,
+  Setting,
+  CustomerPackage,
+  WorkoutSession,
+  Product,
+  TeamTask,
+  CommissionPeriod,
+  Lead,
+  SaleOrder,
+};
+
+const getReportModels = (req) => req.models || defaultModels;
+
+const getCollectionName = (Model, fallback) => Model?.collection?.name || fallback;
 
 
 // @desc    Get dashboard summary statistics
@@ -21,6 +45,7 @@ const { startOfMonth, endOfMonth, subDays, subMonths, addDays, startOfDay, endOf
 // @access  Private
 const getSummary = async (req, res) => {
   try {
+    const { Customer, Transaction } = getReportModels(req);
     const { month, year } = req.query;
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
@@ -31,22 +56,7 @@ const getSummary = async (req, res) => {
     const lastDayOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // Tính doanh thu từ Transaction (tiền thực thu) phân rạch ròi 3 dòng tiền
-    const [revenueAggregation, streamAggregation, newMembersCount, activeMembers, totalEverMembers] = await Promise.all([
-      Transaction.aggregate([
-        {
-          $match: {
-            type: { $in: ["package_purchase", "pos_sale", "pt_session", "service_fee"] },
-            status: "success",
-            createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: "$amount" },
-          },
-        },
-      ]),
+    const [streamAggregation, newMembersCount, activeMembers, totalEverMembers] = await Promise.all([
       Transaction.aggregate([
         {
           $match: {
@@ -76,7 +86,6 @@ const getSummary = async (req, res) => {
       }),
     ]);
 
-    const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
     const streamMap = {};
     streamAggregation.forEach(item => {
       streamMap[item._id] = item.total;
@@ -88,6 +97,7 @@ const getSummary = async (req, res) => {
       serviceFees: streamMap["service_fee"] || 0,
       ptSessions: streamMap["pt_session"] || 0,
     };
+    const totalRevenue = Object.values(revenueStreams).reduce((sum, amount) => sum + amount, 0);
 
     const newMembers = newMembersCount;
     let retentionRate = 0;
@@ -117,6 +127,7 @@ const getSummary = async (req, res) => {
 // @access  Private
 const getRevenueChart = async (req, res) => {
   try {
+    const { Transaction } = getReportModels(req);
     const { month, year } = req.query;
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
@@ -181,6 +192,7 @@ const getRevenueChart = async (req, res) => {
 // @access  Private
 const getPackageDistribution = async (req, res) => {
   try {
+    const { Customer } = getReportModels(req);
     const distribution = await Customer.aggregate([
       {
         $group: {
@@ -210,6 +222,7 @@ const getPackageDistribution = async (req, res) => {
 // @access  Private
 const getExpiringMembers = async (req, res) => {
   try {
+    const { Customer } = getReportModels(req);
     const today = startOfDay(new Date());
     const next14Days = endOfDay(addDays(new Date(), 14));
 
@@ -229,6 +242,7 @@ const getExpiringMembers = async (req, res) => {
 // @access  Private
 const getRevenueDetails = async (req, res) => {
   try {
+    const { Transaction } = getReportModels(req);
     const { month, year } = req.query;
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
@@ -286,14 +300,12 @@ const getRevenueDetails = async (req, res) => {
   }
 };
 
-
-const SaleOrder = require("../models/SaleOrder");
-
 // @desc    Get inventory and POS sales report
 // @route   GET /api/reports/inventory
 // @access  Private
 const getInventoryReport = async (req, res) => {
   try {
+    const { Product, Transaction } = getReportModels(req);
     const { month, year } = req.query;
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
@@ -352,6 +364,7 @@ const getInventoryReport = async (req, res) => {
 // @access  Private
 const getChurnPrediction = async (req, res) => {
   try {
+    const { CheckIn, Customer } = getReportModels(req);
     const today = new Date();
     
     // 1. Lấy tất cả khách hàng có gói tập chưa hết hạn hoặc cần kiểm tra ngày hết hạn
@@ -527,6 +540,7 @@ const getChurnPrediction = async (req, res) => {
 // @access  Private
 const getRevenueAdvanced = async (req, res) => {
   try {
+    const { CustomerPackage, Setting, Transaction } = getReportModels(req);
     const { month, year } = req.query;
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
@@ -802,6 +816,15 @@ const getRevenueAdvanced = async (req, res) => {
 // @access  Private
 const getHRSummary = async (req, res) => {
   try {
+    const {
+      Commission,
+      CustomerPackage,
+      KPITarget,
+      Setting,
+      Transaction,
+      User,
+      WorkoutSession,
+    } = getReportModels(req);
     const { month, year } = req.query;
     const today = new Date();
     const m = parseInt(month) || today.getMonth() + 1;
@@ -813,9 +836,12 @@ const getHRSummary = async (req, res) => {
     const end = new Date(Date.UTC(y, m - 1, lastDay, 16, 59, 59, 999));
 
     // Lấy danh sách nhân viên PT và Sale
-    const staffList = await User.find({
-      role: { $in: ["pt", "sale", "sm", "pm"] }
-    }).select("fullName username role").lean();
+    const [staffList, setting] = await Promise.all([
+      User.find({
+        role: { $in: ["pt", "sale", "sm", "pm"] }
+      }).select("fullName username role").lean(),
+      Setting.findOne().lean(),
+    ]);
 
     // Mặc định lương cơ bản: 5 triệu VND
     const defaultBasicSalary = 5000000;
@@ -842,8 +868,6 @@ const getHRSummary = async (req, res) => {
 
       // 2. Tính hiệu suất KPI & Doanh số đem về
       const target = await KPITarget.findOne({ staff: staff._id, month: m, year: y });
-      const setting = await Setting.findOne();
-
       let kpiPercentage = 0;
       let revenueGenerated = 0;
 
@@ -983,6 +1007,17 @@ const getHRSummary = async (req, res) => {
 // @access  Private
 const getCustomerAnalytics = async (req, res) => {
   try {
+    const {
+      CheckIn,
+      Customer,
+      CustomerPackage,
+      Package,
+      Transaction,
+      User,
+      WorkoutSession,
+    } = getReportModels(req);
+    const packageCollection = getCollectionName(Package, "packages");
+    const userCollection = getCollectionName(User, "users");
     const today = new Date();
 
     // 1. Phân bổ giới tính
@@ -1122,11 +1157,11 @@ const getCustomerAnalytics = async (req, res) => {
     // 8. Thống kê số khách theo từng PT (trainer breakdown) (chỉ tính trên các gói theo buổi)
     const trainerStatsAgg = await CustomerPackage.aggregate([
       { $match: { status: "active", trainer: { $ne: null } } },
-      { $lookup: { from: "packages", localField: "packageName", foreignField: "name", as: "pkgInfo" } },
+      { $lookup: { from: packageCollection, localField: "packageName", foreignField: "name", as: "pkgInfo" } },
       { $unwind: { path: "$pkgInfo", preserveNullAndEmptyArrays: true } },
       { $match: { "pkgInfo.type": "session" } },
       { $group: { _id: "$trainer", count: { $sum: 1 } } },
-      { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "ptInfo" } },
+      { $lookup: { from: userCollection, localField: "_id", foreignField: "_id", as: "ptInfo" } },
       { $unwind: "$ptInfo" },
       { $project: { _id: 1, name: "$ptInfo.fullName", role: "$ptInfo.role", count: 1 } },
       { $sort: { count: -1 } }
@@ -1175,6 +1210,18 @@ const getCustomerAnalytics = async (req, res) => {
 // @access  Private
 const getNotificationsSummary = async (req, res) => {
   try {
+    const {
+      CommissionPeriod,
+      Customer,
+      CustomerPackage,
+      KPITarget,
+      Product,
+      Setting,
+      TeamTask,
+      Transaction,
+      User,
+      WorkoutSession,
+    } = getReportModels(req);
     const now = new Date();
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
@@ -1310,6 +1357,8 @@ const getNotificationsSummary = async (req, res) => {
 // @route   GET /api/reports/pt-sessions
 const getPTSessionsReport = async (req, res) => {
   try {
+    const { CustomerPackage, CommissionPeriod, Setting, User, WorkoutSession } = getReportModels(req);
+    const userCollection = getCollectionName(User, "users");
     const { month, year, ptId, status } = req.query;
     const m = month ? parseInt(month) : new Date().getMonth() + 1;
     const y = year ? parseInt(year) : new Date().getFullYear();
@@ -1320,7 +1369,10 @@ const getPTSessionsReport = async (req, res) => {
     const baseQuery = {
       date: { $gte: startDate, $lte: endDate },
     };
-    if (ptId && ptId !== "all") {
+    const canReadAllWorkouts = await userHasPermission(req, PERMISSIONS.WORKOUT_READ_ALL);
+    if (!canReadAllWorkouts) {
+      baseQuery.pt = req.user._id;
+    } else if (ptId && ptId !== "all") {
       baseQuery.pt = ptId;
     }
 
@@ -1409,14 +1461,21 @@ const getPTSessionsReport = async (req, res) => {
     });
 
     // Thống kê số lượng khách sắp hết buổi (<= 2 buổi còn lại)
-    const atRiskPackages = await CustomerPackage.countDocuments({
+    const atRiskQuery = {
       status: "active",
       remainingSessions: { $gte: 0, $lte: 2 },
-    });
+    };
+    if (!canReadAllWorkouts) atRiskQuery.customer = { $in: customerIds };
+    const atRiskPackages = await CustomerPackage.countDocuments(atRiskQuery);
 
     // Bảng xếp hạng PT theo số buổi hoàn thành (không tính buổi huỷ/vi phạm)
+    const leaderboardMatch = {
+      date: { $gte: startDate, $lte: endDate },
+      status: "completed",
+    };
+    if (!canReadAllWorkouts) leaderboardMatch.pt = req.user._id;
     const leaderboardAgg = await WorkoutSession.aggregate([
-      { $match: { date: { $gte: startDate, $lte: endDate }, status: "completed" } },
+      { $match: leaderboardMatch },
       {
         $group: {
           _id: "$pt",
@@ -1427,7 +1486,7 @@ const getPTSessionsReport = async (req, res) => {
       { $limit: 5 },
       {
         $lookup: {
-          from: "users",
+          from: userCollection,
           localField: "_id",
           foreignField: "_id",
           as: "ptInfo",
@@ -1467,7 +1526,11 @@ const getPTSessionsReport = async (req, res) => {
         estimatedCommission,
         periodStatus: period?.status || "draft",
         periodId: period?._id || null,
-        disputes: period?.disputes || [],
+        disputes: canReadAllWorkouts
+          ? (period?.disputes || [])
+          : (period?.disputes || []).filter(
+              (dispute) => String(dispute.ptUser || "") === String(req.user._id)
+            ),
         leaderboard: leaderboardAgg,
       },
     });
@@ -1481,6 +1544,7 @@ const getPTSessionsReport = async (req, res) => {
 // @route   GET /api/reports/pt-sessions/export-excel
 const exportPTSessionsExcel = async (req, res) => {
   try {
+    const { Setting, User, WorkoutSession } = getReportModels(req);
     const { month, year, ptId } = req.query;
     const m = month ? parseInt(month) : new Date().getMonth() + 1;
     const y = year ? parseInt(year) : new Date().getFullYear();
@@ -1493,8 +1557,12 @@ const exportPTSessionsExcel = async (req, res) => {
       status: "completed",
     };
 
+    const canReadAllWorkouts = await userHasPermission(req, PERMISSIONS.WORKOUT_READ_ALL);
     let ptUser = null;
-    if (ptId && ptId !== "all") {
+    if (!canReadAllWorkouts) {
+      query.pt = req.user._id;
+      ptUser = await User.findById(req.user._id).select("fullName username").lean();
+    } else if (ptId && ptId !== "all") {
       query.pt = ptId;
       ptUser = await User.findById(ptId).select("fullName username").lean();
     }
@@ -1613,6 +1681,7 @@ const exportPTSessionsExcel = async (req, res) => {
 // @route   POST /api/reports/pt-sessions/dispute
 const submitPTDispute = async (req, res) => {
   try {
+    const { CommissionPeriod, WorkoutSession } = getReportModels(req);
     const { month, year, workoutLogId, reason } = req.body;
     if (!reason || !reason.trim()) {
       return res.status(400).json({ success: false, message: "Vui lòng nhập lý do khiếu nại" });
@@ -1620,6 +1689,20 @@ const submitPTDispute = async (req, res) => {
 
     const m = parseInt(month);
     const y = parseInt(year);
+
+    if (workoutLogId) {
+      const ownedWorkout = await WorkoutSession.findOne({
+        _id: workoutLogId,
+        pt: req.user._id,
+      }).select("_id");
+      if (!ownedWorkout) {
+        return res.status(403).json({
+          success: false,
+          code: "OBJECT_ACCESS_DENIED",
+          message: "Bạn không thể khiếu nại buổi tập của PT khác",
+        });
+      }
+    }
 
     let period = await CommissionPeriod.findOne({ month: m, year: y, type: "pt" });
     if (!period) {
@@ -1641,11 +1724,16 @@ const submitPTDispute = async (req, res) => {
     });
 
     await period.save();
+    const submittedDispute = period.disputes[period.disputes.length - 1];
 
     res.json({
       success: true,
       message: "Đã gửi khiếu nại buổi tập thành công. Admin sẽ xem xét đối soát.",
-      data: period,
+      data: {
+        periodId: period._id,
+        periodStatus: period.status,
+        dispute: submittedDispute,
+      },
     });
   } catch (error) {
     console.error("Lỗi khiếu nại đối soát PT:", error);
@@ -1657,6 +1745,7 @@ const submitPTDispute = async (req, res) => {
 // @route   PUT /api/reports/commission-period/status
 const updatePeriodStatus = async (req, res) => {
   try {
+    const { CommissionPeriod } = getReportModels(req);
     const { periodId, month, year, type = "pt", status, note } = req.body;
 
     let period;
@@ -1703,6 +1792,7 @@ const updatePeriodStatus = async (req, res) => {
 // @route   GET /api/reports/leads-conversion
 const getLeadConversionReport = async (req, res) => {
   try {
+    const { Lead } = getReportModels(req);
     const { startDate, endDate } = req.query;
     const query = {};
 
@@ -1790,6 +1880,7 @@ const getLeadConversionReport = async (req, res) => {
 // @route   GET /api/reports/contract-status-breakdown
 const getContractStatusBreakdown = async (req, res) => {
   try {
+    const { CustomerPackage } = getReportModels(req);
     const packages = await CustomerPackage.find({ isDeleted: { $ne: true } }).lean();
     const now = new Date();
     const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);

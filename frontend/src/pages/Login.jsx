@@ -67,31 +67,25 @@ const Login = () => {
         }
       `}</style>
 
-      {/* Hình nền phòng tập gym hiện đại, sắc nét */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700"
         style={{ backgroundImage: "url('/gym_login_bg.jpg')" }}
         aria-hidden="true"
       />
-
-      {/* Lớp phủ chuyển sắc xanh đậm & hiệu ứng mờ ambient tăng độ sâu và làm nổi bật card đăng nhập */}
       <div
         className="absolute inset-0 bg-gradient-to-br from-[#0b1b13]/85 via-[#0e271a]/75 to-[#08150f]/90 backdrop-blur-[4px]"
         aria-hidden="true"
       />
-
-      {/* Đốm sáng phản chiếu thương hiệu */}
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[520px] rounded-full bg-primary/20 blur-[120px] pointer-events-none"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[120px]"
         aria-hidden="true"
       />
 
-      {/* Card đăng nhập chia 2 cột đồng nhất với mẫu thiết kế (nổi bật trên nền hình) */}
-      <div className="relative z-10 w-full max-w-[900px] bg-white/95 backdrop-blur-md rounded-3xl border border-white/60 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden grid grid-cols-1 md:grid-cols-2">
+      <div className="relative z-10 grid w-full max-w-[900px] grid-cols-1 overflow-hidden rounded-lg border border-white/60 bg-white/95 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md md:grid-cols-2">
         {/* Cột trái: Nhận diện thương hiệu Gym Fitness với nền đậm màu hơn, tách biệt rõ rệt với form trắng bên phải */}
         <section className="bg-gradient-to-b from-[#d8f2e4] via-[#e2f5ec] to-[#c8eed8] p-8 sm:p-12 lg:p-14 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-emerald-200/70">
           <div
-            className="flex size-20 items-center justify-center rounded-2xl bg-primary text-[#0d1b14] shadow-lg shadow-emerald-800/20 transition-transform duration-300 hover:scale-105"
+            className="flex size-20 items-center justify-center rounded-lg bg-primary text-[#0d1b14] shadow-lg shadow-emerald-800/20 transition-transform duration-300 hover:scale-105"
             aria-hidden="true"
           >
             <Dumbbell size={40} strokeWidth={2.2} />
@@ -115,7 +109,7 @@ const Login = () => {
             <div
               role="alert"
               aria-live="polite"
-              className="mt-6 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700 animate-slideDown"
+              className="mt-6 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700 animate-slideDown"
             >
               <AlertCircle size={18} className="shrink-0 text-red-500 mt-0.5" />
               <span className="leading-snug">{error}</span>
@@ -131,7 +125,7 @@ const Login = () => {
               >
                 Cơ sở
               </label>
-              <div className="group flex h-12 items-center rounded-xl border border-gray-200 bg-gray-50/80 transition-all duration-200 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/15">
+              <div className="group flex h-12 items-center rounded-lg border border-gray-200 bg-gray-50/80 transition-all duration-200 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/15">
                 <Building2
                   size={18}
                   className="ml-4 shrink-0 text-gray-400 transition-colors group-focus-within:text-emerald-600"
@@ -150,7 +144,7 @@ const Login = () => {
                   maxLength={64}
                   pattern="[A-Za-z0-9][A-Za-z0-9-]*"
                   placeholder="Nhập mã cơ sở"
-                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none"
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[15px] text-gray-900 placeholder:text-gray-500 outline-none"
                   value={facilityKey}
                   onChange={(event) => setFacilityKey(event.target.value)}
                 />
@@ -165,7 +159,7 @@ const Login = () => {
               >
                 Tên đăng nhập
               </label>
-              <div className="group flex h-12 items-center rounded-xl border border-gray-200 bg-gray-50/80 transition-all duration-200 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/15">
+              <div className="group flex h-12 items-center rounded-lg border border-gray-200 bg-gray-50/80 transition-all duration-200 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/15">
                 <User
                   size={18}
                   className="ml-4 shrink-0 text-gray-400 transition-colors group-focus-within:text-emerald-600"
@@ -181,7 +175,7 @@ const Login = () => {
                   spellCheck="false"
                   required
                   placeholder="Nhập tên đăng nhập"
-                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none"
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[15px] text-gray-900 placeholder:text-gray-500 outline-none"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                 />
@@ -196,7 +190,7 @@ const Login = () => {
               >
                 Mật khẩu
               </label>
-              <div className="group flex h-12 items-center rounded-xl border border-gray-200 bg-gray-50/80 transition-all duration-200 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/15">
+              <div className="group flex h-12 items-center rounded-lg border border-gray-200 bg-gray-50/80 transition-all duration-200 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/15">
                 <LockKeyhole
                   size={18}
                   className="ml-4 shrink-0 text-gray-400 transition-colors group-focus-within:text-emerald-600"
@@ -209,7 +203,7 @@ const Login = () => {
                   autoComplete="current-password"
                   required
                   placeholder="Nhập mật khẩu"
-                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none"
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[15px] text-gray-900 placeholder:text-gray-500 outline-none"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
@@ -229,7 +223,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-bold text-[#0d1b14] shadow-sm transition-all duration-200 hover:bg-primary-hover hover:shadow-md hover:shadow-primary/20 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              className="mt-2 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-bold text-[#0d1b14] transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (
                 <>
@@ -243,7 +237,7 @@ const Login = () => {
           </form>
 
           {/* Dòng chú thích bảo mật đồng nhất mẫu */}
-          <p className="mt-8 text-center text-xs text-gray-400">
+          <p className="mt-8 text-center text-xs text-gray-500">
             Đồ án tốt nghiệp của duyki
           </p>
         </section>

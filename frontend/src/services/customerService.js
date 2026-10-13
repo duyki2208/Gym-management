@@ -91,18 +91,16 @@ export const customerService = {
       }
     }
 
-    try {
-      if (isUpdate) {
-        const response = await api.put(url, dataToSend);
-        return response.data;
-      } else {
-        const response = await api.post(url, dataToSend);
-        return response.data;
-      }
-    } catch (error) {
-      // Re-throw để giữ nguyên axios error (status, response.data) cho caller xử lý
-      throw error;
+    if (isUpdate) {
+      const response = await api.put(url, dataToSend);
+      return response.data;
     }
+    const idempotencyKey = globalThis.crypto?.randomUUID?.()
+      || `registration-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const response = await api.post(url, dataToSend, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
+    return response.data;
   },
 
   // Kiểm tra khách hàng đã tồn tại chưa (real-time, không ghi dữ liệu)
@@ -173,7 +171,7 @@ export const checkInService = {
       const data = response.data;
       if (data?.success && data?.data?.checkins) return data.data.checkins;
       return ensureArray(data);
-    } catch (error) {
+    } catch {
       return [];
     }
   },
@@ -201,7 +199,7 @@ export const packageService = {
     try {
       const response = await api.get('/packages');
       return response.data;
-    } catch (error) {
+    } catch {
       return [];
     }
   },
@@ -222,7 +220,7 @@ export const packageService = {
          const response = await api.post(url, body);
          return response.data;
        }
-    } catch (error) {
+    } catch {
       throw new Error("Lỗi lưu gói tập");
     }
   },
@@ -236,7 +234,7 @@ export const staffService = {
     try {
       const response = await api.get('/staff');
       return response.data;
-    } catch (e) {
+    } catch {
       return [];
     }
   },
@@ -274,7 +272,7 @@ export const staffService = {
     try {
       const response = await api.get('/staff/schedules', { params });
       return response.data;
-    } catch (e) {
+    } catch {
       return [];
     }
   },
@@ -289,7 +287,7 @@ export const workoutService = {
     try {
       const response = await api.get(`/workouts/${customerId}`);
       return response.data;
-    } catch (e) {
+    } catch {
       return [];
     }
   },

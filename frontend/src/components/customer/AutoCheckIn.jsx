@@ -143,9 +143,9 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
   // ──────────────────────────────────────────────
   if (cameraError) {
     return (
-      <div className="bg-red-50 p-6 rounded-xl border border-red-200 text-center">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
         <VideoOff size={36} className="text-red-500 block mb-2 mx-auto" />
-        <p className="text-red-700 font-bold">{cameraError}</p>
+        <p className="font-semibold text-red-700">{cameraError}</p>
       </div>
     );
   }
@@ -157,15 +157,15 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
   }[statusColor];
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 bg-white dark:bg-gray-800 p-6 rounded-xl border shadow-sm">
+    <div className="flex flex-col gap-6 rounded-lg border border-border-light bg-surface-light p-5 dark:border-border-dark dark:bg-surface-dark md:flex-row">
       {/* Camera Panel */}
       <div className="w-full md:w-1/2 flex flex-col items-center">
-        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-          <ScanFace size={20} className="text-blue-500" />
-          Giao Diện Quét
+        <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-text-light dark:text-text-dark">
+          <ScanFace size={19} className="text-text-muted-light dark:text-text-muted-dark" />
+          Nhận diện khuôn mặt
         </h3>
 
-        <div className="relative rounded-xl overflow-hidden border border-border-light dark:border-border-dark bg-black shadow-inner w-full max-w-sm aspect-[4/3]">
+        <div className="relative aspect-[4/3] w-full max-w-sm overflow-hidden rounded-lg border border-border-light bg-black dark:border-border-dark">
           <video
             ref={videoRef}
             onPlay={handleVideoPlay}
@@ -179,19 +179,19 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
           <canvas ref={canvasRef} className="hidden" />
         </div>
 
-        <p className={`mt-4 text-sm font-medium px-4 py-1.5 rounded-full ${statusBg}`}>
+        <p className={`mt-4 rounded-full px-4 py-1.5 text-sm font-medium ${statusBg}`}>
           {statusText}
         </p>
       </div>
 
       {/* Info Panel */}
       <div className="w-full md:w-1/2 flex flex-col justify-center gap-4">
-        <div className="p-5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100">
-          <p className="text-sm font-bold text-blue-700 uppercase mb-2">Lần nhận diện gần nhất</p>
+        <div className="rounded-lg border border-border-light bg-background-light p-5 dark:border-border-dark dark:bg-background-dark">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">Lần nhận diện gần nhất</p>
           {lastMatched ? (
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{lastMatched.name}</p>
-              <p className="text-sm text-gray-500 mt-1">Mã: <span className="font-bold">{lastMatched.code}</span></p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{lastMatched.name}</p>
+              <p className="mt-1 text-sm text-gray-500">Mã: <span className="font-medium">{lastMatched.code}</span></p>
               <p className="text-xs text-green-600 mt-1">
                 Độ chính xác: {(lastMatched.confidence * 100).toFixed(1)}%
               </p>
@@ -201,10 +201,9 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
           )}
         </div>
 
-        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500">
-          <p className="font-bold text-gray-700 mb-1">⚡ Powered by InsightFace</p>
-          <p>Camera quét mỗi 1.5 giây. Nhìn thẳng vào camera để nhận diện nhanh hơn.</p>
-          <p className="mt-1 text-xs text-gray-400">Để sử dụng tính năng này, cần chạy face-service tại <code>localhost:5001</code></p>
+        <div className="rounded-lg border border-border-light p-4 text-sm text-text-muted-light dark:border-border-dark dark:text-text-muted-dark">
+          <p className="mb-1 font-medium text-text-light dark:text-text-dark">Hướng dẫn nhận diện</p>
+          <p>Nhìn thẳng vào camera và giữ khuôn mặt trong khung hình. Hệ thống sẽ tự động ghi nhận khi tìm thấy hội viên.</p>
         </div>
       </div>
     </div>

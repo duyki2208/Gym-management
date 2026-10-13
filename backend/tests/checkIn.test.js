@@ -7,6 +7,11 @@ const faceClient = require("../utils/faceServiceClient");
 const { invalidateEmbeddingCache } = require("../controllers/checkInController");
 const { createTestUserAndGetToken } = require("./testSetup");
 
+const testJpeg = () => Buffer.concat([
+  Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+  Buffer.from("test-image-bytes"),
+]);
+
 describe("CheckIn API Tests", () => {
   let staffToken, customerId, packageId;
 
@@ -75,13 +80,19 @@ describe("CheckIn API Tests", () => {
       const res = await request(app)
         .post("/api/v1/checkins/recognize")
         .set("Authorization", `Bearer ${staffToken}`)
-        .attach("image", Buffer.from("fake-image-bytes"), "frame.jpg");
+        .attach("image", testJpeg(), "frame.jpg");
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.matched).toBe(true);
       expect(res.body.warning).toBeNull();
       expect(res.body.member.name).toBe("Hội Viên CheckIn");
+      expect(faceClient.recognize).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.any(Array),
+        "HN01",
+        undefined
+      );
 
       // Đảm bảo check-in được lưu vào DB
       const dbCheckIn = await CheckIn.findOne({ customerId: customerId });
@@ -105,7 +116,7 @@ describe("CheckIn API Tests", () => {
       const res = await request(app)
         .post("/api/v1/checkins/recognize")
         .set("Authorization", `Bearer ${staffToken}`)
-        .attach("image", Buffer.from("fake-image-bytes"), "frame.jpg");
+        .attach("image", testJpeg(), "frame.jpg");
 
       expect(res.status).toBe(200);
       expect(res.body.matched).toBe(true);
@@ -125,7 +136,7 @@ describe("CheckIn API Tests", () => {
       const res = await request(app)
         .post("/api/v1/checkins/recognize")
         .set("Authorization", `Bearer ${staffToken}`)
-        .attach("image", Buffer.from("fake-image-bytes"), "frame.jpg");
+        .attach("image", testJpeg(), "frame.jpg");
 
       expect(res.status).toBe(200);
       expect(res.body.matched).toBe(true);

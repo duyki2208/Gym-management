@@ -1,87 +1,107 @@
 const DefaultCustomer = require("../models/Customer");
 const DefaultCustomerPackage = require("../models/CustomerPackage");
 
-/**
- * Đồng bộ các field cached từ CustomerPackage (gói active nhất) vào Customer.
- *
- * @param {mongoose.Types.ObjectId|string} customerId
- * @param {object} [options] - Tùy chọn truyền vào như { session }
- * @param {object} [models] - Branch models { Customer, CustomerPackage }
- */
-async function syncCustomerFields(customerId, options = {}, models = null) {
-  try {
-    const session = options && options.session ? options.session : null;
+const emptyCustomerProjection = () => ({
+  activePackage: null,
+  packageType: "Không có",
+  packageCategory: "maintenance",
+  startDate: new Date(),
+  endDate: new Date(),
+  remainingSessions: 0,
+  price: 0,
+  paymentStatus: "unpaid",
+  paidAmount: 0,
+  contractType: "new",
+  trainer: null,
+  assignedStaff: null,
+  hasLocker: false,
+  hasWater: false,
+  packageNote: "",
+  contractCode: "",
+});
 
-    const CustomerModel = models?.Customer || DefaultCustomer;
-    const CustomerPackageModel = models?.CustomerPackage || DefaultCustomerPackage;
+const buildCustomerProjection = (customerPackage) => {
+  if (!customerPackage) return emptyCustomerProjection();
 
-    // Ưu tiên gói đang active, nếu không có thì lấy gói mới nhất
-    let activePackageQuery = CustomerPackageModel.findOne({
+  const isTransferred = customerPackage.status === "transferred";
+  return {
+    activePackage: isTransferred ? null : customerPackage._id,
+    packageType: customerPackage.packageName,
+    packageCategory: customerPackage.category || "maintenance",
+    startDate: customerPackage.startDate,
+    endDate: isTransferred ? new Date() : customerPackage.endDate,
+    remainingSessions: isTransferred
+      ? 0
+      : customerPackage.remainingSessions || 0,
+    price: customerPackage.price || 0,
+    paymentStatus: customerPackage.paymentStatus || "unpaid",
+    paidAmount: customerPackage.paidAmount || 0,
+    contractType: customerPackage.contractType || "new",
+    trainer: isTransferred ? null : customerPackage.trainer || null,
+    assignedStaff: customerPackage.assignedStaff || null,
+    hasLocker: isTransferred ? false : Boolean(customerPackage.hasLocker),
+    hasWater: isTransferred ? false : Boolean(customerPackage.hasWater),
+    packageNote: customerPackage.packageNote || "",
+    contractCode: customerPackage.contractCode || "",
+  };
+};
+
+const applySession = (query, session) =>
+  session ? query.session(session) : query;
+
+const findCanonicalPackage = async (
+  CustomerPackageModel,
+  customerId,
+  session
+) => {
+  const activePackage = await applySession(
+    CustomerPackageModel.findOne({
       customer: customerId,
       status: "active",
       isDeleted: { $ne: true },
-    }).sort({ endDate: -1 });
+    }).sort({ endDate: -1, createdAt: -1 }),
+    session
+  );
 
-    if (session) {
-      activePackageQuery = activePackageQuery.session(session);
-    }
-    let activePackage = await activePackageQuery;
+  if (activePackage) return activePackage;
 
-    if (!activePackage) {
-      let latestPackageQuery = CustomerPackageModel.findOne({
-        customer: customerId,
-        isDeleted: { $ne: true },
-      }).sort({ createdAt: -1 });
+  return applySession(
+    CustomerPackageModel.findOne({
+      customer: customerId,
+      isDeleted: { $ne: true },
+    }).sort({ createdAt: -1 }),
+    session
+  );
+};
 
-      if (session) {
-        latestPackageQuery = latestPackageQuery.session(session);
-      }
-      activePackage = await latestPackageQuery;
-    }
+/**
+ * CustomerPackage là nguồn dữ liệu chuẩn; Customer chỉ lưu phép chiếu phục vụ đọc nhanh.
+ */
+async function syncCustomerFields(customerId, options = {}, models = null) {
+  const session = options?.session || null;
+  const CustomerModel = models?.Customer || DefaultCustomer;
+  const CustomerPackageModel =
+    models?.CustomerPackage || DefaultCustomerPackage;
 
-    let customerQuery = CustomerModel.findById(customerId);
-    if (session) {
-      customerQuery = customerQuery.session(session);
-    }
-    const customer = await customerQuery;
-    if (!customer) return;
+  const canonicalPackage = await findCanonicalPackage(
+    CustomerPackageModel,
+    customerId,
+    session
+  );
+  const customer = await applySession(
+    CustomerModel.findById(customerId),
+    session
+  );
+  if (!customer) return null;
 
-    if (activePackage) {
-      const isTransferred = activePackage.status === "transferred";
-      customer.activePackage   = activePackage._id;
-      customer.packageType     = activePackage.packageName;
-      customer.packageCategory = activePackage.category || "maintenance";
-      customer.startDate       = activePackage.startDate;
-      customer.endDate         = isTransferred ? new Date() : activePackage.endDate;
-      customer.remainingSessions = isTransferred ? 0 : (activePackage.remainingSessions || 0);
-      customer.price           = activePackage.price;
-      customer.paymentStatus   = activePackage.paymentStatus;
-      customer.paidAmount      = activePackage.paidAmount;
-      customer.contractType    = activePackage.contractType;
-      customer.trainer         = isTransferred ? null : activePackage.trainer;
-      customer.assignedStaff   = activePackage.assignedStaff;
-      customer.hasLocker       = isTransferred ? false : activePackage.hasLocker;
-      customer.hasWater        = isTransferred ? false : activePackage.hasWater;
-      customer.packageNote     = activePackage.packageNote;
-      customer.contractCode    = activePackage.contractCode || "";
-    } else {
-      customer.activePackage   = null;
-      customer.packageType     = "Không có";
-      customer.startDate       = new Date();
-      customer.endDate         = new Date();
-      customer.remainingSessions = 0;
-      customer.price           = 0;
-      customer.paymentStatus   = "unpaid";
-      customer.paidAmount      = 0;
-      customer.packageNote     = "";
-    }
+  const projection = buildCustomerProjection(canonicalPackage);
+  customer.set(projection);
+  await customer.save({ session: session || undefined });
 
-    await customer.save({ session: session || undefined });
-  } catch (err) {
-    console.error("Lỗi đồng bộ hồ sơ khách hàng:", err);
-    throw err;
-  }
+  return { customer, canonicalPackage, projection };
 }
 
 module.exports = syncCustomerFields;
-
+module.exports.buildCustomerProjection = buildCustomerProjection;
+module.exports.emptyCustomerProjection = emptyCustomerProjection;
+module.exports.findCanonicalPackage = findCanonicalPackage;

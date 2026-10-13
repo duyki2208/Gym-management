@@ -1,6 +1,8 @@
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
+const {
+  IMAGE_UPLOAD_TYPES,
+  createMemoryUpload,
+} = require('../middleware/secureUpload');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,21 +10,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'gym-avatars',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [
-      { width: 300, height: 300, crop: 'fill', gravity: 'face' },
-      { quality: 'auto', fetch_format: 'auto' }
-    ],
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // tối đa 5MB
+const upload = createMemoryUpload({
+  maxBytes: 5 * 1024 * 1024,
+  allowedTypes: IMAGE_UPLOAD_TYPES,
 });
 
 const uploadBuffer = (buffer) => {

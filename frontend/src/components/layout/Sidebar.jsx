@@ -32,7 +32,6 @@ import {
    1. HẰNG SỐ ROLE
 ═══════════════════════════════════════════════════════════ */
 const ALL_ROLES = ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'pt', 'sale', 'reception'];
-const MANAGER_ROLES = ['admin', 'accountant', 'manager', 'sm', 'pm', 'om'];
 
 /* ═══════════════════════════════════════════════════════════
    2. CẤU TRÚC SIDEBAR (5 BÁO CÁO TINH GỌN, KHÔNG BADGE)
@@ -48,12 +47,12 @@ const menuStructure = [
         icon: Users,
         label: 'Khách hàng',
         children: [
-          { path: '/leads', icon: Target, label: 'Khách tiềm năng', roles: ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'staff', 'sale'] },
-          { path: '/customers', icon: Users, label: 'Hội viên', roles: ALL_ROLES },
+          { path: '/leads', icon: Target, label: 'Khách tiềm năng', permission: 'lead.read' },
+          { path: '/customers', icon: Users, label: 'Hội viên', permission: 'customer.read' },
         ],
       },
-      { type: 'link', path: '/checkin', icon: QrCode, label: 'Check-in', roles: ALL_ROLES },
-      { type: 'link', path: '/history', icon: History, label: 'Lịch sử ', roles: ALL_ROLES },
+      { type: 'link', path: '/checkin', icon: QrCode, label: 'Check-in', permission: 'checkin.use' },
+      { type: 'link', path: '/history', icon: History, label: 'Lịch sử ', permission: 'checkin.use' },
     ],
   },
   {
@@ -67,8 +66,8 @@ const menuStructure = [
         label: 'Cửa hàng',
         children: [
           { path: '/products/pos', icon: ShoppingCart, label: 'Bán hàng', roles: ALL_ROLES },
-          { path: '/products/inventory', icon: PackageSearch, label: 'Tồn kho', roles: ALL_ROLES },
-          { path: '/products/import', icon: Download, label: 'Nhập hàng', roles: ALL_ROLES },
+          { path: '/products/inventory', icon: PackageSearch, label: 'Tồn kho', permission: 'inventory.read' },
+          { path: '/products/import', icon: Download, label: 'Nhập hàng', permission: 'inventory.import' },
         ],
       },
       {
@@ -78,7 +77,7 @@ const menuStructure = [
         label: 'Nhân sự',
         children: [
           { path: '/staff', icon: UserCog, label: 'Nhân viên', roles: ALL_ROLES },
-          { path: '/commissions', icon: Coins, label: 'Hoa hồng', roles: ['admin', 'accountant', 'manager', 'sm', 'pm', 'om', 'pt', 'sale'] },
+          { path: '/commissions', icon: Coins, label: 'Hoa hồng', permission: 'commission.read' },
         ],
       },
     ],
@@ -92,11 +91,11 @@ const menuStructure = [
         icon: BarChart3,
         label: 'Báo cáo ',
         children: [
-          { path: '/reports/revenue', icon: TrendingUp, label: 'Doanh thu cơ sở', roles: MANAGER_ROLES },
+          { path: '/reports/revenue', icon: TrendingUp, label: 'Doanh thu cơ sở', permission: 'report.read_all' },
           { path: '/reports/pt-sessions', icon: Dumbbell, label: 'Buổi tập PT', roles: ALL_ROLES },
-          { path: '/reports/sales-funnel', icon: Target, label: 'Hợp đồng', roles: MANAGER_ROLES },
-          { path: '/reports/customer-analytics', icon: UserSearch, label: 'Phân tích khách hàng', roles: MANAGER_ROLES },
-          { path: '/reports/inventory', icon: PackageSearch, label: 'Phân tích kho hàng', roles: MANAGER_ROLES },
+          { path: '/reports/sales-funnel', icon: Target, label: 'Hợp đồng', permission: 'report.read_all' },
+          { path: '/reports/customer-analytics', icon: UserSearch, label: 'Phân tích khách hàng', permission: 'report.read_all' },
+          { path: '/reports/inventory', icon: PackageSearch, label: 'Phân tích kho hàng', permission: 'report.read_all' },
         ],
       },
     ],
@@ -104,7 +103,7 @@ const menuStructure = [
   {
     section: 'Hệ thống',
     items: [
-      { type: 'link', path: '/settings', icon: Settings, label: 'Cài đặt', roles: ['admin', 'accountant'] },
+      { type: 'link', path: '/settings', icon: Settings, label: 'Cài đặt', permission: 'settings.read' },
     ],
   },
 ];
@@ -366,7 +365,7 @@ const GroupNavItem = ({ group, activePath, isOpen, isCollapsed, onToggle }) => {
 ═══════════════════════════════════════════════════════════ */
 const Sidebar = () => {
   const { isCompact: isCollapsed, toggle } = useSidebar();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const role = user?.role || 'staff';
@@ -380,22 +379,25 @@ const Sidebar = () => {
   }, [activePath]);
 
   const toggleGroup = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  const canView = (roles) => !roles || roles.includes(role);
+  const canView = useCallback((item) => {
+    if (item.permission) return hasPermission(item.permission);
+    return !item.roles || item.roles.includes(role);
+  }, [hasPermission, role]);
 
   const visibleMenu = useMemo(() => {
     return menuStructure
       .map((section) => {
         const items = section.items
           .map((item) => {
-            if (item.type === 'link') return canView(item.roles) ? item : null;
-            const visibleChildren = item.children.filter((c) => canView(c.roles));
+            if (item.type === 'link') return canView(item) ? item : null;
+            const visibleChildren = item.children.filter((child) => canView(child));
             return visibleChildren.length > 0 ? { ...item, children: visibleChildren } : null;
           })
           .filter(Boolean);
         return items.length > 0 ? { ...section, items } : null;
       })
       .filter(Boolean);
-  }, [role]);
+  }, [canView]);
 
   return (
     <aside

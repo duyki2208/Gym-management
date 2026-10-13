@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { X, UserPlus } from "lucide-react";
 import { staffService, customerService } from "../../services/customerService";
-import api from "../../services/api";
 import BaseModal from "../common/BaseModal";
 import FormField, { inputClassName } from "../common/FormField";
 import Button from "../common/Button";
@@ -309,7 +308,9 @@ const CustomerModal = ({ customer, packages, onSave, onClose, contractTypeAlert,
   // Real-time check: khi name hoặc phone thay đổi (chỉ áp dụng cho form tạo mới)
   useEffect(() => {
     if (customer) return; // Chỉ check khi tạo mới, không check khi edit
-    const { name, phone, dob } = formData;
+    const name = formData.name;
+    const phone = formData.phone;
+    const dob = formData.dob;
     if (!name.trim() || !phone.trim()) {
       setExistingCustomerAlert(null);
       return;

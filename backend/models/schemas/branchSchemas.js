@@ -89,6 +89,7 @@ const customerSchema = new mongoose.Schema(
     contractType: { type: String, enum: ["new", "renew", "upgrade", "transfer"], default: "new" },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
     source: { type: String, default: "other" },
+    registrationOperationKey: { type: String, trim: true },
 
     faceEmbedding: { type: [Number], default: [] },
     isDeleted: { type: Boolean, default: false },
@@ -119,7 +120,7 @@ customerSchema.pre("validate", async function () {
       const counter = await CounterModel.findByIdAndUpdate(
         { _id: "customerId" },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true, ...(session ? { session } : {}) }
+        { returnDocument: "after", upsert: true, ...(session ? { session } : {}) }
       );
       this.code = "KH" + counter.seq.toString().padStart(4, "0");
     } catch (error) {
@@ -134,6 +135,13 @@ customerSchema.index({ trainer: 1, isDeleted: 1 });
 customerSchema.index({ assignedStaff: 1, isDeleted: 1 });
 customerSchema.index({ identityCard: 1 });
 customerSchema.index({ email: 1 });
+customerSchema.index(
+  { registrationOperationKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { registrationOperationKey: { $type: "string" } },
+  }
+);
 
 // 4. CustomerPackage Schema
 const customerPackageSchema = new mongoose.Schema(
@@ -185,6 +193,7 @@ const customerPackageSchema = new mongoose.Schema(
     transferFee: { type: Number, default: 0 },
     transferredTo: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage", default: null },
     transferredFrom: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage", default: null },
+    operationKey: { type: String, trim: true },
     frozenPeriods: [
       {
         startDate: { type: Date, required: true },
@@ -226,6 +235,13 @@ customerPackageSchema.pre("aggregate", function () {
 customerPackageSchema.index({ customer: 1 });
 customerPackageSchema.index({ status: 1 });
 customerPackageSchema.index({ transferStatus: 1 });
+customerPackageSchema.index(
+  { operationKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { operationKey: { $type: "string" } },
+  }
+);
 
 // 5. CheckIn Schema
 const checkInSchema = new mongoose.Schema(
@@ -285,7 +301,7 @@ invoiceSchema.pre("validate", async function () {
       const counter = await CounterModel.findByIdAndUpdate(
         { _id: "invoiceId" },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true, ...(session ? { session } : {}) }
+        { returnDocument: "after", upsert: true, ...(session ? { session } : {}) }
       );
       this.code = "INV" + counter.seq.toString().padStart(5, "0");
     } catch (error) {
@@ -296,6 +312,7 @@ invoiceSchema.pre("validate", async function () {
 
 invoiceSchema.index({ customer: 1 });
 invoiceSchema.index({ createdAt: -1 });
+invoiceSchema.index({ type: 1, referenceId: 1 }, { unique: true });
 
 // 7. Transaction Schema
 const transactionSchema = new mongoose.Schema(
@@ -311,6 +328,9 @@ const transactionSchema = new mongoose.Schema(
     customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
     customerName: { type: String, default: "Khách Lẻ" },
     saleOrder: { type: mongoose.Schema.Types.ObjectId, ref: "SaleOrder" },
+    paymentProvider: { type: String, trim: true },
+    providerTransactionId: { type: String, trim: true },
+    operationKey: { type: String, trim: true },
     customerPackage: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage" },
     workoutSession: { type: mongoose.Schema.Types.ObjectId, ref: "WorkoutSession" },
     status: { type: String, enum: ["success", "failed"], default: "success" },
@@ -328,7 +348,7 @@ transactionSchema.pre("validate", async function () {
       const counter = await CounterModel.findByIdAndUpdate(
         { _id: "transactionId" },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true, ...(session ? { session } : {}) }
+        { returnDocument: "after", upsert: true, ...(session ? { session } : {}) }
       );
       this.code = "TXN" + counter.seq.toString().padStart(5, "0");
     } catch (error) {
@@ -345,6 +365,20 @@ transactionSchema.index(
   {
     unique: true,
     partialFilterExpression: { saleOrder: { $type: "objectId" } },
+  }
+);
+transactionSchema.index(
+  { paymentProvider: 1, providerTransactionId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { providerTransactionId: { $type: "string" } },
+  }
+);
+transactionSchema.index(
+  { operationKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { operationKey: { $type: "string" } },
   }
 );
 
@@ -376,6 +410,10 @@ const saleOrderSchema = new mongoose.Schema(
       },
     ],
     note: { type: String },
+    staff: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    paymentProvider: { type: String, trim: true },
+    providerTransactionId: { type: String, trim: true },
+    paidAt: { type: Date },
   },
   { timestamps: true }
 );
@@ -383,6 +421,14 @@ const saleOrderSchema = new mongoose.Schema(
 saleOrderSchema.index({ customer: 1 });
 saleOrderSchema.index({ status: 1 });
 saleOrderSchema.index({ createdAt: -1 });
+saleOrderSchema.index({ staff: 1, createdAt: -1 });
+saleOrderSchema.index(
+  { paymentProvider: 1, providerTransactionId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { providerTransactionId: { $type: "string" } },
+  }
+);
 
 // 9. Product Schema
 const productSchema = new mongoose.Schema(
@@ -722,7 +768,7 @@ const settingSchema = new mongoose.Schema(
       }),
     },
     // Ma trận phân quyền các vai trò
-    rolePermissions: {
+      rolePermissions: {
       type: mongoose.Schema.Types.Mixed,
       default: () => ({
         manager: ["view_dashboard", "manage_customers", "checkin", "view_reports", "pos_sell", "manage_staff", "manage_closures"],
@@ -730,8 +776,9 @@ const settingSchema = new mongoose.Schema(
         sale: ["view_dashboard", "manage_leads", "manage_customers", "checkin", "pos_sell", "view_commissions"],
         pt: ["view_dashboard", "checkin", "manage_workouts", "view_commissions"],
         reception: ["view_dashboard", "checkin", "manage_customers", "pos_sell", "deduct_workout"],
-      }),
-    },
+        }),
+      },
+      rolePermissionsVersion: { type: Number, default: 1 },
   },
   { timestamps: true }
 );
@@ -808,7 +855,7 @@ const contractTransferSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-contractTransferSchema.index({ contract: 1 });
+contractTransferSchema.index({ contract: 1 }, { unique: true });
 contractTransferSchema.index({ fromCustomer: 1 });
 contractTransferSchema.index({ toCustomer: 1 });
 
@@ -890,12 +937,20 @@ const packageExtensionHistorySchema = new mongoose.Schema(
     daysDifference: { type: Number, required: true },
     reason: { type: String, required: true, trim: true },
     performedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    operationKey: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
 packageExtensionHistorySchema.index({ packageId: 1, createdAt: -1 });
 packageExtensionHistorySchema.index({ customerId: 1 });
+packageExtensionHistorySchema.index(
+  { operationKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { operationKey: { $type: "string" } },
+  }
+);
 
 module.exports = {
   userSchema,

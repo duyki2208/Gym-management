@@ -8,7 +8,7 @@ const LayoutInner = ({ children }) => {
   const { isCompact } = useSidebar();
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 font-display text-gray-900 dark:text-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark overflow-hidden">
       {/* Sidebar cố định bên trái */}
       <Sidebar />
 
@@ -21,7 +21,7 @@ const LayoutInner = ({ children }) => {
         <Header />
 
         {/* Main content scroll độc lập */}
-        <main className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900 px-3 pt-3 pb-5 sm:px-5 lg:px-8 lg:pt-4 lg:pb-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark px-3 pt-4 pb-5 sm:px-5 lg:px-7 lg:pt-6 lg:pb-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto min-h-full">
             {children}
           </div>

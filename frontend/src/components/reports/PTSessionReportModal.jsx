@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Download } from "lucide-react";
 import reportService from "../../services/reportService";
 import { staffService } from "../../services/customerService";
 import toast from "react-hot-toast";
 
-const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
+const PTSessionReportModal = ({ isOpen, onClose }) => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -27,14 +27,7 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchPTList();
-      fetchReport();
-    }
-  }, [isOpen, month, year, ptId]);
-
-  const fetchPTList = async () => {
+  const fetchPTList = useCallback(async () => {
     try {
       const staff = await staffService.getAll();
       const pts = staff.filter((s) => s.role === "pt" || s.role === "pm");
@@ -42,9 +35,9 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     try {
       setLoading(true);
       const res = await reportService.getPTSessionsReport({ month, year, ptId });
@@ -57,7 +50,14 @@ const PTSessionReportModal = ({ isOpen, onClose, userRole }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [month, year, ptId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPTList();
+      fetchReport();
+    }
+  }, [isOpen, fetchPTList, fetchReport]);
 
   const handleExportExcel = async () => {
     try {

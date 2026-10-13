@@ -61,6 +61,23 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     const code = error.response?.data?.code;
 
+    if (error.response?.status === 429) {
+      const retryAfterHeader = error.response.headers?.["retry-after"];
+      const retryAfterBody = Number(error.response.data?.retryAfterSeconds);
+      const retryAfter = Number.isFinite(retryAfterBody) && retryAfterBody > 0
+        ? retryAfterBody
+        : Math.max(1, Number.parseInt(retryAfterHeader, 10) || 60);
+      const message = error.response.data?.message || "Bạn đang thao tác quá nhanh.";
+
+      if (!error.config?.silentError) {
+        toast.error(`${message} Thử lại sau khoảng ${retryAfter} giây.`, {
+          id: "rate-limit",
+          duration: 5000,
+        });
+      }
+      return Promise.reject(error);
+    }
+
     // Xử lý khi Access Token hết hạn
     if (
       error.response?.status === 401 &&

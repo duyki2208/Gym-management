@@ -1,6 +1,8 @@
 import api from './api';
 import { LOCAL_STORAGE_KEYS } from '../utils/constants';
 
+let sessionRequest = null;
+
 export const authService = {
   // Hàm đăng nhập
   login: async (facilityKey, username, password) => {
@@ -54,6 +56,24 @@ export const authService = {
     }
   },
 
+  getSession: async () => {
+    if (!sessionRequest) {
+      sessionRequest = api
+        .get('/auth/me', { silentError: true, timeout: 5000 })
+        .then((response) => {
+          const sessionUser = response.data?.user;
+          if (sessionUser) {
+            localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(sessionUser));
+          }
+          return sessionUser;
+        })
+        .finally(() => {
+          sessionRequest = null;
+        });
+    }
+    return sessionRequest;
+  },
+
   // Lấy token (Đã có interceptor xử lý, nhưng giữ lại nếu cần dùng lẻ)
   getToken: () => {
     return localStorage.getItem('gym_token');
@@ -82,6 +102,7 @@ export const authService = {
       if (currentUser) {
         currentUser.activeBranch = data.activeBranch;
         currentUser.branchName = data.branchName || currentUser.branchName;
+        currentUser.permissions = data.permissions || [];
         localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(currentUser));
       }
       return data;

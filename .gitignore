@@ -16,6 +16,13 @@ dist-ssr/
 .env.production.local
 backend/.env
 frontend/.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Logs
 logs

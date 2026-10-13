@@ -1,10 +1,11 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './components/ProtectedRoute';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import Layout from './components/layout'; // Sử dụng Layout mới
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -12,7 +13,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false, // Tùy chọn: không tải lại data khi focus lại cửa sổ
-      retry: 1, // Tùy chọn: Thử lại 1 lần nếu lỗi
+      retry: (failureCount, error) => error?.response?.status !== 429 && failureCount < 1,
     },
   },
 });
@@ -38,6 +39,10 @@ const PageLoader = () => (
   </div>
 );
 
+const withPermission = (permission, element) => (
+  <ProtectedRoute permission={permission}>{element}</ProtectedRoute>
+);
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -56,25 +61,30 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Layout>
-                        <Suspense fallback={<PageLoader />}>
-                          <Routes>
+                        <RouteErrorBoundary>
+                          <Suspense fallback={<PageLoader />}>
+                            <Routes>
                             <Route path="/" element={<Dashboard />} />
-                            <Route path="/customers" element={<CustomerList />} />
-                            <Route path="/checkin" element={<CheckIn />} />
-                            <Route path="/history" element={<History />} />
+                            <Route path="/customers" element={withPermission('customer.read', <CustomerList />)} />
+                            <Route path="/checkin" element={withPermission('checkin.use', <CheckIn />)} />
+                            <Route path="/history" element={withPermission('checkin.use', <History />)} />
                             <Route path="/packages" element={<Packages />} />
                             <Route path="/staff" element={<Staff />} />
-                            <Route path="/reports/*" element={<Reports />} />
-                            <Route path="/commissions" element={<Commissions />} />
-                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/reports/pt-sessions" element={<Reports />} />
+                            <Route path="/reports/*" element={withPermission('report.read_all', <Reports />)} />
+                            <Route path="/commissions" element={withPermission('commission.read', <Commissions />)} />
+                            <Route path="/settings" element={withPermission('settings.read', <Settings />)} />
+                            <Route path="/products/inventory" element={withPermission('inventory.read', <ProductsMain />)} />
+                            <Route path="/products/import" element={withPermission('inventory.import', <ProductsMain />)} />
                             <Route path="/products/*" element={<ProductsMain />} />
-                            <Route path="/leads" element={<Leads />} />
-                            <Route path="/branch-closures" element={<BranchClosures />} />
+                            <Route path="/leads" element={withPermission('lead.read', <Leads />)} />
+                            <Route path="/branch-closures" element={withPermission('closure.manage', <BranchClosures />)} />
                             
                             {/* Fallback cho route sai */}
                             <Route path="*" element={<Navigate to="/" replace />} />
-                          </Routes>
-                        </Suspense>
+                            </Routes>
+                          </Suspense>
+                        </RouteErrorBoundary>
                       </Layout>
                     </ProtectedRoute>
                   }

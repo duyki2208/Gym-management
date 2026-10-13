@@ -41,6 +41,7 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import BranchClosures from "./BranchClosures";
 import AuditLogSettings from "../components/settings/AuditLogSettings";
+import PageHeader from "../components/common/PageHeader";
 
 // Component NumberField
 const NumberField = ({ label, value, onChange, hint, suffix, disabled, name, min, max, step }) => {
@@ -104,40 +105,88 @@ const SwitchToggle = ({ label, description, checked, onChange, disabled }) => {
 };
 
 // Danh sách các quyền hệ thống hỗ trợ phân quyền tương tác
-const SYSTEM_PERMISSIONS = [
-  { id: "view_dashboard", label: "Xem Trang tổng quan (Dashboard)", group: "Tổng quan" },
-  { id: "manage_customers", label: "Quản lý Hội viên & Hợp đồng", group: "Hội viên" },
-  { id: "manage_leads", label: "Quản lý Khách tiềm năng (CRM Leads)", group: "Hội viên" },
-  { id: "checkin", label: "Check-in khuôn mặt & thẻ", group: "Vận hành" },
-  { id: "pos_sell", label: "Bán hàng bán lẻ (POS)", group: "Vận hành" },
-  { id: "deduct_workout", label: "Trừ buổi tập PT của khách", group: "Vận hành" },
-  { id: "manage_workouts", label: "Xem lịch dạy & buổi tập PT", group: "Vận hành" },
-  { id: "view_reports", label: "Xem Báo cáo doanh thu & hiệu suất", group: "Báo cáo" },
-  { id: "view_financials", label: "Xem Dòng tiền & Sổ quỹ chi tiết", group: "Báo cáo" },
-  { id: "manage_staff", label: "Quản lý Nhân sự & Phân ca", group: "Hệ thống" },
-  { id: "view_commissions", label: "Xem bảng tính hoa hồng", group: "Hệ thống" },
-  { id: "manage_closures", label: "Quản lý đóng/mở chi nhánh & Bù hạn", group: "Hệ thống" },
+  const SYSTEM_PERMISSIONS = [
+  { id: "customer.read", label: "Xem danh sách hội viên", group: "Hội viên" },
+  { id: "customer.check_existing", label: "Kiểm tra hội viên đã tồn tại", group: "Hội viên" },
+  { id: "customer.export", label: "Xuất danh sách hội viên", group: "Hội viên" },
+  { id: "contract.manage", label: "Bảo lưu, gia hạn và nâng cấp hợp đồng", group: "Hợp đồng" },
+  { id: "contract.transfer", label: "Chuyển nhượng hợp đồng", group: "Hợp đồng" },
+  { id: "contract.history.read", label: "Xem lịch sử điều chỉnh hợp đồng", group: "Hợp đồng" },
+  { id: "customer.face_enroll", label: "Đăng ký khuôn mặt hội viên", group: "Vận hành" },
+    { id: "checkin.use", label: "Thực hiện và xem lịch sử check-in", group: "Vận hành" },
+    { id: "workout.deduct", label: "Trừ buổi tập PT", group: "Vận hành" },
+    { id: "workout.read_all", label: "Xem buổi tập của mọi PT", group: "Vận hành" },
+  { id: "package.manage", label: "Thêm, sửa, xóa gói tập", group: "Hợp đồng" },
+  { id: "product.manage", label: "Thêm, sửa, xóa sản phẩm", group: "Kho & POS" },
+  { id: "inventory.read", label: "Xem phiếu nhập kho", group: "Kho & POS" },
+    { id: "inventory.import", label: "Tạo phiếu nhập kho", group: "Kho & POS" },
+    { id: "pos.read_all", label: "Xem đơn POS của mọi nhân viên", group: "Kho & POS" },
+  { id: "payment.confirm", label: "Xác nhận thanh toán POS", group: "Kho & POS" },
+  { id: "payment.cancel", label: "Hủy đơn POS", group: "Kho & POS" },
+    { id: "commission.read", label: "Xem hoa hồng", group: "Tài chính" },
+    { id: "commission.read_all", label: "Xem hoa hồng của nhân viên khác", group: "Tài chính" },
+  { id: "commission.manage", label: "Duyệt và thanh toán hoa hồng", group: "Tài chính" },
+  { id: "notification.broadcast", label: "Gửi thông báo hàng loạt", group: "Truyền thông" },
+  { id: "notification.read", label: "Xem bảng thông báo", group: "Truyền thông" },
+  { id: "team_task.read", label: "Xem công việc ca trực", group: "Vận hành" },
+  { id: "team_task.complete", label: "Hoàn tất công việc ca trực", group: "Vận hành" },
+  { id: "team_task.manage", label: "Tạo, sửa, xóa công việc ca trực", group: "Vận hành" },
+  { id: "staff.schedule", label: "Cập nhật lịch làm việc", group: "Nhân sự" },
+  { id: "staff.update", label: "Cập nhật thông tin nhân viên", group: "Nhân sự" },
+    { id: "kpi.manage", label: "Cập nhật chỉ tiêu KPI", group: "Nhân sự" },
+    { id: "kpi.read_all", label: "Xem KPI của nhân viên khác", group: "Nhân sự" },
+    { id: "lead.create", label: "Tạo khách hàng tiềm năng", group: "Khách tiềm năng" },
+    { id: "lead.read", label: "Xem khách hàng tiềm năng", group: "Khách tiềm năng" },
+    { id: "lead.read_all", label: "Xem lead của mọi nhân viên", group: "Khách tiềm năng" },
+    { id: "lead.update", label: "Cập nhật khách hàng tiềm năng", group: "Khách tiềm năng" },
+    { id: "lead.convert", label: "Chuyển lead thành hội viên", group: "Khách tiềm năng" },
+    { id: "lead.delete", label: "Xóa khách hàng tiềm năng", group: "Khách tiềm năng" },
+    { id: "report.read_all", label: "Xem báo cáo tổng hợp toàn cơ sở", group: "Báo cáo" },
+    { id: "audit.read", label: "Xem nhật ký hệ thống", group: "Hệ thống" },
+    { id: "settings.read", label: "Xem cài đặt hệ thống", group: "Hệ thống" },
+  { id: "closure.manage", label: "Quản lý đóng cửa và bù hạn", group: "Hệ thống" },
+  { id: "branch_transfer.create", label: "Chuyển hội viên sang chi nhánh khác", group: "Hệ thống" },
+  { id: "branch_transfer.read", label: "Xem yêu cầu chuyển chi nhánh", group: "Hệ thống" },
 ];
 
 const DEFAULT_ROLE_PERMISSIONS = {
   manager: [
-    "view_dashboard",
-    "manage_customers",
-    "manage_leads",
-    "checkin",
-    "pos_sell",
-    "deduct_workout",
-    "manage_workouts",
-    "view_reports",
-    "view_financials",
-    "manage_staff",
-    "view_commissions",
-    "manage_closures",
+    "customer.read", "customer.check_existing", "customer.export",
+    "contract.manage", "contract.transfer", "contract.history.read",
+      "customer.face_enroll", "checkin.use", "workout.deduct", "workout.read_all", "package.manage",
+    "product.manage", "inventory.read", "inventory.import",
+      "payment.confirm", "payment.cancel", "commission.read", "commission.read_all",
+      "notification.broadcast", "staff.schedule", "staff.update",
+      "notification.read", "team_task.read", "team_task.complete", "team_task.manage",
+      "kpi.manage", "kpi.read_all", "lead.create", "lead.read",
+      "lead.read_all", "lead.update", "lead.convert", "lead.delete",
+      "pos.read_all", "report.read_all", "audit.read", "closure.manage",
+    "branch_transfer.create", "branch_transfer.read",
   ],
-  accountant: ["view_dashboard", "view_reports", "view_financials", "pos_sell", "view_commissions"],
-  sale: ["view_dashboard", "manage_leads", "manage_customers", "checkin", "pos_sell", "view_commissions"],
-  pt: ["view_dashboard", "checkin", "manage_workouts", "view_commissions"],
-  reception: ["view_dashboard", "checkin", "manage_customers", "pos_sell", "deduct_workout"],
+  accountant: [
+    "customer.export", "contract.history.read", "inventory.read",
+    "inventory.import", "payment.confirm", "payment.cancel",
+      "commission.read", "commission.read_all", "commission.manage", "notification.broadcast",
+      "notification.read", "team_task.read", "team_task.complete", "team_task.manage",
+      "staff.schedule", "workout.read_all", "kpi.read_all", "lead.create", "lead.read",
+      "lead.read_all", "lead.update", "lead.convert", "lead.delete",
+      "pos.read_all", "report.read_all", "settings.read",
+  ],
+  sale: [
+      "customer.read", "customer.check_existing", "customer.export",
+      "contract.manage", "checkin.use", "commission.read", "staff.schedule",
+      "lead.create", "lead.read", "lead.update", "lead.convert",
+      "notification.read", "team_task.read", "team_task.complete",
+  ],
+  pt: ["customer.read", "customer.export", "checkin.use", "commission.read", "pt.dispute", "staff.schedule", "notification.read", "team_task.read", "team_task.complete"],
+  reception: [
+    "customer.read", "customer.check_existing", "customer.export",
+    "contract.manage", "customer.face_enroll", "checkin.use",
+    "workout.deduct", "inventory.read", "inventory.import",
+      "payment.confirm", "payment.cancel", "staff.schedule",
+      "branch_transfer.create", "pos.read_all",
+      "notification.read", "team_task.read", "team_task.complete",
+  ],
 };
 
 const Settings = () => {
@@ -272,10 +321,20 @@ const Settings = () => {
         }
         // Tab 5
         if (d.rolePermissions) {
-          setRolePermissions((prev) => ({
-            ...prev,
-            ...d.rolePermissions,
-          }));
+          const isLegacyPolicy = (d.rolePermissionsVersion || 1) < 3;
+          const migratedPermissions = Object.fromEntries(
+            Object.entries(DEFAULT_ROLE_PERMISSIONS).map(([role, defaults]) => {
+              const configured = d.rolePermissions?.[role];
+              const usesNamespacedPermissions =
+                Array.isArray(configured) && configured.some((item) => item.includes("."));
+              if (!usesNamespacedPermissions) return [role, defaults];
+              return [
+                role,
+                isLegacyPolicy ? [...new Set([...defaults, ...configured])] : configured,
+              ];
+            })
+          );
+          setRolePermissions(migratedPermissions);
         }
         // Tab 6
         setVietqrBank(d.vietqrBank || "MBBank");
@@ -510,23 +569,17 @@ const Settings = () => {
   const webhookUrl = `${window.location.origin}/api/v1/pos/webhook`;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6">
-      {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Cài đặt hệ thống</h1>
-            
-          </div>
-          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-            Cấu hình các tham số vận hành, mẫu nhắc nhở và phân quyền áp dụng riêng cho chi nhánh hiện tại.
-          </p>
-        </div>
-
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+      <PageHeader
+        meta="Quản trị"
+        title="Cài đặt hệ thống"
+        description="Cấu hình vận hành, mẫu nhắc nhở và phân quyền áp dụng cho chi nhánh hiện tại."
+        icon={ShieldCheck}
+        actions={(
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          className="h-10 px-5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2 self-start sm:self-auto"
+          className="flex h-10 items-center gap-2 self-start rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 sm:self-auto"
         >
           {saving ? (
             <>
@@ -540,12 +593,13 @@ const Settings = () => {
             </>
           )}
         </button>
-      </div>
+        )}
+      />
 
       {/* Main Layout 2 Cột (Master - Detail) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* CỘT TRÁI: MENU DỌC (VERTICAL SIDEBAR) */}
-        <div className="lg:col-span-4 xl:col-span-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm space-y-6">
+        <div className="space-y-6 rounded-lg border border-border-light bg-surface-light p-4 dark:border-border-dark dark:bg-surface-dark lg:col-span-4 xl:col-span-3">
           {MENU_GROUPS.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1.5">
               <div className="text-[11px] font-medium text-text-muted-light dark:text-text-muted-dark px-3 mb-1">

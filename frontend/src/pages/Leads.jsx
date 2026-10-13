@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -10,14 +10,11 @@ import {
   Phone,
   Mail,
   FileText,
-  Calendar,
   Trash2,
   Edit3,
-  ChevronRight,
-  TrendingUp,
   MessageSquare,
 } from "lucide-react";
-import { getIconColor } from "../utils/iconTone";
+import PageHeader from "../components/common/PageHeader";
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -47,7 +44,7 @@ const Leads = () => {
 
   const [newNote, setNewNote] = useState("");
 
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
       const params = {};
@@ -65,9 +62,9 @@ const Leads = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, statusFilter, sourceFilter]);
 
-  const fetchSales = async () => {
+  const fetchSales = useCallback(async () => {
     try {
       const response = await api.get("/staff");
       if (Array.isArray(response.data)) {
@@ -76,15 +73,15 @@ const Leads = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLeads();
-  }, [search, statusFilter, sourceFilter]);
+  }, [fetchLeads]);
 
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [fetchSales]);
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
@@ -186,17 +183,17 @@ const Leads = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case "new":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 rounded-full border border-blue-100">Mới</span>;
+        return <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">Mới</span>;
       case "contacted":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-yellow-50 text-yellow-600 rounded-full border border-yellow-100">Đang chăm sóc</span>;
+        return <span className="rounded-full border border-yellow-100 bg-yellow-50 px-2.5 py-1 text-xs font-medium text-yellow-700">Đang chăm sóc</span>;
       case "trial":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-purple-50 text-purple-600 rounded-full border border-purple-100">Tập thử</span>;
+        return <span className="rounded-full border border-purple-100 bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700">Tập thử</span>;
       case "converted":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-green-50 text-green-600 rounded-full border border-green-100">Đã chốt</span>;
+        return <span className="rounded-full border border-green-100 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">Đã chốt</span>;
       case "lost":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-red-50 text-red-600 rounded-full border border-red-100">Thất bại</span>;
+        return <span className="rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Thất bại</span>;
       default:
-        return <span className="px-2.5 py-1 text-xs font-bold bg-gray-50 text-gray-600 rounded-full">Không rõ</span>;
+        return <span className="rounded-full bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-600">Không rõ</span>;
     }
   };
 
@@ -206,30 +203,27 @@ const Leads = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 font-display max-w-7xl mx-auto">
-      {/* Header Summary */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2 text-text-light dark:text-text-dark">
-            <Users size={24} className={getIconColor(Users)} /> Quản lý khách hàng tiềm năng
-          </h2>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Theo dõi, chăm sóc khách hàng và chuyển đổi thành hội viên chính thức
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setFormData({ name: "", phone: "", email: "", source: "facebook", assignedSale: "", note: "" });
-            setShowAddModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-text-light rounded-xl font-semibold hover:bg-primary/90 shadow-sm transition-all shrink-0 cursor-pointer"
-        >
-          <Plus size={18} /> Thêm khách tiềm năng
-        </button>
-      </div>
+    <div className="mx-auto flex max-w-7xl flex-col gap-5 font-display">
+      <PageHeader
+        meta="Khách hàng"
+        title="Khách tiềm năng"
+        description="Theo dõi quá trình chăm sóc, phân công Sale và chuyển đổi thành hội viên."
+        icon={Users}
+        actions={(
+          <button
+            onClick={() => {
+              setFormData({ name: "", phone: "", email: "", source: "facebook", assignedSale: "", note: "" });
+              setShowAddModal(true);
+            }}
+            className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary-hover"
+          >
+            <Plus size={17} /> Thêm khách tiềm năng
+          </button>
+        )}
+      />
 
       {/* Filters & Search */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      <div className="grid grid-cols-1 gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark md:grid-cols-4">
         <div className="relative md:col-span-2">
           <Search className="absolute left-3 top-3 text-subtle-light dark:text-subtle-dark" size={18} />
           <input
@@ -267,7 +261,7 @@ const Leads = () => {
       </div>
 
       {/* Leads Table */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         {loading ? (
           <div className="p-10 text-center text-gray-400">Đang tải dữ liệu...</div>
         ) : leads.length === 0 ? (
@@ -276,41 +270,45 @@ const Leads = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark text-xs font-semibold tracking-wide text-text-light dark:text-text-dark">
-                  <th className="px-6 py-4">Tên & Thông tin liên hệ</th>
-                  <th className="px-6 py-4">Nguồn khách</th>
-                  <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4">Sale phụ trách</th>
-                  <th className="px-6 py-4">Ngày tạo</th>
-                  <th className="px-6 py-4 text-center">Hành động</th>
+                <tr className="border-b border-border-light bg-background-light text-xs font-medium text-text-muted-light dark:border-border-dark dark:bg-background-dark dark:text-text-muted-dark">
+                  <th className="px-5 py-3">Khách hàng</th>
+                  <th className="px-5 py-3">Nguồn</th>
+                  <th className="px-5 py-3">Trạng thái</th>
+                  <th className="px-5 py-3">Sale phụ trách</th>
+                  <th className="px-5 py-3">Ngày tạo</th>
+                  <th className="px-5 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark text-sm">
                 {leads.map((lead) => (
-                  <tr key={lead._id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr
+                    key={lead._id}
+                    onClick={() => { setSelectedLead(lead); setShowDetailsModal(true); }}
+                    className="cursor-pointer transition-colors hover:bg-background-light/70 dark:hover:bg-background-dark/70"
+                  >
+                    <td className="px-5 py-3.5">
                       <div>
-                        <p className="font-bold text-text-light dark:text-text-dark">{lead.name}</p>
+                        <p className="font-medium text-text-light dark:text-text-dark">{lead.name}</p>
                         <div className="flex gap-4 text-xs text-subtle-light dark:text-subtle-dark mt-1">
                           <span className="flex items-center gap-1"><Phone size={12} /> {lead.phone}</span>
                           {lead.email && <span className="flex items-center gap-1"><Mail size={12} /> {lead.email}</span>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-subtle-light dark:text-subtle-dark">
+                    <td className="px-5 py-3.5 text-subtle-light dark:text-subtle-dark">
                       {getSourceLabel(lead.source)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       {getStatusBadge(lead.status)}
                     </td>
-                    <td className="px-6 py-4 text-gray-600 font-medium">
+                    <td className="px-5 py-3.5 font-medium text-gray-600 dark:text-gray-300">
                       {lead.assignedSale ? lead.assignedSale.fullName || lead.assignedSale.username : <span className="text-gray-400 italic">Chưa phân phối</span>}
                     </td>
-                    <td className="px-6 py-4 text-xs text-gray-500">
+                    <td className="px-5 py-3.5 text-xs text-gray-500">
                       {new Date(lead.createdAt).toLocaleDateString("vi-VN")}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center items-center gap-2">
+                    <td className="px-5 py-3.5" onClick={(event) => event.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => {
                             setSelectedLead(lead);

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   loginUser,
+  getSession,
   refreshToken,
   switchBranch,
   logoutUser,
@@ -12,6 +13,9 @@ const { protect } = require("../middleware/authMiddleware");
 
 // POST /api/v1/auth/login
 router.post("/login", loginValidator, validate, loginUser);
+
+// GET /api/v1/auth/me — Trả identity và permission hiện hành theo chi nhánh.
+router.get("/me", protect, getSession);
 
 // POST /api/v1/auth/refresh-token — Cấp Access Token mới (không cần protect, cookie tự gửi kèm)
 router.post("/refresh-token", refreshToken);

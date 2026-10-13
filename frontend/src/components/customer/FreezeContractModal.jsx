@@ -3,7 +3,7 @@ import { Snowflake, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import BaseModal from '../common/BaseModal';
-import FormField, { inputClassName } from '../common/FormField';
+import FormField from '../common/FormField';
 import Button from '../common/Button';
 
 const FreezeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) => {

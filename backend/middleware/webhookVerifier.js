@@ -1,5 +1,29 @@
 const crypto = require("crypto");
 
+const DEFAULT_TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
+
+const parseTimestampMilliseconds = (value) => {
+  if (typeof value !== "string" || !/^\d{10,13}$/.test(value.trim())) {
+    return null;
+  }
+
+  const numericTimestamp = Number(value.trim());
+  if (!Number.isSafeInteger(numericTimestamp)) return null;
+
+  // Providers commonly use either Unix seconds (10 digits) or milliseconds (13 digits).
+  return numericTimestamp < 1e12 ? numericTimestamp * 1000 : numericTimestamp;
+};
+
+const getTimestampToleranceMilliseconds = () => {
+  const configured = Number(process.env.SEPAY_WEBHOOK_TOLERANCE_SECONDS);
+  const toleranceSeconds =
+    Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_TIMESTAMP_TOLERANCE_SECONDS;
+
+  return toleranceSeconds * 1000;
+};
+
 /**
  * Middleware xác thực Webhook từ SePay (hoặc cổng thanh toán ngân hàng)
  * 
@@ -52,6 +76,24 @@ const verifySepayWebhook = (req, res, next) => {
         req.headers["x-timestamp"] ||
         "";
 
+      const timestampMilliseconds = parseTimestampMilliseconds(timestamp);
+      if (timestampMilliseconds === null) {
+        return res.status(401).json({
+          success: false,
+          message: "Webhook HMAC thiếu timestamp hợp lệ",
+        });
+      }
+
+      if (
+        Math.abs(Date.now() - timestampMilliseconds) >
+        getTimestampToleranceMilliseconds()
+      ) {
+        return res.status(401).json({
+          success: false,
+          message: "Webhook HMAC đã hết thời hạn",
+        });
+      }
+
       // Chuẩn hóa signature: bóc tách tiền tố "sha256=" nếu có
       const receivedHash = signatureHeader
         .replace(/^sha256=/i, "")
@@ -95,7 +137,7 @@ const verifySepayWebhook = (req, res, next) => {
       }
 
       console.warn(
-        `[Webhook Security CẢNH BÁO] Chữ ký HMAC SePay không hợp lệ! Header: "${signatureHeader}", Timestamp: "${timestamp}"`
+        `[Webhook Security CẢNH BÁO] Chữ ký HMAC SePay không hợp lệ! Timestamp: "${timestamp}"`
       );
       return res.status(401).json({
         success: false,
@@ -147,4 +189,8 @@ const verifySepayWebhook = (req, res, next) => {
   }
 };
 
-module.exports = { verifySepayWebhook };
+module.exports = {
+  verifySepayWebhook,
+  parseTimestampMilliseconds,
+  getTimestampToleranceMilliseconds,
+};

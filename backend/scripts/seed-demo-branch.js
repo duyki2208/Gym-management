@@ -52,7 +52,7 @@ const seedDemoBranch = async () => {
             isActive: true,
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
       );
 
       // Đăng ký vào Central LoginIndex
@@ -129,7 +129,7 @@ const seedDemoBranch = async () => {
             contractCode: `HĐ-HCM-${String(i + 1).padStart(4, "0")}`,
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
       );
 
       const customerPackage = await hcmModels.CustomerPackage.findOneAndUpdate(
@@ -150,7 +150,7 @@ const seedDemoBranch = async () => {
             paidAmount: customer.price,
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
       );
 
       customer.activePackage = customerPackage._id;

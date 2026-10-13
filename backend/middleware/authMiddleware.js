@@ -2,22 +2,15 @@
  * authMiddleware.js — Middleware xác thực & phân quyền Đa chi nhánh
  * Export: { protect, authorize }
  */
-const jwt = require("jsonwebtoken");
+const { getAccessTokenState } = require("./accessTokenContext");
 
 // Middleware xác thực token (protect)
 const protect = async (req, res, next) => {
-  let token;
+  const authState = getAccessTokenState(req);
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
+  if (authState.status === "authenticated") {
     try {
-      // 1. Lấy token từ header
-      token = req.headers.authorization.split(" ")[1];
-
-      // 2. Giải mã token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = authState.claims;
 
       const { getCentralModels, getBranchModels } = require("../db/branchConnectionManager");
       if (!req.centralModels) {
@@ -27,8 +20,8 @@ const protect = async (req, res, next) => {
       let user = null;
       let isCentral = false;
 
-      // 1. Thử tìm trong CentralUser trước (nếu là role admin/accountant hoặc token isCentral)
-      if (decoded.isCentral || decoded.role === "admin" || decoded.role === "accountant") {
+      // 1. Central/branch is an identity property, not an inference from role.
+      if (decoded.isCentral === true) {
         user = await req.centralModels.CentralUser.findById(decoded.id).select("-password");
         if (user) {
           isCentral = true;
@@ -73,7 +66,7 @@ const protect = async (req, res, next) => {
       }
 
       req.user = user;
-      req.user.isCentral = isCentral || user.role === "admin" || user.role === "accountant";
+      req.user.isCentral = isCentral;
       req.user.activeBranch = req.branchCode || decoded.activeBranch || "HN01";
       req.user.allowedBranches =
         Array.isArray(user.allowedBranches) && user.allowedBranches.length > 0
@@ -81,22 +74,37 @@ const protect = async (req, res, next) => {
           : (req.user.isCentral && user.role === "admin" ? ["*"] : []);
       req.user.branchCode = req.branchCode || decoded.branchCode || "HN01";
 
-      return next();
-    } catch (error) {
-      if (error.name === "TokenExpiredError") {
-        return res.status(401).json({
-          code: "TOKEN_EXPIRED",
-          message: "Access token đã hết hạn",
+      if (
+        req.user.isCentral &&
+        !req.user.allowedBranches.includes("*") &&
+        !req.user.allowedBranches.includes(req.user.branchCode)
+      ) {
+        return res.status(403).json({
+          code: "BRANCH_ACCESS_DENIED",
+          message: `Bạn không có quyền truy cập dữ liệu chi nhánh ${req.user.branchCode}`,
         });
       }
-      return res.status(401).json({
-        code: "INVALID_TOKEN",
-        message: "Không được phép truy cập, token không hợp lệ",
-      });
+
+      return next();
+    } catch (error) {
+      return next(error);
     }
   }
 
-  if (!token) {
+  if (authState.status === "invalid") {
+    if (authState.error?.name === "TokenExpiredError") {
+      return res.status(401).json({
+        code: "TOKEN_EXPIRED",
+        message: "Access token đã hết hạn",
+      });
+    }
+    return res.status(401).json({
+      code: "INVALID_TOKEN",
+      message: "Không được phép truy cập, token không hợp lệ",
+    });
+  }
+
+  if (authState.status === "anonymous") {
     return res
       .status(401)
       .json({ message: "Không được phép truy cập, không có token" });

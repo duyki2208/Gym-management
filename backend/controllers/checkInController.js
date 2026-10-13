@@ -230,7 +230,13 @@ const recognizeFace = async (req, res) => {
       embedding: c.embedding,
     }));
 
-    const result = await faceClient.recognize(req.file.buffer, candidatesForPython, branchCode);
+    const setting = await req.models.Setting.findOne().select("faceMatchThreshold").lean();
+    const result = await faceClient.recognize(
+      req.file.buffer,
+      candidatesForPython,
+      branchCode,
+      setting?.faceMatchThreshold
+    );
 
     if (!result.matched) {
       return res.json({

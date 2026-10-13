@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import commissionService from '../services/commissionService';
-import { staffService } from '../services/customerService';
 import { useAuth } from '../context/AuthContext';
 import { RotateCcw, Download, Coins, Dumbbell, Wallet } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from '../utils/xlsxWriter';
 import StatCard from '../components/common/StatCard';
+import PageHeader from '../components/common/PageHeader';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -321,7 +321,7 @@ const Commissions = () => {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
       if (activeTab === 'pt') {
         if (!ptData || !ptData.staffSummary?.length) {
@@ -372,7 +372,7 @@ const Commissions = () => {
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Hoa Hong PT");
-        XLSX.writeFile(wb, `HoaHong_PT_T${selectedMonth}_${selectedYear}.xlsx`);
+        await XLSX.writeFile(wb, `HoaHong_PT_T${selectedMonth}_${selectedYear}.xlsx`);
         toast.success("Xuất file Excel hoa hồng PT thành công");
       } else if (activeTab === 'sale') {
         if (!saleData || !saleData.staffSummary?.length) {
@@ -428,7 +428,7 @@ const Commissions = () => {
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Hoa Hong Sale");
-        XLSX.writeFile(wb, `HoaHong_Sale_T${selectedMonth}_${selectedYear}.xlsx`);
+        await XLSX.writeFile(wb, `HoaHong_Sale_T${selectedMonth}_${selectedYear}.xlsx`);
         toast.success("Xuất file Excel hoa hồng Sale thành công");
       }
     } catch (error) {
@@ -449,24 +449,18 @@ const Commissions = () => {
   ].filter(t => t.visible);
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* ── Page header ── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
-            <Coins size={24} className="text-primary" /> Quản lý hoa hồng
-          </h1>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Bảng tính hoa hồng PT và Sale theo kỳ, đối soát hợp đồng và chốt kỳ thanh toán
-          </p>
-        </div>
-
-        {/* Month/Year Selector & Quick Actions */}
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-6">
+      <PageHeader
+        meta="Tài chính"
+        title="Hoa hồng"
+        description="Đối soát hoa hồng PT và Sale, chốt kỳ và theo dõi trạng thái thanh toán."
+        icon={Coins}
+        actions={(
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="text-xs font-medium border border-border-light dark:border-border-dark rounded-xl px-3 py-2 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark outline-none cursor-pointer"
+            className="h-9 cursor-pointer rounded-lg border border-border-light bg-surface-light px-3 text-xs font-medium text-text-light outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
           >
             {months.map((m) => (
               <option key={m} value={m} className="text-gray-900">
@@ -477,7 +471,7 @@ const Commissions = () => {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="text-xs font-medium border border-border-light dark:border-border-dark rounded-xl px-3 py-2 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark outline-none cursor-pointer"
+            className="h-9 cursor-pointer rounded-lg border border-border-light bg-surface-light px-3 text-xs font-medium text-text-light outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
           >
             {years.map((y) => (
               <option key={y} value={y} className="text-gray-900">
@@ -489,7 +483,7 @@ const Commissions = () => {
           {isManager && (activeTab === "pt" || activeTab === "sale") && (
             <button
               onClick={exportToExcel}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs md:text-sm font-bold transition-all shadow-sm cursor-pointer"
+              className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border-light bg-surface-light px-3.5 text-xs font-semibold text-text-light transition-colors hover:bg-background-light dark:border-border-dark dark:bg-surface-dark dark:text-text-dark dark:hover:bg-background-dark md:text-sm"
             >
               <Download size={16} />
               Xuất Excel
@@ -500,26 +494,27 @@ const Commissions = () => {
             <div className="flex gap-1.5 ml-1">
               <button
                 onClick={() => handleCreatePeriod("pt")}
-                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl font-semibold transition-colors border border-blue-700/20 shadow-sm cursor-pointer"
+                className="h-9 cursor-pointer rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
               >
                 Chốt PT
               </button>
               <button
                 onClick={() => handleCreatePeriod("sale")}
-                className="text-xs bg-primary hover:bg-primary/90 text-text-light px-3 py-2 rounded-xl font-semibold transition-colors shadow-sm cursor-pointer"
+                className="h-9 cursor-pointer rounded-lg bg-primary px-3 text-xs font-semibold text-text-light transition-colors hover:bg-primary/90"
               >
                 Chốt Sale
               </button>
             </div>
           )}
         </div>
-      </div>
+        )}
+      />
 
       {/* ── Summary Cards ── */}
       {isManager && <SummaryCards summary={summary} loading={loadingSummary} />}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 mb-6 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark p-1 rounded-xl w-fit">
+      <div className="flex w-fit gap-1 rounded-lg border border-border-light bg-background-light p-1 dark:border-border-dark dark:bg-background-dark">
         {tabs.map(t => (
           <button
             key={t.id}

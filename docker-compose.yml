@@ -7,7 +7,10 @@ services:
     environment:
       - PORT=5000
       - MONGO_URI=mongodb://mongo:27017/gym-management
-      - JWT_SECRET=do_an_tot_nghiep_jwt_secret_2026
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the host environment}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set in the host environment}
+      - FACILITY_LOOKUP_PEPPER=${FACILITY_LOOKUP_PEPPER:?FACILITY_LOOKUP_PEPPER must be set in the host environment}
+      - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET must be set in the host environment}
       - NODE_ENV=development
     volumes:
       - ./backend:/app
@@ -19,10 +22,11 @@ services:
   frontend:
     build:
       context: ./frontend
+      target: development
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:5000/api/v1
+      - VITE_API_BASE_URL=http://localhost:5000/api/v1
     volumes:
       - ./frontend:/app
       - /app/node_modules

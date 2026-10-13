@@ -1,0 +1,58 @@
+{
+  "gate": "staging-smoke",
+  "generatedAt": "2026-09-27T15:41:00.950Z",
+  "environment": "staging-public-probe",
+  "releaseSha": "unknown",
+  "executedBy": "codex-local",
+  "approvedBy": null,
+  "baseUrl": "https://gym-management-bms0.onrender.com",
+  "authenticationMode": "anonymous",
+  "preflightPassed": false,
+  "loginFlowExecuted": false,
+  "authenticatedChecksEnabled": false,
+  "authenticatedChecksExecuted": false,
+  "skippedChecks": [],
+  "thresholds": {
+    "timeoutMs": 60000,
+    "maxLatencyMs": 30000
+  },
+  "success": false,
+  "results": [
+    {
+      "name": "liveness",
+      "path": "/api/v1/system/health/live",
+      "expectedStatus": 200,
+      "actualStatus": 404,
+      "latencyMs": 366.2,
+      "requestIdPropagated": false,
+      "readinessDependencies": null,
+      "reportedRelease": null,
+      "passed": false,
+      "responseBytes": 164
+    },
+    {
+      "name": "readiness",
+      "path": "/api/v1/system/health/ready",
+      "expectedStatus": 200,
+      "actualStatus": 404,
+      "latencyMs": 94.21,
+      "requestIdPropagated": false,
+      "readinessDependencies": null,
+      "reportedRelease": null,
+      "passed": false,
+      "responseBytes": 165
+    },
+    {
+      "name": "anonymous-protection",
+      "path": "/api/v1/customers?limit=1",
+      "expectedStatus": 401,
+      "actualStatus": 401,
+      "latencyMs": 99.02,
+      "requestIdPropagated": false,
+      "readinessDependencies": null,
+      "reportedRelease": null,
+      "passed": false,
+      "responseBytes": 64
+    }
+  ]
+}

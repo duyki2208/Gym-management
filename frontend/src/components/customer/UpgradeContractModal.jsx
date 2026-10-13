@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowUpCircle, Check } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -15,13 +15,7 @@ const UpgradeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && customerPackage) {
-      fetchInitialData();
-    }
-  }, [isOpen, customerPackage]);
-
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     try {
       setLoading(true);
       const [pkgRes, staffRes] = await Promise.all([
@@ -47,12 +41,18 @@ const UpgradeContractModal = ({ isOpen, onClose, customerPackage, onSuccess }) =
         const staffId = typeof customerPackage.assignedStaff === 'object' ? customerPackage.assignedStaff._id : customerPackage.assignedStaff;
         setAssignedStaff(staffId || '');
       }
-    } catch (err) {
+    } catch {
       toast.error('Lỗi khi tải danh sách gói tập nâng cấp');
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerPackage]);
+
+  useEffect(() => {
+    if (isOpen && customerPackage) {
+      fetchInitialData();
+    }
+  }, [isOpen, customerPackage, fetchInitialData]);
 
   if (!isOpen || !customerPackage) return null;
 

@@ -22,6 +22,7 @@ import {
 import { closureService } from "../services/closureService";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
+import PageHeader from "../components/common/PageHeader";
 
 const BranchClosures = ({ embedded = false }) => {
   const [closures, setClosures] = useState([]);
@@ -155,7 +156,7 @@ const BranchClosures = ({ embedded = false }) => {
       if (res && res.success) {
         setClosureDetailData(res.data);
       }
-    } catch (err) {
+    } catch {
       toast.error("Không thể tải chi tiết sự kiện");
     } finally {
       setLoadingDetail(false);
@@ -258,42 +259,38 @@ Ban Quản Lý Chi Nhánh`
   };
 
   return (
-    <div className={embedded ? "space-y-6" : "space-y-6 max-w-7xl mx-auto p-4 sm:p-6"}>
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
-            <CalendarOff size={24} className="text-primary" /> Quản lý đóng / mở chi nhánh
-          </h1>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Ghi nhận lịch đóng cửa bảo trì, tự động bù hạn cho hội viên và gửi thông báo qua email
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+    <div className={embedded ? "space-y-5" : "mx-auto max-w-7xl space-y-5 p-4 sm:p-6"}>
+      <PageHeader
+        meta="Vận hành chi nhánh"
+        title="Lịch đóng cửa"
+        description="Quản lý lịch bảo trì, bù hạn hợp đồng và thông báo đến hội viên."
+        icon={CalendarOff}
+        actions={(
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             onClick={() => {
               setRefreshing(true);
               fetchClosures();
             }}
             disabled={refreshing}
-            className="h-10 px-3.5 rounded-xl bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-800 text-text-light dark:text-text-dark transition-colors flex items-center gap-2 text-sm font-medium border border-border-light dark:border-border-dark cursor-pointer"
+            className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border-light bg-surface-light px-3.5 text-sm font-medium text-text-light transition-colors hover:bg-background-light dark:border-border-dark dark:bg-surface-dark dark:text-text-dark dark:hover:bg-background-dark"
           >
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
             Làm mới
           </button>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="h-10 px-4 rounded-xl bg-primary hover:bg-primary/90 text-text-light text-sm font-semibold transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary/90"
           >
             <Plus size={18} />
             Tạo lịch đóng cửa
           </button>
         </div>
-      </div>
+        )}
+      />
 
       {/* Danh sách sự kiện đóng cửa */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
           <h2 className="font-bold text-text-light dark:text-text-dark text-base flex items-center gap-2">
             Lịch sử các đợt đóng cửa tại chi nhánh ({closures.length})

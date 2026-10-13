@@ -130,7 +130,9 @@ git clone https://github.com/your-username/gym-management.git
 cd gym-management
 
 # Start all services
-docker compose up --build
+cp backend/.env.example .env
+# Thay toàn bộ placeholder secret trong .env trước khi chạy
+docker compose --env-file .env up --build
 ```
 
 | Service | URL |
@@ -211,9 +213,14 @@ gunicorn app:app --bind 0.0.0.0:8000
 | `NODE_ENV` | `development` / `production` / `test` | Yes |
 | `MONGO_URI` | MongoDB connection string | Yes |
 | `JWT_SECRET` | Secret for signing JWT tokens | Yes |
+| `JWT_REFRESH_SECRET` | Secret độc lập để ký refresh token | Yes |
+| `FACILITY_LOOKUP_PEPPER` | Pepper tối thiểu 32 ký tự cho facility key | Yes |
+| `INTERNAL_SERVICE_SECRET` | Shared secret tối thiểu 32 ký tự cho face service | Yes |
+| `SEPAY_WEBHOOK_SECRET` | HMAC secret xác minh webhook thanh toán | Production |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | Yes |
 | `EMAIL_USER` | SMTP sender email address | Yes |
 | `EMAIL_PASS` | SMTP app password | Yes |
+| `RELEASE_SHA` | Commit/release identifier returned by liveness probe | No |
 
 ---
 
@@ -254,6 +261,19 @@ npm test
 ```
 
 Tests use an in-memory MongoDB instance (`mongodb-memory-server`) — no real database required.
+
+Kiểm tra secret trước khi push:
+
+```bash
+cd backend
+npm run security:scan
+```
+
+### Health probes
+
+- `GET /api/v1/system/health/live`: process liveness.
+- `GET /api/v1/system/health/ready`: readiness của default và central database.
+- Mọi response trả header `X-Request-Id`; client có thể gửi ID hợp lệ để đối chiếu structured logs.
 
 ---
 

@@ -3,16 +3,24 @@
  * Tất cả routes đều được mount tại đây với prefix /api/v1/
  */
 const router = require('express').Router();
-const attachBranchContext = require('../middleware/attachBranchContext');
+const { authenticate } = require('../middleware/accessTokenContext');
+const resolveTenant = require('../middleware/resolveTenant');
+const loadTenantContext = require('../middleware/loadTenantContext');
 const auditLogger = require('../middleware/auditLogger');
 
-// 1. Tự động attach Central Models và Branch Models vào mọi request
-router.use(attachBranchContext);
+// 1. Verify access token once (optional for public routes).
+router.use(authenticate);
 
-// 2. Kích hoạt audit logger cho tất cả các thao tác thay đổi dữ liệu
+// 2. Resolve tenant without touching the database.
+router.use(resolveTenant);
+
+// 3. Load the selected tenant context.
+router.use(loadTenantContext);
+
+// 4. Kích hoạt audit logger cho tất cả các thao tác thay đổi dữ liệu
 router.use(auditLogger);
 
-// 3. Mount các routes chức năng
+// 5. Mount các routes chức năng
 router.use('/auth',             require('./authRoutes'));
 router.use('/customers',        require('./customerRoutes'));
 router.use('/packages',         require('./packageRoutes'));

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { productService } from '../services/productService';
 import ProductModal from '../components/product/ProductModal';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Search, Edit, Trash2, Package, PlusCircle, PackageSearch } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import { getIconTone } from '../utils/iconTone';
+import PageHeader from '../components/common/PageHeader';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -15,25 +15,24 @@ const ProductList = () => {
   
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const navigate = useNavigate();
   const confirm = useConfirm();
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await productService.getAll(search);
       setProducts(data);
-    } catch (error) {
+    } catch {
       toast.error('Lỗi khi tải danh sách sản phẩm');
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchProducts(), 500);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [fetchProducts]);
 
   const handleSave = async (data) => {
     try {
@@ -62,7 +61,7 @@ const ProductList = () => {
         await productService.delete(id);
         toast.success('Đã xóa sản phẩm thành công');
         fetchProducts();
-      } catch (error) {
+      } catch {
         toast.error('Không thể xóa sản phẩm');
       }
     }
@@ -73,31 +72,28 @@ const ProductList = () => {
   );
 
   return (
-    <div className="flex flex-col gap-6 font-display bg-transparent h-full overflow-y-auto custom-scrollbar">
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
-            <PackageSearch size={24} className="text-primary" /> Quản lý sản phẩm & dịch vụ
-          </h2>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Theo dõi đồ uống, thực phẩm bổ sung, phụ kiện tập luyện và tồn kho chi nhánh
-          </p>
-        </div>
+    <div className="flex h-full flex-col gap-5 overflow-y-auto bg-transparent font-display custom-scrollbar">
+      <PageHeader
+        meta="Cửa hàng & kho"
+        title="Sản phẩm và tồn kho"
+        description="Theo dõi danh mục bán lẻ, giá bán và lượng hàng hiện có tại chi nhánh."
+        icon={PackageSearch}
+        actions={(
         <button
           onClick={() => {
             setSelectedProduct(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-semibold hover:bg-primary/90 shrink-0 shadow-sm transition-all cursor-pointer"
+          className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary/90"
         >
           <Plus size={18} />
           <span>Thêm sản phẩm</span>
         </button>
-      </div>
+        )}
+      />
 
       {/* Filter & Search Bar */}
-      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex-wrap">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark">
         <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search size={18} className="absolute left-3.5 top-3 text-gray-400" />
           <input
@@ -105,7 +101,7 @@ const ProductList = () => {
             name="productListSearch"
             type="text"
             aria-label="Tìm theo tên sản phẩm"
-            className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-gray-400 transition-colors"
+            className="h-10 w-full rounded-lg border border-border-light bg-background-light pl-10 pr-4 text-sm text-text-light outline-none transition-colors placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
             placeholder="Tìm theo tên sản phẩm..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -115,7 +111,7 @@ const ProductList = () => {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full h-10 px-3 text-xs font-bold rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-gray-700 dark:text-gray-300"
+            className="h-10 w-full rounded-lg border border-border-light bg-background-light px-3 text-sm font-medium text-gray-700 dark:border-border-dark dark:bg-background-dark dark:text-gray-300"
           >
             <option value="all">Tất cả danh mục</option>
             <option value="Đồ uống">Đồ uống</option>
@@ -133,7 +129,7 @@ const ProductList = () => {
              filteredProducts.map((p) => (
                 <div 
                   key={p._id} 
-                  className="aspect-square bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:border-primary/30 transition-all group flex flex-col justify-between relative overflow-hidden"
+                  className="group relative flex aspect-square flex-col justify-between overflow-hidden rounded-lg border border-border-light bg-surface-light p-4 transition-colors hover:border-primary/40 dark:border-border-dark dark:bg-surface-dark"
                 >
                     {/* Header: Category & Action buttons */}
                     <div className="flex justify-between items-center gap-2 min-w-0">

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { checkInService } from "../services/customerService";
 import { getCustomerStatus } from "../utils/dateUtils";
-import { LogIn, CheckCircle, XCircle, ScanFace, Search } from "lucide-react";
+import { LogIn, ScanFace, Search } from "lucide-react";
 import AutoCheckIn from "../components/customer/AutoCheckIn";
 import CheckInSuccessPopup from "../components/customer/CheckInSuccessPopup";
+import PageHeader from "../components/common/PageHeader";
 
 const CheckIn = () => {
   const [customers, setCustomers] = useState([]);
@@ -104,29 +105,35 @@ const CheckIn = () => {
   );
 
   return (
-    <div className="flex flex-col gap-6 font-display">
-      {/* ── Card: Search + FaceID ── */}
-      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
+    <div className="flex flex-col gap-5 font-display">
+      <PageHeader
+        meta="Vận hành"
+        title="Check-in hội viên"
+        description="Tìm hội viên để check-in thủ công hoặc chuyển sang chế độ nhận diện khuôn mặt."
+        icon={LogIn}
+      />
+
+      <div className="flex flex-col gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-2xl">
-          <Search size={18} className="absolute left-3 top-2.5 text-gray-500" />
+          <Search size={17} className="absolute left-3 top-3 text-text-muted-light dark:text-text-muted-dark" />
           <input
             id="checkInSearchInput"
             name="checkInSearch"
             type="text"
             aria-label="Tìm kiếm hội viên để check in theo tên hoặc số điện thoại"
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-gray-100"
-            placeholder="Tìm tên, SĐT..."
+            className="h-10 w-full rounded-lg border border-border-light bg-background-light pl-10 pr-4 text-sm text-text-light outline-none transition-colors placeholder:text-text-muted-light focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-background-dark dark:text-text-dark dark:placeholder:text-text-muted-dark"
+            placeholder="Tìm theo tên, số điện thoại..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
           />
         </div>
 
-        <div className="flex-1" />
+        <span className="text-xs text-text-muted-light dark:text-text-muted-dark sm:ml-auto">{filteredCustomers.length} hội viên</span>
 
         <button
           onClick={() => setUseAutoScan(!useAutoScan)}
-          className={`flex items-center gap-2 h-10 px-4 rounded-xl font-bold text-sm transition-all shrink-0 ${
+          className={`flex h-10 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors ${
             useAutoScan
               ? 'bg-red-500 text-white hover:bg-red-600'
               : 'bg-primary text-text-light hover:opacity-90'
@@ -156,16 +163,16 @@ const CheckIn = () => {
           isCheckingIn={checkingIn !== null}
         />
       ) : (
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
+              <thead className="border-b border-border-light bg-background-light text-xs font-medium text-text-muted-light dark:border-border-dark dark:bg-background-dark dark:text-text-muted-dark">
                 <tr>
-                  <th className="p-4">TÊN KHÁCH HÀNG</th>
-                  <th className="p-4">SỐ ĐIỆN THOẠI</th>
-                  <th className="p-4">GÓI TẬP</th>
-                  <th className="p-4">TRẠNG THÁI</th>
-                  {isAdmin && <th className="p-4 text-right">HÀNH ĐỘNG</th>}
+                  <th className="p-4">Hội viên</th>
+                  <th className="p-4">Số điện thoại</th>
+                  <th className="p-4">Gói tập</th>
+                  <th className="p-4">Trạng thái</th>
+                  {isAdmin && <th className="p-4 text-right">Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
@@ -175,11 +182,11 @@ const CheckIn = () => {
                     const isCheckingIn = checkingIn === c._id;
                     return (
                       <tr key={c._id || c.id} className="border-t border-border-light dark:border-border-dark hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
-                        <td className="p-4 font-medium text-base text-text-light dark:text-text-dark">{c.name || 'N/A'}</td>
-                        <td className="p-4 text-base font-medium text-text-light dark:text-text-dark">{c.phone || 'N/A'}</td>
-                        <td className="p-4 text-base font-medium text-text-light dark:text-text-dark">{c.packageType || 'N/A'}</td>
+                        <td className="p-4 text-sm font-medium text-text-light dark:text-text-dark">{c.name || 'N/A'}</td>
+                        <td className="p-4 text-sm text-text-light dark:text-text-dark">{c.phone || 'N/A'}</td>
+                        <td className="p-4 text-sm text-text-light dark:text-text-dark">{c.packageType || 'N/A'}</td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${status.color}`}>
+                          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${status.color}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
                               status.status === 'active' ? 'bg-green-500'
                               : status.status === 'frozen' ? 'bg-purple-500'
@@ -195,7 +202,7 @@ const CheckIn = () => {
                             <button
                               onClick={() => handleCheckIn(c)}
                               disabled={isCheckingIn || status.status === 'expired'}
-                              className={`px-4 py-2 rounded-xl font-bold transition-colors flex items-center gap-2 ml-auto ${
+                              className={`ml-auto flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                                 status.status === 'expired'
                                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                   : isCheckingIn

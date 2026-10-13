@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -20,7 +20,7 @@ import CustomerModal from "../components/customer/CustomerModal"; // Existing Ed
 import CustomerDetailModal from "../components/customer/CustomerDetailModal"; // New Detail Modal
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
-import { getIconColor } from "../utils/iconTone";
+import PageHeader from "../components/common/PageHeader";
 
 const getCustomerStatus = (startDate, endDate, status) => {
   if (status === "frozen") return { status: "frozen", label: "Bảo lưu" };
@@ -65,17 +65,11 @@ const CustomerList = () => {
   const [filterEndDateTo, setFilterEndDateTo] = useState("");
   const [filterAssignedStaff, setFilterAssignedStaff] = useState("all");
 
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
-  const [showContractDropdown, setShowContractDropdown] = useState(false);
-  const [showPackageDropdown, setShowPackageDropdown] = useState(false);
-  const [showDateDropdown, setShowDateDropdown] = useState(false);
-  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
   const [staffList, setStaffList] = useState([]);
   
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [, setTotalCustomers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
 
@@ -162,7 +156,7 @@ const CustomerList = () => {
     setPage(1);
   }, [filterStatus, filterPayment, filterContract, filterPackage, filterStartDateFrom, filterStartDateTo, filterEndDateFrom, filterEndDateTo, filterAssignedStaff]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [customerData, packageData, staffData] = await Promise.all([
@@ -200,11 +194,11 @@ const CustomerList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, debouncedSearch, filterStatus, filterPayment, filterContract, filterPackage, filterAssignedStaff, filterStartDateFrom, filterStartDateTo, filterEndDateFrom, filterEndDateTo]);
 
   useEffect(() => {
     fetchData();
-  }, [page, debouncedSearch, filterStatus, filterPayment, filterContract, filterPackage, filterStartDateFrom, filterStartDateTo, filterEndDateFrom, filterEndDateTo, filterAssignedStaff]);
+  }, [fetchData]);
 
   const handleSave = async (data) => {
     try {
@@ -270,7 +264,7 @@ const CustomerList = () => {
 
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleExportExcel = async (preset = null) => {
+  const handleExportExcel = async () => {
     try {
       setIsExporting(true);
       toast.loading("Đang khởi tạo file Excel...", { id: "export-excel" });
@@ -302,23 +296,19 @@ const CustomerList = () => {
     return <div className="p-10 text-center">loading...</div>;
 
   return (
-    <div className="flex flex-col gap-6 font-display">
+    <div className="flex flex-col gap-5 font-display">
 
-      {/* ── Khối 1: Tiêu đề trang và thao tác chính ── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
-            <Users size={26} className={getIconColor(Users)} /> Quản lý hội viên & hợp đồng
-          </h2>
-          <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal mt-1">
-            Theo dõi hồ sơ hội viên, thời hạn gói tập, tiến độ thanh toán và lịch sử giao dịch
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+      <PageHeader
+        meta="Khách hàng"
+        title="Hội viên và hợp đồng"
+        description="Theo dõi hồ sơ, thời hạn gói tập, thanh toán và lịch sử giao dịch."
+        icon={Users}
+        actions={(
+          <>
           <button
             onClick={() => handleExportExcel()}
             disabled={isExporting}
-            className="flex items-center gap-1.5 h-10 px-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark rounded-xl text-sm font-semibold transition-all hover:border-primary disabled:opacity-50 cursor-pointer"
+            className="flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-border-light bg-surface-light px-4 text-sm font-semibold text-text-secondary-light transition-colors hover:border-primary disabled:opacity-50 dark:border-border-dark dark:bg-surface-dark dark:text-text-secondary-dark"
           >
             <Download size={16} />
             {isExporting ? "Đang xuất..." : "Xuất Excel"}
@@ -326,17 +316,18 @@ const CustomerList = () => {
           {isAdmin && (
             <button
               onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
-              className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-sm font-semibold hover:bg-primary-hover shadow-sm transition-all cursor-pointer"
+              className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary-hover"
             >
               <Plus size={18} />
               Thêm Hội Viên Mới
             </button>
           )}
-        </div>
-      </div>
+          </>
+        )}
+      />
 
       {/* ── Khối 2: Filter Bar Cải Tiến (Phân cấp Primary & Secondary) ── */}
-      <div className="flex flex-col gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      <div className="flex flex-col gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark">
         {/* Hàng 1: Primary Filters + Ô tìm kiếm + Nút Nâng cao */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Ô tìm kiếm nổi bật */}
@@ -604,16 +595,16 @@ const CustomerList = () => {
         )}
       </div>
 
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         <table className="w-full text-left">
-          <thead className="bg-background-light dark:bg-background-dark uppercase text-xs font-semibold tracking-wide text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark">
+          <thead className="border-b border-border-light bg-background-light text-xs font-medium text-text-muted-light dark:border-border-dark dark:bg-background-dark dark:text-text-muted-dark">
             <tr>
               <th className="p-4 w-[5%]"></th>
-              <th className="p-4 pl-8 w-[25%]">HỌ VÀ TÊN</th>
-              <th className="p-4 w-[15%]">SĐT</th>
-              <th className="p-4 pl-8 w-[20%]">GÓI TẬP</th>
-              <th className="p-4 w-[20%]">TRẠNG THÁI</th>
-              {isAdmin && <th className="p-4 text-right w-[15%]">HÀNH ĐỘNG</th>}
+              <th className="p-4 pl-8 w-[25%]">Hội viên</th>
+              <th className="p-4 w-[15%]">Số điện thoại</th>
+              <th className="p-4 pl-8 w-[20%]">Gói tập</th>
+              <th className="p-4 w-[20%]">Trạng thái</th>
+              {isAdmin && <th className="p-4 text-right w-[15%]">Thao tác</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark font-display">
@@ -642,7 +633,7 @@ const CustomerList = () => {
                        </div>
                     </td>
                     <td className="p-4 pl-8">
-                        <div className="font-normal text-text-light dark:text-text-dark text-sm">{c.name}</div>
+                        <div className="text-sm font-medium text-text-light dark:text-text-dark">{c.name}</div>
                         <div className="text-xs text-subtle-light dark:text-subtle-dark font-normal mt-0.5">{c.code}</div>
                     </td>
                     <td className="p-4 text-sm font-normal text-text-light dark:text-text-dark">
@@ -684,7 +675,7 @@ const CustomerList = () => {
                               setSelectedCustomer(c);
                               setShowEditModal(true);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors"
+                            className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-100"
                             title="Sửa thông tin"
                           >
                             <Pencil size={18} />
@@ -694,7 +685,7 @@ const CustomerList = () => {
                                 e.stopPropagation();
                                 handleDelete(c._id || c.id);
                             }}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-colors"
+                            className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-100"
                             title="Xóa khách hàng"
                           >
                              <Trash2 size={18} />
@@ -720,22 +711,22 @@ const CustomerList = () => {
         </table>
         
         {/* Pagination Controls */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-            <div className="text-sm font-bold text-gray-700">
-                Trang: {page}/{totalPages}
+        <div className="flex items-center justify-between border-t border-border-light bg-background-light px-4 py-3 dark:border-border-dark dark:bg-background-dark">
+            <div className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+                Trang {page} / {totalPages}
             </div>
             <div className="flex gap-2">
                 <button
                     onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg border border-border-light bg-surface-light px-4 py-2 text-sm font-medium text-text-secondary-light transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-border-dark dark:bg-surface-dark dark:text-text-secondary-dark dark:hover:bg-white/5"
                 >
                     Trang trước
                 </button>
                 <button
                     onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={page >= totalPages}
-                    className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg border border-border-light bg-surface-light px-4 py-2 text-sm font-medium text-text-secondary-light transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-border-dark dark:bg-surface-dark dark:text-text-secondary-dark dark:hover:bg-white/5"
                 >
                     Trang sau
                 </button>

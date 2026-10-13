@@ -4,6 +4,14 @@
   "main": "server.js",
   "scripts": {
     "test": "jest --runInBand --detectOpenHandles --forceExit",
+    "benchmark:local": "node scripts/benchmark-local.js",
+    "smoke:staging": "node scripts/staging-smoke.js",
+    "load:staging": "node scripts/staging-load.js",
+    "verify:topology": "node scripts/verify-production-topology.js",
+    "verify:provider-restore": "node scripts/verify-provider-restore.js",
+    "verify:release-gate": "node scripts/verify-release-gate.js",
+    "drill:backup-restore": "node scripts/backup-restore-drill.js",
+    "security:scan": "node ../scripts/scan-secrets.js",
     "start": "node server.js",
     "migrate:multibranch": "node scripts/migrate-to-multibranch.js",
     "facility-key:set": "node scripts/set-facility-login-key.js",
@@ -22,7 +30,7 @@
   "dependencies": {
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^1.41.3",
+    "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
@@ -34,11 +42,9 @@
     "helmet": "^8.2.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.0.0",
+    "mongoose": "9.7.2",
     "multer": "^2.2.0",
-    "multer-storage-cloudinary": "^4.0.0",
-    "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.1"
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "jest": "^30.4.2",

@@ -15,19 +15,24 @@ import numpy as np
 import cv2
 import json
 import os
+import hmac
 
 app = Flask(__name__)
 
-INTERNAL_SECRET = os.environ.get("INTERNAL_SERVICE_SECRET", "gympro_internal_secret")
+INTERNAL_SECRET = os.environ.get("INTERNAL_SERVICE_SECRET", "")
+if len(INTERNAL_SECRET) < 32:
+    raise RuntimeError(
+        "INTERNAL_SERVICE_SECRET must be configured with at least 32 characters"
+    )
+
+MATCH_THRESHOLD = float(os.environ.get("FACE_MATCH_THRESHOLD", "0.60"))
+if not 0.0 <= MATCH_THRESHOLD <= 1.0:
+    raise RuntimeError("FACE_MATCH_THRESHOLD must be between 0 and 1")
 
 def verify_internal_secret():
-    """Kiểm tra header bảo mật X-Internal-Secret nếu có cấu hình."""
+    """Bắt buộc xác thực mọi request xử lý dữ liệu khuôn mặt."""
     secret = request.headers.get("X-Internal-Secret")
-    # Nếu env INTERNAL_SERVICE_SECRET được set khác rỗng, yêu cầu header phải khớp
-    if os.environ.get("REQUIRE_INTERNAL_AUTH") == "true":
-        if not secret or secret != INTERNAL_SECRET:
-            return False
-    return True
+    return bool(secret) and hmac.compare_digest(secret, INTERNAL_SECRET)
 
 # ──────────────────────────────────────────────
 # Khởi tạo InsightFace — load 1 lần khi start
@@ -149,6 +154,16 @@ def recognize():
     if not candidates:
         return jsonify({'matched': False, 'reason': 'no_candidates'})
 
+    threshold = MATCH_THRESHOLD
+    threshold_raw = request.form.get('threshold')
+    if threshold_raw is not None:
+        try:
+            threshold = float(threshold_raw)
+        except ValueError:
+            return jsonify({'matched': False, 'reason': 'invalid_threshold'}), 400
+        if not 0.0 <= threshold <= 1.0:
+            return jsonify({'matched': False, 'reason': 'invalid_threshold'}), 400
+
     img = decode_image(file)
     if img is None:
         return jsonify({'matched': False, 'reason': 'invalid_image'}), 400
@@ -164,7 +179,6 @@ def recognize():
     face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     query_vec = face.embedding
 
-    THRESHOLD = 0.45
     best_member_id = None
     best_score = 0.0
 
@@ -180,11 +194,12 @@ def recognize():
         except Exception:
             continue
 
-    if best_score >= THRESHOLD and best_member_id:
+    if best_score >= threshold and best_member_id:
         return jsonify({
             'matched': True,
             'member_id': best_member_id,
             'confidence': round(best_score, 4),
+            'threshold': threshold,
             'branch_code': branch_code
         })
     else:
@@ -192,6 +207,7 @@ def recognize():
             'matched': False,
             'reason': 'below_threshold',
             'best_confidence': round(best_score, 4),
+            'threshold': threshold,
             'branch_code': branch_code
         })
 

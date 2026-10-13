@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-09-21T15:21:57.594Z",
+  "releaseSha": "working-tree",
+  "success": true,
+  "environment": {
+    "node": "v22.15.0",
+    "platform": "win32-x64",
+    "database": "mongodb-memory-server (single process, local)"
+  },
+  "dataset": {
+    "customers": 1000,
+    "checkins": 5000,
+    "posOrders": 250,
+    "transactions": 5000
+  },
+  "results": [
+    {
+      "name": "customer-list",
+      "path": "/api/v1/customers?page=1&limit=25",
+      "requests": 80,
+      "concurrency": 8,
+      "failures": 0,
+      "throughputRps": 101.3,
+      "latencyMs": {
+        "min": 53.09,
+        "p50": 76.95,
+        "p95": 97.8,
+        "p99": 100.84,
+        "max": 100.84
+      },
+      "averageResponseBytes": 19635
+    },
+    {
+      "name": "checkin-history",
+      "path": "/api/v1/checkins?page=1&limit=50",
+      "requests": 80,
+      "concurrency": 8,
+      "failures": 0,
+      "throughputRps": 149.01,
+      "latencyMs": {
+        "min": 31.85,
+        "p50": 50.55,
+        "p95": 83.49,
+        "p99": 87.58,
+        "max": 87.58
+      },
+      "averageResponseBytes": 14524
+    },
+    {
+      "name": "pos-sales-today",
+      "path": "/api/v1/pos/sales?preset=today&page=1&limit=25",
+      "requests": 80,
+      "concurrency": 8,
+      "failures": 0,
+      "throughputRps": 124.08,
+      "latencyMs": {
+        "min": 32.22,
+        "p50": 62.38,
+        "p95": 71.83,
+        "p99": 97.76,
+        "max": 97.76
+      },
+      "averageResponseBytes": 6981
+    },
+    {
+      "name": "report-summary",
+      "path": "/api/v1/reports/summary",
+      "requests": 80,
+      "concurrency": 8,
+      "failures": 0,
+      "throughputRps": 129.67,
+      "latencyMs": {
+        "min": 32.43,
+        "p50": 59.48,
+        "p95": 70.52,
+        "p99": 97.66,
+        "max": 97.66
+      },
+      "averageResponseBytes": 195
+    }
+  ]
+}

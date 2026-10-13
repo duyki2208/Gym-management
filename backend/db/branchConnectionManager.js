@@ -220,6 +220,8 @@ const closeAllConnections = async () => {
   }
 };
 
+const getCentralConnectionState = () => centralConnection?.readyState ?? 0;
+
 module.exports = {
   initCentralConnection,
   getCentralModels,
@@ -228,4 +230,5 @@ module.exports = {
   resolveBranchDbName,
   getLegacyDbName,
   closeAllConnections,
+  getCentralConnectionState,
 };

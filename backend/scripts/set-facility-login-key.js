@@ -33,7 +33,7 @@ const run = async () => {
         ...encryptedFields,
       },
     },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!branch) {

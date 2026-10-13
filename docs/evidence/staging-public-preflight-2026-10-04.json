@@ -1,0 +1,84 @@
+{
+  "gate": "staging-smoke",
+  "generatedAt": "2026-10-04T15:16:01.527Z",
+  "environment": "staging-public-probe",
+  "releaseSha": "unknown",
+  "executedBy": "codex-local",
+  "approvedBy": null,
+  "baseUrl": "https://gym-management-bms0.onrender.com",
+  "frontendOrigin": "https://gym-management-eight-omega.vercel.app",
+  "expectedApiOrigin": "https://gym-management-bms0.onrender.com",
+  "authenticationMode": "anonymous",
+  "preflightPassed": false,
+  "loginFlowExecuted": false,
+  "authenticatedChecksEnabled": false,
+  "authenticatedChecksExecuted": false,
+  "skippedChecks": [],
+  "thresholds": {
+    "timeoutMs": 60000,
+    "maxLatencyMs": 30000
+  },
+  "success": false,
+  "results": [
+    {
+      "name": "frontend-root",
+      "path": "/",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "latencyMs": 525.33,
+      "passed": true,
+      "responseBytes": 775
+    },
+    {
+      "name": "frontend-spa-fallback",
+      "path": "/customers",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "latencyMs": 595.67,
+      "passed": true,
+      "responseBytes": 775
+    },
+    {
+      "name": "frontend-api-target",
+      "expectedApiOrigin": "https://gym-management-bms0.onrender.com",
+      "scriptCount": 1,
+      "passed": true
+    },
+    {
+      "name": "liveness",
+      "path": "/api/v1/system/health/live",
+      "expectedStatus": 200,
+      "actualStatus": 404,
+      "latencyMs": 279.94,
+      "requestIdPropagated": false,
+      "readinessDependencies": null,
+      "reportedRelease": null,
+      "passed": false,
+      "responseBytes": 164
+    },
+    {
+      "name": "readiness",
+      "path": "/api/v1/system/health/ready",
+      "expectedStatus": 200,
+      "actualStatus": 404,
+      "latencyMs": 100.53,
+      "requestIdPropagated": false,
+      "readinessDependencies": null,
+      "reportedRelease": null,
+      "passed": false,
+      "responseBytes": 165
+    },
+    {
+      "name": "anonymous-protection",
+      "path": "/api/v1/customers?limit=1",
+      "expectedStatus": 401,
+      "actualStatus": 401,
+      "latencyMs": 129.8,
+      "requestIdPropagated": false,
+      "readinessDependencies": null,
+      "reportedRelease": null,
+      "passed": false,
+      "responseBytes": 64
+    }
+  ]
+}

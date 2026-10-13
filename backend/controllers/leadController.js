@@ -1,6 +1,14 @@
 const Lead = require("../models/Lead");
-const Customer = require("../models/Customer");
-const User = require("../models/User");
+const { PERMISSIONS, userHasPermission } = require("../middleware/permissions");
+
+const isAssignedToUser = (lead, user) =>
+  Boolean(lead?.assignedSale && user?._id && String(lead.assignedSale) === String(user._id));
+
+const denyObjectAccess = (res) => res.status(403).json({
+  success: false,
+  code: "OBJECT_ACCESS_DENIED",
+  message: "Bạn không có quyền truy cập khách hàng tiềm năng này",
+});
 
 // @desc    Lấy tất cả Leads (tìm kiếm & lọc)
 // @route   GET /api/v1/leads
@@ -8,10 +16,12 @@ const getAllLeads = async (req, res) => {
   try {
     const { search, status, source, assignedSale } = req.query;
     const query = {};
+    const canReadAll = await userHasPermission(req, PERMISSIONS.LEAD_READ_ALL);
 
     if (status) query.status = status;
     if (source) query.source = source;
-    if (assignedSale) query.assignedSale = assignedSale;
+    if (canReadAll && assignedSale) query.assignedSale = assignedSale;
+    if (!canReadAll) query.assignedSale = req.user._id;
 
     if (search) {
       query.$or = [
@@ -36,6 +46,7 @@ const getAllLeads = async (req, res) => {
 const createLead = async (req, res) => {
   try {
     const { name, phone, email, source, assignedSale, note } = req.body;
+    const canAssignOthers = await userHasPermission(req, PERMISSIONS.LEAD_READ_ALL);
     if (!name || !phone) {
       return res.status(400).json({ success: false, message: "Tên và số điện thoại là bắt buộc" });
     }
@@ -54,7 +65,7 @@ const createLead = async (req, res) => {
       phone,
       email: email || "",
       source: source || "other",
-      assignedSale: assignedSale || undefined,
+      assignedSale: canAssignOthers ? (assignedSale || undefined) : req.user._id,
       notes: notesList,
     });
 
@@ -74,13 +85,22 @@ const updateLead = async (req, res) => {
     if (!lead) {
       return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng tiềm năng" });
     }
+    const canManageAll = await userHasPermission(req, PERMISSIONS.LEAD_READ_ALL);
+    if (!canManageAll && !isAssignedToUser(lead, req.user)) {
+      return denyObjectAccess(res);
+    }
 
     if (name) lead.name = name;
     if (phone) lead.phone = phone;
     if (email !== undefined) lead.email = email;
     if (source) lead.source = source;
     if (status) lead.status = status;
-    if (assignedSale !== undefined) lead.assignedSale = assignedSale || null;
+    if (assignedSale !== undefined) {
+      if (!canManageAll && String(assignedSale || "") !== String(req.user._id)) {
+        return denyObjectAccess(res);
+      }
+      lead.assignedSale = assignedSale || null;
+    }
 
     if (note) {
       lead.notes.push({
@@ -105,6 +125,10 @@ const convertLead = async (req, res) => {
     const lead = await Lead.findById(req.params.id);
     if (!lead) {
       return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng tiềm năng" });
+    }
+    const canManageAll = await userHasPermission(req, PERMISSIONS.LEAD_READ_ALL);
+    if (!canManageAll && !isAssignedToUser(lead, req.user)) {
+      return denyObjectAccess(res);
     }
 
     if (lead.status === "converted") {
@@ -141,10 +165,14 @@ const convertLead = async (req, res) => {
 // @route   DELETE /api/v1/leads/:id
 const deleteLead = async (req, res) => {
   try {
-    const lead = await Lead.findByIdAndDelete(req.params.id);
+    const lead = await Lead.findById(req.params.id);
     if (!lead) {
       return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng tiềm năng" });
     }
+    if (!(await userHasPermission(req, PERMISSIONS.LEAD_READ_ALL))) {
+      return denyObjectAccess(res);
+    }
+    await lead.deleteOne();
     res.json({ success: true, message: "Xóa thành công" });
   } catch (error) {
     console.error("Lỗi xóa lead:", error);

@@ -12,6 +12,9 @@ jest.mock("../db/branchConnectionManager", () => ({
 }));
 
 const attachBranchContext = require("../middleware/attachBranchContext");
+const { authenticate } = require("../middleware/accessTokenContext");
+const resolveTenant = require("../middleware/resolveTenant");
+const { protect } = require("../middleware/authMiddleware");
 const authController = require("../controllers/authController");
 
 const getJwtSecret = () => process.env.JWT_SECRET || "testsecret123";
@@ -56,6 +59,43 @@ describe("Branch Security and Cache Isolation Tests", () => {
   });
 
   describe("1. attachBranchContext - Access Control via X-Branch-Code", () => {
+    test("authenticate -> resolveTenant -> protect verifies an access token only once", async () => {
+      const token = jwt.sign(
+        {
+          id: "admin_1",
+          role: "admin",
+          isCentral: true,
+          allowedBranches: ["*"],
+          activeBranch: "HN01",
+        },
+        getJwtSecret()
+      );
+      const verifySpy = jest.spyOn(jwt, "verify");
+      const user = {
+        _id: "admin_1",
+        role: "admin",
+        isActive: true,
+        allowedBranches: ["*"],
+      };
+      const req = {
+        headers: { authorization: `Bearer ${token}` },
+        query: {},
+        centralModels: {
+          CentralUser: {
+            findById: jest.fn(() => ({ select: jest.fn().mockResolvedValue(user) })),
+          },
+        },
+      };
+      const res = createMockRes();
+
+      authenticate(req, res, jest.fn());
+      resolveTenant(req, res, jest.fn());
+      await protect(req, res, jest.fn());
+
+      expect(verifySpy).toHaveBeenCalledTimes(1);
+      verifySpy.mockRestore();
+    });
+
     test("Central accountant with allowedBranches: ['HN01'] sending X-Branch-Code: HN02 -> 403 BRANCH_ACCESS_DENIED", async () => {
       const token = jwt.sign(
         {

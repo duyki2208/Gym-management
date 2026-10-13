@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, UserCircle2, Calendar } from "lucide-react";
 import toast from "react-hot-toast";
 import { staffService } from "../../services/customerService";
@@ -35,9 +35,9 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
     });
   };
 
-  const weekDates = getDatesForWeek(currentWeekStart);
+  const weekDates = useMemo(() => getDatesForWeek(currentWeekStart), [currentWeekStart]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       setLoading(true);
       const startStr = weekDates[0].toLocaleDateString('en-CA'); // YYYY-MM-DD local
@@ -60,13 +60,13 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [staff, weekDates]);
 
   useEffect(() => {
     if (staff) {
       fetchSchedules();
     }
-  }, [staff, currentWeekStart]);
+  }, [staff, fetchSchedules]);
 
   const handleUpdateShift = async (dateStr, shiftType) => {
     if (!isAdmin) return;
@@ -78,7 +78,7 @@ const StaffDetailModal = ({ staff, onClose, isAdmin, onScheduleUpdate }) => {
       toast.success("Cập nhật ca làm thành công");
       fetchSchedules();
       if (onScheduleUpdate) onScheduleUpdate();
-    } catch (error) {
+    } catch {
       toast.error("Lỗi cập nhật lịch làm việc");
     }
   };

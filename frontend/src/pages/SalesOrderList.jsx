@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { posService } from '../services/productService';
 import PointOfSale from './PointOfSale';
 import toast from 'react-hot-toast';
-import { Search, Plus, ChevronRight, ChevronDown, ChevronLeft, Download, Calendar, Filter, FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { Search, Plus, ChevronRight, ChevronDown, ChevronLeft, Download, Calendar, Filter, FileSpreadsheet, ShoppingCart } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
+
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 const SalesOrderList = () => {
   const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState({ totalAmount: 0, totalPaid: 0, totalDue: 0, totalOrders: 0 });
+  const [serverPagination, setServerPagination] = useState({ totalPages: 1, totalItems: 0 });
   const [loading, setLoading] = useState(true);
 
   // Filter States (Mặc định: Tháng này - Hiển thị danh sách các ngày đã bán trong tháng)
@@ -16,28 +19,30 @@ const SalesOrderList = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Pagination State (Mỗi trang hiển thị 10 ngày)
+  // Server-side pagination keeps the POS payload bounded as order volume grows.
   const [currentPage, setCurrentPage] = useState(1);
-  const daysPerPage = 10;
 
   // UI States (Bấm vào mới mở xem chi tiết)
   const [expandedDateGroups, setExpandedDateGroups] = useState({});
   const [showPosModal, setShowPosModal] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
 
-  const fetchSales = async () => {
+  const fetchSales = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
         search,
         preset,
+        page: currentPage,
+        limit: 50,
         startDate: preset === 'custom' ? startDate : '',
         endDate: preset === 'custom' ? endDate : ''
       };
       const data = await posService.getSales(params);
       if (data && data.success) {
-        setSales(data.sales || []);
+        setSales(asArray(data.sales));
         setSummary(data.summary || { totalAmount: 0, totalPaid: 0, totalDue: 0, totalOrders: 0 });
+        setServerPagination(data.pagination || { totalPages: 1, totalItems: data.sales?.length || 0 });
       } else {
         setSales(Array.isArray(data) ? data : []);
       }
@@ -47,15 +52,18 @@ const SalesOrderList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, preset, currentPage, startDate, endDate]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, preset, startDate, endDate]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentPage(1);
       fetchSales();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, preset, startDate, endDate]);
+  }, [fetchSales]);
 
   // Gom nhóm các sản phẩm bán được theo Ngày (YYYY-MM-DD)
   const groupSalesByDate = (salesList) => {
@@ -124,8 +132,8 @@ const SalesOrderList = () => {
   };
 
   const allDateGroups = groupSalesByDate(sales);
-  const totalPages = Math.ceil(allDateGroups.length / daysPerPage) || 1;
-  const currentPageGroups = allDateGroups.slice((currentPage - 1) * daysPerPage, currentPage * daysPerPage);
+  const totalPages = serverPagination.totalPages || 1;
+  const currentPageGroups = allDateGroups;
 
   const toggleDateGroup = (dateKey) => {
     setExpandedDateGroups(prev => ({ ...prev, [dateKey]: !prev[dateKey] }));
@@ -166,15 +174,30 @@ const SalesOrderList = () => {
   };
 
   // Hàm Xuất File Excel Báo Cáo Bán Hàng
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
-      if (!allDateGroups || allDateGroups.length === 0) {
+      const XLSX = await import('../utils/xlsxWriter');
+      const exportSales = [];
+      const exportTotalPages = Math.max(1, Math.ceil((serverPagination.totalItems || 0) / 100));
+      for (let exportPage = 1; exportPage <= exportTotalPages; exportPage += 1) {
+        const pageData = await posService.getSales({
+          search,
+          preset,
+          page: exportPage,
+          limit: 100,
+          startDate: preset === 'custom' ? startDate : '',
+          endDate: preset === 'custom' ? endDate : '',
+        });
+        exportSales.push(...asArray(pageData.sales));
+      }
+      const exportDateGroups = groupSalesByDate(exportSales);
+      if (exportDateGroups.length === 0) {
         toast.error('Không có dữ liệu báo cáo để xuất Excel!');
         return;
       }
 
       // 1. Bảng tổng hợp theo ngày
-      const summaryRows = allDateGroups.map(group => ({
+      const summaryRows = exportDateGroups.map(group => ({
         'Ngày': group.formattedDate,
         'Số loại sản phẩm': group.aggregatedProducts.length,
         'Tổng số lượng bán': group.aggregatedProducts.reduce((sum, p) => sum + (p.quantity || 0), 0),
@@ -194,7 +217,7 @@ const SalesOrderList = () => {
 
       // 2. Bảng chi tiết từng sản phẩm bán
       const detailRows = [];
-      allDateGroups.forEach(group => {
+      exportDateGroups.forEach(group => {
         group.aggregatedProducts.forEach(p => {
           detailRows.push({
             'Ngày bán': group.formattedDate,
@@ -217,7 +240,7 @@ const SalesOrderList = () => {
       XLSX.utils.book_append_sheet(wb, wsDetail, "Chi Tiết Sản Phẩm Bán");
 
       const fileName = `Bao_Cao_Ban_Hang_${preset}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      await XLSX.writeFile(wb, fileName);
       toast.success('Xuất file Excel báo cáo bán hàng thành công!');
     } catch (error) {
       console.error('Lỗi xuất Excel:', error);
@@ -226,9 +249,15 @@ const SalesOrderList = () => {
   };
 
   return (
-    <div className="flex flex-col gap-5 font-display bg-transparent h-full">
+    <div className="flex h-full flex-col gap-5 bg-transparent font-display">
+      <PageHeader
+        meta="Cửa hàng & kho"
+        title="Bán hàng"
+        description="Theo dõi doanh thu POS, tra cứu đơn theo ngày và tạo giao dịch mới."
+        icon={ShoppingCart}
+      />
       {/* ── Compact Filter Bar ── */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm flex flex-wrap items-center justify-between gap-3 relative z-20">
+      <div className="relative z-20 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark">
         
         {/* Search Input (Bên trái, mở rộng rộng rãi) */}
         <div className="relative flex-1 max-w-lg min-w-[260px]">
@@ -332,7 +361,7 @@ const SalesOrderList = () => {
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-1.5 h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            className="flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border-light bg-surface-light px-3.5 text-xs font-semibold text-text-light transition-colors hover:bg-background-light dark:border-border-dark dark:bg-surface-dark dark:text-text-dark dark:hover:bg-background-dark"
             title="Xuất dữ liệu ra Excel"
           >
             <FileSpreadsheet size={15} />
@@ -341,7 +370,7 @@ const SalesOrderList = () => {
 
           <button
             onClick={() => setShowPosModal(true)}
-            className="flex items-center justify-center gap-1.5 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-bold hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
+            className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-text-light transition-colors hover:bg-primary/90 md:text-sm"
           >
             <Plus size={18} />
             <span>Đơn hàng mới</span>
@@ -350,7 +379,7 @@ const SalesOrderList = () => {
       </div>
 
       {/* ── Main Sales Table (Color White/Gray, Grouped by Date & 10 Days/Page) ── */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden flex-1 flex flex-col justify-between">
+      <div className="flex flex-1 flex-col justify-between overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         <div className="overflow-x-auto custom-scrollbar flex-1 p-4 space-y-3">
           
           {/* Summary Row */}

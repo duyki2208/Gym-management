@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import reportService from '../services/reportService';
 import { CHART_THEME } from '../utils/theme';
@@ -8,24 +8,39 @@ import {
 } from 'recharts';
 import {
   Download, Users, DollarSign, TrendingUp, AlertTriangle, ArrowUpRight,
-  ArrowDownRight, Package, ShoppingCart, Award, Calendar, Clock, BarChart2, ShieldAlert, Minus,
-  Target, CheckCircle2, XCircle, CreditCard, QrCode, Receipt, Medal
+  ArrowDownRight, Package, Calendar, Minus
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import ChurnPrediction from '../components/report/ChurnPrediction';
 import PTSessionReportView from '../components/reports/PTSessionReportView';
-import { getIconTone } from '../utils/iconTone';
+import {
+  ReportMetricCell,
+  ReportMetricStrip,
+  ReportPageHeader,
+} from '../components/reports/ReportPrimitives';
 
 const COLORS = CHART_THEME.palette;
-
-const ReportIconBadge = ({ icon: Icon, size = 22 }) => (
-  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${getIconTone(Icon)}`}>
-    <Icon size={size} />
-  </div>
-);
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+};
+
+const formatCompactCurrency = (amount) => {
+  const value = Number(amount) || 0;
+  const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
+  if (Math.abs(value) >= 1000000000) return `${formatter.format(value / 1000000000)} tỷ ₫`;
+  if (Math.abs(value) >= 1000000) return `${formatter.format(value / 1000000)} tr ₫`;
+  return formatCurrency(value);
+};
+
+const ReportCurrencyValue = ({ value }) => {
+  const fullValue = formatCurrency(value);
+  return (
+    <span title={fullValue}>
+      <span className="whitespace-nowrap sm:hidden">{formatCompactCurrency(value)}</span>
+      <span className="hidden sm:inline">{fullValue}</span>
+    </span>
+  );
 };
 
 const renderGrowthBadge = (percent, labelSuffix = "") => {
@@ -39,14 +54,14 @@ const renderGrowthBadge = (percent, labelSuffix = "") => {
   if (percent > 0) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50">
-        <ArrowUpRight size={14} /> +{percent}% {labelSuffix}
+        <ArrowUpRight size={14} /> +{percent}% {labelSuffix && <span className="hidden sm:inline">{labelSuffix}</span>}
       </span>
     );
   }
   if (percent < 0) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50">
-        <ArrowDownRight size={14} /> {percent}% {labelSuffix}
+        <ArrowDownRight size={14} /> {percent}% {labelSuffix && <span className="hidden sm:inline">{labelSuffix}</span>}
       </span>
     );
   }
@@ -68,14 +83,7 @@ const pathToTabMap = {
   'churn': 'customer-analytics',
   'inventory': 'inventory',
   'pt-sessions': 'pt-sessions',
-};
-
-const tabToPathMap = {
-  'revenue': 'revenue',
-  'sales-funnel': 'sales-funnel',
-  'customer-analytics': 'customer-analytics',
-  'inventory': 'inventory',
-  'pt-sessions': 'pt-sessions',
+  'notifications-report': 'notifications-report',
 };
 
 const Reports = () => {
@@ -91,14 +99,8 @@ const Reports = () => {
     }
   }, [subPath, navigate]);
 
-  const setActiveTab = (tabId) => {
-    const targetPath = tabToPathMap[tabId] || tabId;
-    navigate(`/reports/${targetPath}`);
-  };
-
   const [summary, setSummary] = useState({ totalRevenue: 0, activeMembers: 0, newMembers: 0, retentionRate: 0, churnRate: 0 });
   const [revenueData, setRevenueData] = useState([]);
-  const [packageData, setPackageData] = useState([]);
   const [expiringMembers, setExpiringMembers] = useState([]);
   const [inventoryData, setInventoryData] = useState({ posRevenue: 0, totalStockValue: 0, lowStockProducts: [] });
   const [loading, setLoading] = useState(true);
@@ -118,13 +120,7 @@ const Reports = () => {
   const [loadingAdvanced, setLoadingAdvanced] = useState(false);
   const [leadReportData, setLeadReportData] = useState(null);
   const [contractBreakdownData, setContractBreakdownData] = useState(null);
-
-  // States cho Audit Log
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [auditPage, setAuditPage] = useState(1);
-  const [auditTotalPages, setAuditTotalPages] = useState(1);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditSearch, setAuditSearch] = useState("");
+  const requestSequence = useRef(0);
 
   // Pagination cho danh sách khách lâu chưa đi tập
   const [inactivePage, setInactivePage] = useState(1);
@@ -132,7 +128,8 @@ const Reports = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (!loading) {
@@ -144,147 +141,107 @@ const Reports = () => {
     }
   }, [activeTab, loading]);
 
-  useEffect(() => {
-    if (activeTab === "audit") {
-      fetchAuditLogs(auditPage, auditSearch);
-      fetchNotificationsSummary();
-    } else if (activeTab === "revenue" || activeTab === "revenue-advanced" || activeTab === "business") {
-      fetchRevenueAdvanced();
-      fetchHRSummary();
-    } else if (activeTab === "customer-analytics" || activeTab === "churn") {
-      fetchCustomerAnalytics();
-    } else if (activeTab === "sales-funnel" || activeTab === "leads-funnel" || activeTab === "contract-status") {
-      fetchLeadReport();
-      fetchContractBreakdown();
-    }
-  }, [activeTab, auditPage, auditSearch, selectedMonth, selectedYear]);
-
-  const fetchLeadReport = async () => {
-    try {
-      const res = await reportService.getLeadConversionReport();
-      if (res.success) setLeadReportData(res.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchContractBreakdown = async () => {
-    try {
-      const res = await reportService.getContractStatusBreakdown();
-      if (res.success) setContractBreakdownData(res.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const fetchData = async () => {
+    const requestId = ++requestSequence.current;
+    setLoading(true);
     setRefreshing(true);
+    setLoadingAdvanced(true);
     try {
       const params = { month: selectedMonth, year: selectedYear };
-      const [summaryRes, revenueRes, packageRes, expiringRes, invRes, revAdvRes, hrRes] = await Promise.all([
-        reportService.getSummary(params),
-        reportService.getRevenueChart(params),
-        reportService.getPackageDistribution(params),
-        reportService.getExpiringMembers(params),
-        reportService.getInventoryReport(params),
-        reportService.getRevenueAdvanced(params),
-        reportService.getHRSummary(params)
-      ]);
 
-      setSummary(summaryRes);
-      setRevenueData(revenueRes);
-      setPackageData(packageRes);
-      setExpiringMembers(expiringRes);
-      setInventoryData(invRes);
-      if (revAdvRes && revAdvRes.success) {
-        setRevenueAdvanced(revAdvRes.data);
-      }
-      if (hrRes && hrRes.success) {
-        setHrSummary(hrRes.data || []);
+      if (activeTab === "revenue") {
+        const [summaryRes, revenueRes, revAdvRes, hrRes] = await Promise.all([
+          reportService.getSummary(params),
+          reportService.getRevenueChart(params),
+          reportService.getRevenueAdvanced(params),
+          reportService.getHRSummary(params),
+        ]);
+        if (requestId !== requestSequence.current) return;
+        setSummary(summaryRes && typeof summaryRes === "object" ? summaryRes : {});
+        setRevenueData(asArray(revenueRes));
+        if (revAdvRes?.success) {
+          setRevenueAdvanced({
+            ...revAdvRes.data,
+            contractBreakdown: asArray(revAdvRes.data?.contractBreakdown),
+            paymentMethods: asArray(revAdvRes.data?.paymentMethods),
+            trend: asArray(revAdvRes.data?.trend),
+          });
+        }
+        setHrSummary(hrRes?.success ? asArray(hrRes.data) : []);
+      } else if (activeTab === "customer-analytics") {
+        const [summaryRes, expiringRes, analyticsRes] = await Promise.all([
+          reportService.getSummary(params),
+          reportService.getExpiringMembers(params),
+          reportService.getCustomerAnalytics(params),
+        ]);
+        if (requestId !== requestSequence.current) return;
+        setSummary(summaryRes && typeof summaryRes === "object" ? summaryRes : {});
+        setExpiringMembers(asArray(expiringRes));
+        if (analyticsRes?.success) {
+          setCustomerAnalytics({
+            ...analyticsRes.data,
+            trainerStats: asArray(analyticsRes.data?.trainerStats),
+            gender: asArray(analyticsRes.data?.gender),
+            packagePopularity: asArray(analyticsRes.data?.packagePopularity),
+            sources: asArray(analyticsRes.data?.sources),
+            inactive: asArray(analyticsRes.data?.inactive),
+          });
+        }
+      } else if (activeTab === "inventory") {
+        const invRes = await reportService.getInventoryReport(params);
+        if (requestId !== requestSequence.current) return;
+        setInventoryData({
+          posRevenue: Number(invRes?.posRevenue) || 0,
+          totalStockValue: Number(invRes?.totalStockValue) || 0,
+          lowStockProducts: asArray(invRes?.lowStockProducts),
+        });
+      } else if (activeTab === "sales-funnel") {
+        const [leadRes, contractRes] = await Promise.all([
+          reportService.getLeadConversionReport(params),
+          reportService.getContractStatusBreakdown(params),
+        ]);
+        if (requestId !== requestSequence.current) return;
+        if (leadRes?.success) {
+          setLeadReportData({
+            ...leadRes.data,
+            salePerformance: asArray(leadRes.data?.salePerformance),
+          });
+        }
+        if (contractRes?.success) {
+          setContractBreakdownData({
+            ...contractRes.data,
+            statusChartData: asArray(contractRes.data?.statusChartData),
+          });
+        }
+      } else if (activeTab === "notifications-report") {
+        const notificationsRes = await reportService.getNotificationsSummary(params);
+        if (requestId !== requestSequence.current) return;
+        if (notificationsRes?.success) {
+          setNotificationsSummary({
+            ...notificationsRes.data,
+            lowStockProducts: asArray(notificationsRes.data?.lowStockProducts),
+            expiringCustomers: asArray(notificationsRes.data?.expiringCustomers),
+            pendingTasks: asArray(notificationsRes.data?.pendingTasks),
+            pendingCommissions: asArray(notificationsRes.data?.pendingCommissions),
+            lowKPIStaff: asArray(notificationsRes.data?.lowKPIStaff),
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching reports:", error);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const fetchRevenueAdvanced = async () => {
-    setLoadingAdvanced(true);
-    try {
-      const res = await reportService.getRevenueAdvanced({ month: selectedMonth, year: selectedYear });
-      if (res && res.success) {
-        setRevenueAdvanced(res.data);
+      if (requestId === requestSequence.current) {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingAdvanced(false);
       }
-    } catch (err) {
-      console.error("Lỗi lấy báo cáo doanh thu nâng cao:", err);
-    } finally {
-      setLoadingAdvanced(false);
-    }
-  };
-
-  const fetchHRSummary = async () => {
-    setLoadingAdvanced(true);
-    try {
-      const res = await reportService.getHRSummary({ month: selectedMonth, year: selectedYear });
-      if (res && res.success) {
-        setHrSummary(res.data || []);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy báo cáo nhân sự:", err);
-    } finally {
-      setLoadingAdvanced(false);
-    }
-  };
-
-  const fetchCustomerAnalytics = async () => {
-    setLoadingAdvanced(true);
-    try {
-      const res = await reportService.getCustomerAnalytics();
-      if (res && res.success) {
-        setCustomerAnalytics(res.data);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy phân tích khách hàng:", err);
-    } finally {
-      setLoadingAdvanced(false);
-    }
-  };
-
-  const fetchNotificationsSummary = async () => {
-    setLoadingAdvanced(true);
-    try {
-      const res = await reportService.getNotificationsSummary();
-      if (res && res.success) {
-        setNotificationsSummary(res.data);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy báo cáo cảnh báo:", err);
-    } finally {
-      setLoadingAdvanced(false);
-    }
-  };
-
-  const fetchAuditLogs = async (page = 1, search = "") => {
-    setAuditLoading(true);
-    try {
-      const res = await reportService.getAuditLogs({ page, limit: 10, search });
-      if (res && res.success && res.data) {
-        setAuditLogs(res.data.logs || []);
-        setAuditTotalPages(res.data.totalPages || 1);
-        setAuditPage(res.data.currentPage || 1);
-      }
-    } catch (error) {
-      console.error("Lỗi lấy nhật ký hệ thống:", error);
-    } finally {
-      setAuditLoading(false);
     }
   };
 
   const exportToExcel = async () => {
     try {
-      const details = await reportService.getRevenueDetails({ month: selectedMonth, year: selectedYear });
+      const XLSX = await import('../utils/xlsxWriter');
+      const details = asArray(await reportService.getRevenueDetails({ month: selectedMonth, year: selectedYear }));
       const excelData = details.map((item, index) => ({
         "STT": index + 1,
         "Mã GD": item.transactionCode || "-",
@@ -311,30 +268,36 @@ const Reports = () => {
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Doanh Thu Cơ Sở");
-      XLSX.writeFile(wb, `BaoCao_DoanhThu_ChiNhanh_T${selectedMonth}_${selectedYear}.xlsx`);
+      await XLSX.writeFile(wb, `BaoCao_DoanhThu_ChiNhanh_T${selectedMonth}_${selectedYear}.xlsx`);
     } catch (error) {
       console.error("Export Excel error", error);
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Đang tải báo cáo...</div>;
+    return (
+      <div className="space-y-4" aria-busy="true" aria-live="polite">
+        <div className="h-9 w-64 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800" />
+        <div className="h-10 w-52 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800" />
+        <ReportMetricStrip columns={4}>
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="h-28 animate-pulse bg-surface-light dark:bg-surface-dark" />
+          ))}
+        </ReportMetricStrip>
+        <div className="h-72 animate-pulse rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark" />
+      </div>
+    );
   }
-
-  const revenueTicks = [0, 50000000, 100000000, 150000000, 200000000];
 
   return (
     <div className="space-y-6">
 
       {/* Header controls: Kỳ báo cáo & Nút thao tác */}
       {!["audit", "customer-analytics", "notifications-report", "leads-funnel", "contract-status", "sales-funnel", "pt-sessions"].includes(activeTab) && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight">Doanh thu cơ sở</h1>
-            <p className="text-xs md:text-sm text-subtle-light dark:text-subtle-dark mt-0.5">Theo dõi và phân tích hiệu quả kinh doanh của phòng gym</p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
+        <ReportPageHeader
+          title="Doanh thu cơ sở"
+          description="Theo dõi và phân tích hiệu quả kinh doanh của phòng gym"
+        >
             <div className="flex items-center gap-2">
               
               <select
@@ -343,7 +306,7 @@ const Reports = () => {
                 aria-label="Chọn tháng báo cáo"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
+                className="h-10 rounded-lg border border-border-light bg-surface-light px-3 text-base font-semibold text-text-light outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark md:text-sm"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                   <option key={m} value={m}>Tháng {m}</option>
@@ -355,7 +318,7 @@ const Reports = () => {
                 aria-label="Chọn năm báo cáo"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-colors"
+                className="h-10 rounded-lg border border-border-light bg-surface-light px-3 text-base font-semibold text-text-light outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark md:text-sm"
               >
                 {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -367,13 +330,12 @@ const Reports = () => {
             <div className="flex items-center gap-2">
               <button 
                 onClick={exportToExcel}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-text-light font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-sm transition-all cursor-pointer"
+                className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-xs font-semibold text-text-light transition-colors hover:bg-primary-hover md:text-sm"
               >
                 <Download size={16} /> Xuất Excel
               </button>
             </div>
-          </div>
-        </div>
+        </ReportPageHeader>
       )}
 
       {/* 1. Doanh thu Tab */}
@@ -416,13 +378,12 @@ const Reports = () => {
 
             return (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <ReportMetricStrip columns={4}>
                   {/* Card 1: Doanh thu thực tế */}
-                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
-                    <div className="min-w-0 flex-1">
+                  <ReportMetricCell>
                       <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng thực thu</p>
-                      <p className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
-                        {formatCurrency(summary.totalRevenue || 0)}
+                      <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
+                        <ReportCurrencyValue value={summary.totalRevenue || 0} />
                       </p>
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         {renderGrowthBadge(momGrowth, "so T.trước")}
@@ -430,16 +391,13 @@ const Reports = () => {
                       <p className="text-[11px] text-gray-400 mt-2">
                         Doanh thu tháng trước: <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(lastMonthValue)}</span>
                       </p>
-                    </div>
-                    <ReportIconBadge icon={DollarSign} size={20} />
-                  </div>
+                  </ReportMetricCell>
 
                   {/* Card 2: Trung bình / ngày & Dự kiến */}
-                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
-                    <div className="min-w-0 flex-1">
+                  <ReportMetricCell>
                       <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Trung bình / ngày</p>
-                      <p className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
-                        {formatCurrency(avgDailyRevenue)}
+                      <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
+                        <ReportCurrencyValue value={avgDailyRevenue} />
                       </p>
                       <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-2 font-medium">
                         {isCurrentMonth ? `Tính trên ${elapsedDays} ngày qua` : `Tính trên ${daysInMonth} ngày`}
@@ -449,17 +407,14 @@ const Reports = () => {
                           Dự kiến tháng  <span className="font-semibold text-text-light dark:text-text-dark">≈ {formatCurrency(projectedRevenue)}</span>
                         </p>
                       )}
-                    </div>
-                    <ReportIconBadge icon={BarChart2} size={20} />
-                  </div>
+                  </ReportMetricCell>
 
                   {/* Card 3: Tiến độ mục tiêu tháng */}
-                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
-                    <div className="min-w-0 flex-1">
+                  <ReportMetricCell>
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Tiến độ mục tiêu</p>
                       </div>
-                      <p className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                      <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                         {targetProgress}%
                       </p>
                       <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mt-2">
@@ -473,94 +428,26 @@ const Reports = () => {
                       <p className="text-[11px] text-gray-400 mt-1.5">
                         Chỉ tiêu: <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(targetRevenue)}</span>
                       </p>
-                    </div>
-                    <ReportIconBadge icon={Target} size={20} />
-                  </div>
+                  </ReportMetricCell>
 
                   {/* Card 4: Công nợ cần thu */}
-                  <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-3">
-                    <div className="min-w-0 flex-1">
+                  <ReportMetricCell>
                       <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Công nợ</p>
-                      <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight break-words">
-                        {formatCurrency(receivables.totalAmount)}
+                      <p className="break-words text-xl font-semibold tracking-tight text-rose-600 dark:text-rose-400 sm:text-2xl">
+                        <ReportCurrencyValue value={receivables.totalAmount} />
                       </p>
                       <div className="flex items-center gap-1.5 mt-2">
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50">
-                          {receivables.count} HĐ đang cọc / nợ
+                          {receivables.count} HĐ <span className="hidden sm:inline">đang cọc / nợ</span>
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-400 mt-1.5">Khoản tiền cần đôn đốc thu hồi</p>
-                    </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/30">
-                      <Receipt size={20} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Phân Rạch Ròi 3 Dòng Doanh Thu theo Nguồn */}
-                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Cơ cấu luồng doanh thu cơ sở</h3>
-                    </div>
-                    <span className="text-xs font-medium text-subtle-light dark:text-subtle-dark bg-border-light/40 dark:bg-border-dark/40 px-2.5 py-1 rounded-lg">
-                      Tháng {selectedMonth}/{selectedYear}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-emerald-50/50 dark:bg-surface-dark rounded-xl border border-emerald-200 dark:border-border-dark">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-text-light dark:text-text-dark flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                          Gói tập
-                        </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300">
-                          {pkgPct}%
-                        </span>
-                      </div>
-                      <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                        {formatCurrency(pkgVal)}
-                      </p>
-                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-1">Bao gồm thẻ hội viên & hợp đồng PT</p>
-                    </div>
-
-                    <div className="p-4 bg-blue-50/50 dark:bg-surface-dark rounded-xl border border-blue-200 dark:border-border-dark">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-text-light dark:text-text-dark flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          Bán lẻ 
-                        </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
-                          {posPct}%
-                        </span>
-                      </div>
-                      <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                        {formatCurrency(posVal)}
-                      </p>
-                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-1">Nước uống, thực phẩm bổ sung, phụ kiện</p>
-                    </div>
-
-                    <div className="p-4 bg-purple-50/50 dark:bg-surface-dark rounded-xl border border-purple-200 dark:border-border-dark">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-text-light dark:text-text-dark flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-purple-500" />
-                          Phí dịch vụ 
-                        </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300">
-                          {feePct}%
-                        </span>
-                      </div>
-                      <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                        {formatCurrency(feeVal)}
-                      </p>
-                      <p className="text-[11px] text-subtle-light dark:text-subtle-dark mt-1">Phí chuyển nhượng, nâng cấp, bảo lưu</p>
-                    </div>
-                  </div>
-                </div>
+                  </ReportMetricCell>
+                </ReportMetricStrip>
 
                 {/* Biểu Đồ Doanh Thu Theo Ngày: BIỂU ĐỒ DIỄN BIẾN 3 LUỒNG DOANH THU (Độc lập, đúng quy ước giá trị thực) */}
-                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
+                <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
+                  <div className="p-5 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                       <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Diễn biến doanh thu theo ngày</h2>
@@ -619,7 +506,7 @@ const Reports = () => {
                                 const total = Number(currentData.revenue ?? (pkg + pos + fee));
 
                                 return (
-                                  <div className="bg-surface-light dark:bg-surface-dark p-3.5 rounded-xl border border-border-light dark:border-border-dark shadow-lg text-xs space-y-2 min-w-[210px]">
+                                  <div className="bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg border border-border-light dark:border-border-dark shadow-lg text-xs space-y-2 min-w-[210px]">
                                     <p className="font-bold text-text-light dark:text-text-dark border-b pb-1.5 border-border-light dark:border-border-dark">
                                       Ngày {label}
                                     </p>
@@ -691,12 +578,39 @@ const Reports = () => {
                       </div>
                     )}
                   </div>
+                  </div>
+
+                  <div className="border-t border-border-light px-5 py-4 dark:border-border-dark sm:px-6">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-text-light dark:text-text-dark">Cơ cấu luồng doanh thu cơ sở</h3>
+                      <span className="text-xs text-subtle-light dark:text-subtle-dark">Tháng {selectedMonth}/{selectedYear}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border-light bg-border-light dark:border-border-dark dark:bg-border-dark md:grid-cols-3">
+                      {[
+                        { label: 'Gói tập', value: pkgVal, percent: pkgPct, note: 'Thẻ hội viên & hợp đồng PT', dot: 'bg-emerald-500' },
+                        { label: 'Bán lẻ', value: posVal, percent: posPct, note: 'Nước uống, thực phẩm & phụ kiện', dot: 'bg-blue-500' },
+                        { label: 'Phí dịch vụ', value: feeVal, percent: feePct, note: 'Chuyển nhượng, nâng cấp & bảo lưu', dot: 'bg-purple-500' },
+                      ].map((stream) => (
+                        <div key={stream.label} className="bg-surface-light p-4 dark:bg-surface-dark">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-2 text-xs font-medium text-text-light dark:text-text-dark">
+                              <span className={`size-2 rounded-full ${stream.dot}`} />
+                              {stream.label}
+                            </span>
+                            <span className="text-xs font-semibold tabular-nums text-subtle-light dark:text-subtle-dark">{stream.percent}%</span>
+                          </div>
+                          <p className="mt-2 text-lg font-semibold text-text-light dark:text-text-dark">{formatCurrency(stream.value)}</p>
+                          <p className="mt-1 text-[11px] text-subtle-light dark:text-subtle-dark">{stream.note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Grid 2 Cột (50/50): TỶ LỆ MỚI VS TÁI KÝ & TỶ TRỌNG THANH TOÁN VIETQR */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Cột 1: Tỷ lệ Hợp đồng Mới vs Tái ký / Gia hạn (Donut Chart Độc Lập) */}
-                  <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+                  <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Cơ cấu hợp đồng gói tập</h3>
@@ -725,7 +639,7 @@ const Reports = () => {
                                     />
                                   ))}
                                 </Pie>
-                                <Tooltip formatter={(v) => [formatCurrency(v), "Doanh số"]} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl" />
+                                <Tooltip formatter={(v) => [formatCurrency(v), "Doanh số"]} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg" />
                               </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -765,10 +679,8 @@ const Reports = () => {
                     </div>
 
                     {/* Thẻ Insight: Tỷ lệ Tái ký / Giữ chân hội viên */}
-                    <div className="mt-5 pt-3.5 border-t border-border-light dark:border-border-dark flex items-center justify-between text-xs text-subtle-light dark:text-subtle-dark bg-gray-50/50 dark:bg-gray-900/30 p-2.5 rounded-lg">
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <TrendingUp size={15} className="text-blue-500" /> Tỷ lệ khách tái ký / gia hạn
-                      </span>
+                    <div className="mt-5 flex items-center justify-between rounded-lg border-t border-border-light bg-background-light/70 p-2.5 pt-3.5 text-xs text-subtle-light dark:border-border-dark dark:bg-background-dark/40 dark:text-subtle-dark">
+                      <span className="font-medium">Tỷ lệ khách tái ký / gia hạn</span>
                       <span className="font-bold text-text-light dark:text-text-dark">
                         {renewPct}% doanh số gói
                       </span>
@@ -776,7 +688,7 @@ const Reports = () => {
                   </div>
 
                   {/* Cột 2: Tỷ trọng hình thức thanh toán (VietQR vs Tiền mặt vs Thẻ) */}
-                  <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+                  <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phương thức thanh toán</h3>
@@ -803,12 +715,11 @@ const Reports = () => {
                               return <Cell key={`cell-pay-${index}`} fill={paymentColors[index % paymentColors.length]} />;
                             })}
                           </Pie>
-                          <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl" />
+                          <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg" />
                         </PieChart>
                       </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <QrCode size={20} className="text-gray-400 mb-0.5" />
-                        <span className="text-[10px] text-gray-400 font-medium">Kênh thu</span>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Kênh thu</span>
                       </div>
                     </div>
 
@@ -841,10 +752,8 @@ const Reports = () => {
               </div>
 
               {/* Thông tin chuyển đổi số thanh toán */}
-              <div className="mt-5 pt-3.5 border-t border-border-light dark:border-border-dark flex items-center justify-between text-xs text-subtle-light dark:text-subtle-dark bg-gray-50/50 dark:bg-gray-900/30 p-2.5 rounded-lg">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CreditCard size={15} className="text-emerald-500" /> Thanh toán số hoá (VietQR / Thẻ)
-                </span>
+              <div className="mt-5 flex items-center justify-between rounded-lg border-t border-border-light bg-background-light/70 p-2.5 pt-3.5 text-xs text-subtle-light dark:border-border-dark dark:bg-background-dark/40 dark:text-subtle-dark">
+                <span className="font-medium">Thanh toán số hoá (VietQR / Thẻ)</span>
                 <span className="font-bold text-text-light dark:text-text-dark">
                   {(() => {
                     const list = revenueAdvanced?.paymentMethods || [];
@@ -858,7 +767,7 @@ const Reports = () => {
           </div>
 
           {/* Bar Chart: Doanh thu 6 tháng gần nhất */}
-          <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+          <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Doanh thu 6 tháng gần đây</h3>
@@ -891,7 +800,7 @@ const Reports = () => {
                     />
                     <Tooltip 
                       formatter={(v) => [formatCurrency(v), "Doanh thu"]}
-                      contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                      contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                       labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
                     />
                     <Bar 
@@ -913,7 +822,7 @@ const Reports = () => {
 
           {/* Bảng Hiệu quả kinh doanh & Hoa hồng nhân sự (LEADERBOARD) */}
           {hrSummary.length > 0 && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+            <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
               <div className="p-5 border-b border-border-light dark:border-border-dark flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
                   Doanh số & hoa hồng nhân sự
@@ -984,24 +893,20 @@ const Reports = () => {
           ) : customerAnalytics ? (
             <>
               {/* KPI 3 Cards: ARPU | PT Riêng | Solo */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <ReportMetricStrip columns={3}>
                 {/* Card 1: Chi tiêu trung bình */}
-                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
+                <ReportMetricCell>
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Chi tiêu trung bình / KH</p>
-                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
-                      {formatCurrency(customerAnalytics.arpu)}
+                    <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
+                      <ReportCurrencyValue value={customerAnalytics.arpu} />
                     </p>
                     <p className="text-xs text-gray-400 mt-2">Doanh thu trung bình trọn đời mỗi hội viên</p>
-                  </div>
-                  <ReportIconBadge icon={DollarSign} />
-                </div>
+                </ReportMetricCell>
 
                 {/* Card 2: Hội viên có PT riêng */}
-                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
+                <ReportMetricCell>
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên có PT riêng</p>
-                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                    <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                       {customerAnalytics.trainerRatio?.withTrainer || 0} <span className="text-sm font-semibold text-gray-400">người</span>
                     </p>
                     <div className="mt-2">
@@ -1009,29 +914,23 @@ const Reports = () => {
                         {customerAnalytics.trainerRatio ? Math.round((customerAnalytics.trainerRatio.withTrainer / (customerAnalytics.trainerRatio.withTrainer + customerAnalytics.trainerRatio.solo || 1)) * 100) : 0}% tổng hội viên
                       </span>
                     </div>
-                  </div>
-                  <ReportIconBadge icon={Award} />
-                </div>
+                </ReportMetricCell>
 
                 {/* Card 3: Hội viên tự tập (Solo) */}
-                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên tự tập (Solo)</p>
-                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                <ReportMetricCell>
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hội viên tự tập</p>
+                    <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                       {customerAnalytics.trainerRatio?.solo || 0} <span className="text-sm font-semibold text-gray-400">người</span>
                     </p>
                     <p className="text-xs text-gray-400 mt-2">Hội viên tập luyện tự do tại phòng</p>
-                  </div>
-                  <ReportIconBadge icon={Users} />
-                </div>
-              </div>
+                </ReportMetricCell>
+              </ReportMetricStrip>
 
               {/* Hàng 2 Cards: Tỷ lệ giữ chân & Tỷ lệ rời bỏ */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
+              <ReportMetricStrip columns={2}>
+                <ReportMetricCell>
                     <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ giữ chân hội viên</p>
-                    <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
+                    <p className="text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                       {summary.retentionRate}%
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -1040,14 +939,11 @@ const Reports = () => {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-2">Dựa trên tỷ lệ khách hàng còn Active / Tổng số</p>
-                  </div>
-                  <ReportIconBadge icon={TrendingUp} />
-                </div>
+                </ReportMetricCell>
 
-                <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ rời bỏ (Churn rate)</p>
-                    <p className="text-2xl md:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
+                <ReportMetricCell>
+                    <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ rời bỏ</p>
+                    <p className="text-xl font-semibold tracking-tight text-rose-600 dark:text-rose-400 sm:text-2xl">
                       {summary.churnRate}%
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -1056,17 +952,15 @@ const Reports = () => {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-2">Tỷ lệ khách hàng không gia hạn / rời bỏ</p>
-                  </div>
-                  <ReportIconBadge icon={AlertTriangle} />
-                </div>
-              </div>
+                </ReportMetricCell>
+              </ReportMetricStrip>
 
               {/* Churn Prediction Component */}
               <ChurnPrediction />
 
               {/* Phân bổ theo Huấn luyện viên */}
               {customerAnalytics.trainerStats && customerAnalytics.trainerStats.length > 0 && (
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+                <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <div>
                       <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân bổ hội viên theo huấn luyện viên (PT)</h3>
@@ -1119,7 +1013,7 @@ const Reports = () => {
               {/* Hàng biểu đồ 1: Giới tính & Độ tuổi */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Donut Chart Giới tính */}
-                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Cơ cấu giới tính hội viên</h3>
                     <span className="text-xs text-gray-400 font-normal">Tỷ trọng</span>
@@ -1142,7 +1036,7 @@ const Reports = () => {
                         </Pie>
                         <Tooltip 
                           formatter={(v, name) => [`${v} KH`, name]} 
-                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                         />
                         <Legend />
                       </PieChart>
@@ -1157,7 +1051,7 @@ const Reports = () => {
                 </div>
 
                 {/* Bar Chart Độ tuổi */}
-                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân bổ độ tuổi hội viên</h3>
                     <span className="text-xs text-gray-400 font-normal">Nhóm tuổi</span>
@@ -1170,7 +1064,7 @@ const Reports = () => {
                         <YAxis tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" axisLine={false} tickLine={false} />
                         <Tooltip 
                           formatter={(v) => [`${v} hội viên`, "Số lượng"]}
-                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                         />
                         <Bar dataKey="value" fill="#2563eb" radius={[4, 4, 0, 0]} name="Số lượng" barSize={32} />
                       </BarChart>
@@ -1180,7 +1074,7 @@ const Reports = () => {
               </div>
 
               {/* Phân bổ gói tập - full width, layout Side-by-side lớn */}
-              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+              <div className="rounded-lg border border-border-light bg-surface-light p-6 dark:border-border-dark dark:bg-surface-dark">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Gói tập đang hoạt động</h3>
                   <span className="text-xs text-gray-400 font-normal">Mức độ phổ biến</span>
@@ -1191,7 +1085,7 @@ const Reports = () => {
                       const total = customerAnalytics.packagePopularity.reduce((a, b) => a + (b.value || 0), 0) || 1;
                       const pct = ((entry.value / total) * 100).toFixed(1);
                       return (
-                        <div key={index} className="flex items-center justify-between p-2.5 rounded-xl bg-background-light dark:bg-background-dark/50 border border-border-light dark:border-border-dark text-xs">
+                        <div key={index} className="flex items-center justify-between p-2.5 rounded-lg bg-background-light dark:bg-background-dark/50 border border-border-light dark:border-border-dark text-xs">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[(index + 2) % COLORS.length] }} />
                             <span className="font-medium text-subtle-light dark:text-subtle-dark truncate">{entry.name}</span>
@@ -1223,7 +1117,7 @@ const Reports = () => {
                           </Pie>
                           <Tooltip 
                             formatter={(v, name) => [`${v} khách hàng`, name]} 
-                            contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                            contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -1242,7 +1136,7 @@ const Reports = () => {
 
               {/* Kênh tiếp cận & Tần suất tập luyện */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Kênh tiếp cận</h3>
                     <span className="text-xs text-gray-400 font-normal">Nguồn hội viên</span>
@@ -1268,14 +1162,14 @@ const Reports = () => {
                         </Pie>
                         <Tooltip 
                           formatter={(v, name) => [`${v} KH`, name]} 
-                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                         />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col justify-between">
+                <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân khúc tần suất tập luyện</h3>
@@ -1291,7 +1185,7 @@ const Reports = () => {
                         <YAxis tick={{ fontSize: 11, fill: "currentColor" }} className="text-subtle-light dark:text-subtle-dark" axisLine={false} tickLine={false} />
                         <Tooltip 
                           formatter={(v) => [`${v} hội viên`, "Số lượng"]}
-                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                          contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                         />
                         <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} name="Số hội viên" barSize={32} />
                       </BarChart>
@@ -1308,7 +1202,7 @@ const Reports = () => {
                   inactivePage * INACTIVE_PAGE_SIZE
                 );
                 return (
-                  <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+                  <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
                     <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                       <div>
                         <h3 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Khách hàng lâu chưa đi tập</h3>
@@ -1385,7 +1279,7 @@ const Reports = () => {
 
               {/* Hội viên sắp hết hạn */}
               {expiringMembers.length > 0 && (
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+                <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <div>
                       <h3 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark">Hội viên sắp hết hạn (14 ngày tới)</h3>
@@ -1462,7 +1356,7 @@ const Reports = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
                 {/* 1. Cảnh báo tồn kho */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px]">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[380px]">
                   <div className="p-4 bg-rose-50/60 dark:bg-rose-950/30 border-b border-rose-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-sm">
                       <Package size={18} />
@@ -1492,7 +1386,7 @@ const Reports = () => {
                 </div>
 
                 {/* 2. Hội viên sắp hết hạn */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px]">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[380px]">
                   <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 border-b border-amber-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
                       <Users size={18} />
@@ -1522,7 +1416,7 @@ const Reports = () => {
                 </div>
 
                 {/* 3. Công việc ca trực hôm nay chưa làm */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px]">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[380px]">
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/40 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-text-light dark:text-text-dark font-bold text-sm">
                       <Calendar size={18} />
@@ -1552,7 +1446,7 @@ const Reports = () => {
                 </div>
 
                 {/* 4. Kỳ lương hoa hồng chờ duyệt */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px] lg:col-span-1">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[380px] lg:col-span-1">
                   <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 border-b border-purple-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 font-bold text-sm">
                       <DollarSign size={18} />
@@ -1582,7 +1476,7 @@ const Reports = () => {
                 </div>
 
                 {/* 5. Cảnh báo KPI yếu */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col overflow-hidden h-[380px] md:col-span-2 lg:col-span-2">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[380px] md:col-span-2 lg:col-span-2">
                   <div className="p-4 bg-yellow-50/60 dark:bg-yellow-950/30 border-b border-yellow-100 dark:border-border-dark flex items-center justify-between">
                     <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-400 font-bold text-sm">
                       <AlertTriangle size={18} />
@@ -1624,39 +1518,33 @@ const Reports = () => {
       {/* Kho Hàng Tab */}
       {activeTab === 'inventory' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <ReportMetricStrip columns={2}>
             {/* Card 1: Doanh thu POS */}
-            <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-              <div className="min-w-0 flex-1">
+            <ReportMetricCell>
                 <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Doanh thu bán lẻ </p>
-                <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
-                  {formatCurrency(inventoryData.posRevenue || 0)}
+                <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
+                  <ReportCurrencyValue value={inventoryData.posRevenue || 0} />
                 </p>
                 <p className="text-xs text-gray-400 mt-2">Tổng doanh số bán lẻ trực tiếp tại quầy</p>
-              </div>
-              <ReportIconBadge icon={ShoppingCart} />
-            </div>
+            </ReportMetricCell>
 
             {/* Card 2: Tổng giá trị tồn kho */}
-            <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-              <div className="min-w-0 flex-1">
+            <ReportMetricCell>
                 <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng giá trị tồn kho</p>
-                <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
-                  {formatCurrency(inventoryData.totalStockValue || 0)}
+                <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
+                  <ReportCurrencyValue value={inventoryData.totalStockValue || 0} />
                 </p>
                 <p className="text-xs text-gray-400 mt-2">Giá trị ước tính toàn bộ sản phẩm hiện có trong kho</p>
-              </div>
-              <ReportIconBadge icon={Package} />
-            </div>
-          </div>
+            </ReportMetricCell>
+          </ReportMetricStrip>
           
           {/* Bảng sản phẩm sắp hết hàng */}
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark overflow-hidden">
             <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
               <div>
                 <h2 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
-                  <AlertTriangle className="text-amber-500" size={20} />
-                  Sản phẩm sắp hết hàng (Tồn kho &le; 10)
+                  
+                  Sản phẩm sắp hết hàng 
                 </h2>
                 <p className="text-xs text-subtle-light dark:text-subtle-dark mt-0.5">Danh sách mặt hàng cần chuẩn bị nhập kho bổ sung</p>
               </div>
@@ -1729,57 +1617,43 @@ const Reports = () => {
             </div>
 
             {/* 4 Cards KPI Cân Bằng Baseline */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+            <ReportMetricStrip columns={4}>
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng lead tiềm năng</p>
-                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                     {leadReportData?.totalLeads || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Dữ liệu ghi nhận từ các kênh</p>
-                </div>
-                <ReportIconBadge icon={Users} />
-              </div>
+              </ReportMetricCell>
 
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tỷ lệ chuyển đổi</p>
-                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                     {leadReportData?.conversionRateOverall || 0}%
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tỷ lệ chuyển thành hợp đồng</p>
-                </div>
-                <ReportIconBadge icon={TrendingUp} />
-              </div>
+              </ReportMetricCell>
 
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Đã chốt hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                     {leadReportData?.statusCounts?.converted || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Khách hàng kích hoạt thành công</p>
-                </div>
-                <ReportIconBadge icon={CheckCircle2} />
-              </div>
+              </ReportMetricCell>
 
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Hủy / Từ chối</p>
-                  <p className="text-2xl md:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight break-words">
+                  <p className="break-words text-xl font-semibold tracking-tight text-rose-600 dark:text-rose-400 sm:text-2xl">
                     {leadReportData?.statusCounts?.lost || 0}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Khách không có nhu cầu tiếp tục</p>
-                </div>
-                <div className="w-11 h-11 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/30">
-                  <XCircle size={22} />
-                </div>
-              </div>
-            </div>
+              </ReportMetricCell>
+            </ReportMetricStrip>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Biểu đồ trạng thái Lead (Auto-scale Y axis) */}
-              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Tình trạng lead theo giai đoạn</h3>
                   
@@ -1807,7 +1681,7 @@ const Reports = () => {
                       />
                       <Tooltip 
                         formatter={(value) => [`${value} Lead`, "Số lượng"]}
-                        contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl"
+                        contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg"
                       />
                       <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={36} />
                     </BarChart>
@@ -1816,7 +1690,7 @@ const Reports = () => {
               </div>
 
               {/* Hiệu suất Chuyển đổi theo Sale (Co giãn tự nhiên + Empty state) */}
-              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
                 <div>
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Hiệu suất chuyển đổi theo sale</h3>
@@ -1866,44 +1740,35 @@ const Reports = () => {
             </div>
 
             {/* 3 KPI Cards Màu Ngữ Nghĩa */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+            <ReportMetricStrip columns={3}>
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                     {contractBreakdownData?.totalContracts || 0} HĐ
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tổng số hợp đồng đã phát sinh</p>
-                </div>
-                <ReportIconBadge icon={Package} />
-              </div>
+              </ReportMetricCell>
 
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Tổng giá trị tiền hợp đồng</p>
-                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
-                    {formatCurrency(contractBreakdownData?.grandTotalValue)}
+                  <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
+                    <ReportCurrencyValue value={contractBreakdownData?.grandTotalValue} />
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Tổng giá trị quy đổi tất cả hợp đồng</p>
-                </div>
-                <ReportIconBadge icon={DollarSign} />
-              </div>
+              </ReportMetricCell>
 
-              <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex items-start justify-between min-w-0 w-full gap-4">
-                <div className="min-w-0 flex-1">
+              <ReportMetricCell>
                   <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Đang hoạt động (Active)</p>
-                  <p className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark tracking-tight break-words">
+                  <p className="break-words text-xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-2xl">
                     {contractBreakdownData?.breakdown?.active?.count || 0} HĐ
                   </p>
                   <p className="text-xs text-gray-400 mt-2">Hợp đồng đang có hiệu lực tập luyện</p>
-                </div>
-                <ReportIconBadge icon={Users} />
-              </div>
-            </div>
+              </ReportMetricCell>
+            </ReportMetricStrip>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Donut Chart Tỷ lệ trạng thái (Bỏ label leader-line bị đè chữ + Center Total) */}
-              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-sm border border-border-light dark:border-border-dark flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-lg border border-border-light dark:border-border-dark flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Phân bổ trạng thái hợp đồng</h3>
                 </div>
@@ -1925,7 +1790,7 @@ const Reports = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value, name, item) => [`${value} HĐ (${formatCurrency(item.payload.value)})`, name]} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-xl" />
+                      <Tooltip formatter={(value, name, item) => [`${value} HĐ (${formatCurrency(item.payload.value)})`, name]} contentStyle={{ borderRadius: "12px" }} wrapperClassName="!bg-surface-light dark:!bg-surface-dark !border-border-light dark:!border-border-dark !text-text-light dark:!text-text-dark shadow-lg rounded-lg" />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -1939,7 +1804,7 @@ const Reports = () => {
               </div>
 
               {/* Bảng chi tiết trạng thái hợp đồng */}
-              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark overflow-hidden flex flex-col justify-between">
                 <div>
                   <div className="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                     <h3 className="text-base font-semibold text-text-light dark:text-text-dark">Bảng thống kê chi tiết trạng thái hợp đồng</h3>

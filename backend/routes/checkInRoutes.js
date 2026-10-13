@@ -1,19 +1,20 @@
 const express = require("express");
 const router = express.Router();
 const checkInController = require("../controllers/checkInController");
-const { protect, authorize } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/authMiddleware");
+const { PERMISSIONS, requirePermission } = require("../middleware/permissions");
 const { createCheckInValidator } = require("../validators/checkInValidator");
 const validate = require("../middleware/validate");
-const multer = require("multer");
+const {
+  IMAGE_UPLOAD_TYPES,
+  createMemoryUpload,
+  validateUploadedFile,
+} = require("../middleware/secureUpload");
 
 // Multer config: lưu trong memory (không ghi ra disk)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // max 5MB
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Chỉ chấp nhận file ảnh'));
-  },
+const upload = createMemoryUpload({
+  maxBytes: 5 * 1024 * 1024,
+  allowedTypes: IMAGE_UPLOAD_TYPES,
 });
 
 
@@ -21,7 +22,7 @@ const upload = multer({
 router.get(
   "/checkin-list",
   protect,
-  authorize("admin", "manager", "staff", "pt", "sale", "reception"),
+  requirePermission(PERMISSIONS.CHECKIN_USE),
   checkInController.getCheckInList
 );
 
@@ -29,14 +30,14 @@ router.get(
 router.get(
   "/",
   protect,
-  authorize("admin", "manager", "staff", "pt", "sale", "reception"),
+  requirePermission(PERMISSIONS.CHECKIN_USE),
   checkInController.getAll
 );
 
 router.post(
   "/",
   protect,
-  authorize("admin", "manager", "staff", "pt", "sale", "reception"),
+  requirePermission(PERMISSIONS.CHECKIN_USE),
   createCheckInValidator,
   validate,
   checkInController.create
@@ -46,8 +47,9 @@ router.post(
 router.post(
   "/recognize",
   protect,
-  authorize("admin", "manager", "staff", "pt", "sale", "reception"),
+  requirePermission(PERMISSIONS.CHECKIN_USE),
   upload.single("image"),
+  validateUploadedFile(IMAGE_UPLOAD_TYPES),
   checkInController.recognizeFace
 );
 

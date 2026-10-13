@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productService, posService } from '../services/productService';
 import { customerService } from '../services/customerService';
-import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, User, Package, QrCode, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { getIconColor } from '../utils/iconTone';
@@ -25,11 +24,15 @@ const PointOfSale = ({ onFinish, onClose }) => {
     const initFetch = async () => {
        try {
           const prods = await productService.getAll('');
-          setProducts(prods);
+          setProducts(Array.isArray(prods) ? prods : []);
           
           const custData = await customerService.getAll({ page: 1, limit: 100 });
-          setCustomers(custData.customers || []);
-       } catch(e) {}
+          setCustomers(Array.isArray(custData?.customers) ? custData.customers : []);
+       } catch (error) {
+          console.error('Không thể tải dữ liệu POS:', error);
+          setProducts([]);
+          setCustomers([]);
+       }
     };
     initFetch();
   }, []);
@@ -167,9 +170,9 @@ const PointOfSale = ({ onFinish, onClose }) => {
   }, [showInvoice, lastOrder, orderStatus]);
 
   return (
-    <div className="flex flex-col gap-6 font-display bg-transparent h-full">
+    <div className="flex h-full flex-col gap-4 font-display bg-transparent">
       {onClose && (
-        <div className="flex justify-between items-center bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div className="flex items-center justify-between border-b border-border-light pb-4 dark:border-border-dark">
            <h2 className="text-xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
              <ShoppingCart className={getIconColor(ShoppingCart)} /> Bán hàng (POS)
            </h2>
@@ -178,10 +181,10 @@ const PointOfSale = ({ onFinish, onClose }) => {
            </button>
         </div>
       )}
-      <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${onClose ? 'h-[calc(100vh-280px)]' : 'h-[calc(100vh-230px)]'} min-h-[520px]`}>
+      <div className={`grid min-h-[520px] grid-cols-1 gap-4 lg:grid-cols-3 ${onClose ? 'h-[calc(100vh-280px)]' : 'h-[calc(100vh-230px)]'}`}>
          {/* Left Side: Product Grid */}
-         <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-full">
-            <div className="flex gap-4 mb-5">
+         <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark lg:col-span-2">
+            <div className="flex gap-4 border-b border-border-light p-4 dark:border-border-dark">
                <div className="relative flex-1">
                    <Search className="absolute left-3 top-3 text-subtle-light dark:text-subtle-dark" size={18} />
                    <input 
@@ -211,14 +214,14 @@ const PointOfSale = ({ onFinish, onClose }) => {
                </select>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 overflow-y-auto pr-2 custom-scrollbar flex-1 pb-4">
+            <div className="grid flex-1 grid-cols-2 gap-px overflow-y-auto bg-border-light custom-scrollbar dark:bg-border-dark lg:grid-cols-4">
                 {filteredProducts.map(p => (
                    <div 
                       key={p._id} 
                       onClick={() => addToCart(p)}
-                      className={`aspect-square relative border rounded-xl p-3 bg-surface-light dark:bg-surface-dark cursor-pointer hover:shadow-md transition-all group flex flex-col justify-between overflow-hidden ${p.stockQuantity <= 0 ? 'opacity-50 grayscale border-border-light dark:border-border-dark' : 'border-border-light dark:border-border-dark hover:border-primary/40'}`}
+                      className={`group relative flex aspect-square flex-col justify-between overflow-hidden bg-surface-light p-3 text-left transition-colors dark:bg-surface-dark ${p.stockQuantity <= 0 ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer hover:bg-background-light dark:hover:bg-background-dark'}`}
                    >
-                       <div className="absolute top-2 right-2 z-10 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark">
+                       <div className="absolute top-2 right-2 z-10 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-light dark:border-border-dark text-subtle-light dark:text-subtle-dark">
                           Kho: {p.stockQuantity}
                        </div>
                        <div className="flex-1 w-full bg-background-light dark:bg-background-dark rounded-lg flex items-center justify-center overflow-hidden mb-2 relative">
@@ -238,15 +241,15 @@ const PointOfSale = ({ onFinish, onClose }) => {
          </div>
 
          {/* Right Side: Cart Workspace */}
-         <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl flex flex-col shadow-sm border border-border-light dark:border-border-dark h-full overflow-hidden relative">
+         <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-lg flex flex-col border border-border-light dark:border-border-dark h-full overflow-hidden relative">
             <div className="p-4 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
                <h3 className="font-semibold text-xl text-text-light dark:text-text-dark flex items-center gap-2 mb-4">Giỏ hàng <span className="bg-primary text-text-light text-xs font-semibold px-2 py-1 rounded-full">{cart.length}</span></h3>
                <div className="flex gap-2 p-1 bg-background-light dark:bg-background-dark rounded-lg w-full border border-border-light dark:border-border-dark">
                   <button 
-                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all cursor-pointer ${isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`} 
+                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-colors cursor-pointer ${isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary ring-1 ring-border-light dark:ring-border-dark' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`}
                      onClick={() => setIsWalkIn(true)}>Khách lẻ</button>
                   <button 
-                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-all cursor-pointer ${!isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`} 
+                     className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-colors cursor-pointer ${!isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary ring-1 ring-border-light dark:ring-border-dark' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`}
                      onClick={() => setIsWalkIn(false)}>Hội viên</button>
                </div>
                {!isWalkIn && (
@@ -298,7 +301,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                <div className="grid grid-cols-2 gap-3">
                    <button 
                      onClick={() => handleCheckout('Tiền mặt')}
-                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3 font-bold flex flex-col items-center justify-center shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-3 font-bold flex flex-col items-center justify-center shadow-emerald-600/20 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={cart.length === 0}
                    >
                      <Banknote size={20} className="mb-1" />
@@ -306,7 +309,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                    </button>
                    <button 
                      onClick={() => handleCheckout('Chuyển khoản QR')}
-                     className="bg-primary hover:bg-primary/90 text-text-light rounded-xl py-3 font-bold flex flex-col items-center justify-center shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="bg-primary hover:bg-primary/90 text-text-light rounded-lg py-3 font-bold flex flex-col items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={cart.length === 0}
                    >
                      <CreditCard size={20} className="mb-1" />
@@ -320,7 +323,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
       {/* INVOICE MODAL (Thanh toán xong hiện Bill kèm QR) */}
       {showInvoice && lastOrder && (
          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-center items-center p-4">
-             <div className="bg-surface-light dark:bg-surface-dark rounded-xl w-full max-w-sm shadow-xl overflow-hidden border border-border-light dark:border-border-dark animate-in fade-in zoom-in duration-300">
+             <div className="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-sm shadow-xl overflow-hidden border border-border-light dark:border-border-dark animate-in fade-in zoom-in duration-300">
                  {orderStatus === 'Chờ thanh toán' ? (
                       <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-center text-white">
                           <p className="text-white font-bold text-lg">Đơn hàng: {lastOrder._id?.substr(-8).toUpperCase()}</p>
@@ -356,10 +359,10 @@ const PointOfSale = ({ onFinish, onClose }) => {
                                <img 
                                   src={`https://img.vietqr.io/image/970422-0344075790-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
                                   alt="VietQR MBBank" 
-                                  className="w-64 h-64 rounded-xl object-contain bg-white p-2"
+                                  className="w-64 h-64 rounded-lg object-contain bg-white p-2"
                                />
                                {/* Trạng thái chờ - tự động xác nhận */}
-                               <div className="w-full mt-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                               <div className="w-full mt-3 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2.5 flex items-center gap-2">
                                   <Loader2 size={16} className="text-amber-500 animate-spin flex-shrink-0" />
                                   <div>
                                      <p className="text-amber-600 dark:text-amber-400 font-bold text-xs">Đang chờ thanh toán...</p>
@@ -368,7 +371,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                                </div>
                             </div>
                          ) : (
-                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex flex-col items-center justify-center">
+                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg flex flex-col items-center justify-center">
                                <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mb-2">
                                   <CheckCircle className="text-emerald-500" size={24} />
                                </div>
@@ -382,7 +385,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      <button 
                         onClick={handleCloseInvoice}
                         disabled={isCancelling}
-                        className={`w-full mt-6 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                        className={`w-full mt-6 font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer ${
                            orderStatus === 'Chờ thanh toán'
                               ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
                               : 'bg-background-light dark:bg-background-dark hover:bg-border-light dark:hover:bg-border-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark'

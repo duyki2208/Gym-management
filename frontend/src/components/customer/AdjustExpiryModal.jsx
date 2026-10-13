@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Calendar, History, Clock, CheckCircle, ShieldAlert } from "lucide-react";
 import { customerService } from "../../services/customerService";
 import toast from "react-hot-toast";
@@ -14,19 +14,7 @@ const AdjustExpiryModal = ({ isOpen, onClose, customerPackage, customerName, onS
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && customerPackage) {
-      const currentEnd = customerPackage.endDate
-        ? new Date(customerPackage.endDate).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0];
-
-      setNewEndDate(currentEnd);
-      setReason("");
-      fetchHistory();
-    }
-  }, [isOpen, customerPackage]);
-
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     if (!customerPackage?._id) return;
     try {
       setLoadingHistory(true);
@@ -39,7 +27,19 @@ const AdjustExpiryModal = ({ isOpen, onClose, customerPackage, customerName, onS
     } finally {
       setLoadingHistory(false);
     }
-  };
+  }, [customerPackage?._id]);
+
+  useEffect(() => {
+    if (isOpen && customerPackage) {
+      const currentEnd = customerPackage.endDate
+        ? new Date(customerPackage.endDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
+
+      setNewEndDate(currentEnd);
+      setReason("");
+      fetchHistory();
+    }
+  }, [isOpen, customerPackage, fetchHistory]);
 
   if (!isOpen || !customerPackage) return null;
 

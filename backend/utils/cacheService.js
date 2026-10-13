@@ -14,9 +14,12 @@ try {
 
 let redisClient = null;
 let isRedisConnected = false;
+let connectionPromise = Promise.resolve(false);
+const redisRequired = String(process.env.CACHE_REQUIRE_REDIS || "").toLowerCase() === "true";
 
 // Fallback in-memory cache: Map<key, { value, expiresAt }>
 const memoryCache = new Map();
+const rateLimitMemory = new Map();
 
 // Tự động dọn dẹp các key hết hạn trong memoryCache mỗi 60 giây
 setInterval(() => {
@@ -25,6 +28,9 @@ setInterval(() => {
     if (item.expiresAt && item.expiresAt < now) {
       memoryCache.delete(key);
     }
+  }
+  for (const [key, item] of rateLimitMemory.entries()) {
+    if (item.resetAt <= now) rateLimitMemory.delete(key);
   }
 }, 60000).unref(); // unref để không làm đơ event loop khi shutdown Node
 
@@ -45,12 +51,16 @@ if (Redis) {
       lazyConnect: true,
     });
 
-    redisClient.connect().then(() => {
+    connectionPromise = redisClient.connect().then(() => {
       isRedisConnected = true;
       console.log("⚡ [CacheService] Kết nối Redis Server thành công!");
+      return true;
     }).catch((err) => {
       isRedisConnected = false;
-      console.log("ℹ️ [CacheService] Không kết nối được Redis. Đang tự động chuyển sang In-Memory Cache Mode.");
+      console.log(redisRequired
+        ? "⚠️ [CacheService] Redis bắt buộc nhưng hiện không khả dụng."
+        : "ℹ️ [CacheService] Không kết nối được Redis. Đang tự động chuyển sang In-Memory Cache Mode.");
+      return false;
     });
 
     redisClient.on("error", (err) => {
@@ -68,6 +78,14 @@ if (Redis) {
   }
 }
 
+const assertFallbackAllowed = () => {
+  if (redisRequired && !isRedisConnected) {
+    const error = new Error("Shared Redis cache is required but unavailable");
+    error.code = "CACHE_UNAVAILABLE";
+    throw error;
+  }
+};
+
 /**
  * Lấy dữ liệu từ Cache
  * @param {string} key 
@@ -84,6 +102,7 @@ const get = async (key) => {
   }
 
   // Memory Fallback
+  assertFallbackAllowed();
   const cached = memoryCache.get(key);
   if (!cached) return null;
   if (cached.expiresAt && cached.expiresAt < Date.now()) {
@@ -110,6 +129,7 @@ const set = async (key, value, ttlSeconds = 300) => {
   }
 
   // Memory Fallback
+  assertFallbackAllowed();
   const expiresAt = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
   memoryCache.set(key, { value, expiresAt });
   return true;
@@ -127,6 +147,7 @@ const del = async (key) => {
       console.error("[Cache] Redis del error:", err.message);
     }
   }
+  assertFallbackAllowed();
   memoryCache.delete(key);
 };
 
@@ -139,16 +160,25 @@ const delPattern = async (patternPrefix) => {
   
   if (isRedisConnected && redisClient) {
     try {
-      const keys = await redisClient.keys(`${cleanPrefix}*`);
-      if (keys.length > 0) {
-        await redisClient.del(...keys);
-      }
+      let cursor = "0";
+      do {
+        const [nextCursor, keys] = await redisClient.scan(
+          cursor,
+          "MATCH",
+          `${cleanPrefix}*`,
+          "COUNT",
+          100
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) await redisClient.del(...keys);
+      } while (cursor !== "0");
     } catch (err) {
       console.error("[Cache] Redis delPattern error:", err.message);
     }
   }
 
   // Memory Fallback
+  assertFallbackAllowed();
   for (const key of memoryCache.keys()) {
     if (key.startsWith(cleanPrefix)) {
       memoryCache.delete(key);
@@ -167,7 +197,9 @@ const clear = async () => {
       console.error("[Cache] Redis flush error:", err.message);
     }
   }
+  assertFallbackAllowed();
   memoryCache.clear();
+  rateLimitMemory.clear();
 };
 
 /**
@@ -177,8 +209,65 @@ const getStatus = () => {
   return {
     mode: isRedisConnected ? "Redis" : "In-Memory",
     redisConnected: isRedisConnected,
+    redisRequired,
     memoryCacheKeysCount: memoryCache.size,
   };
+};
+
+const waitForReady = async () => {
+  const connected = await connectionPromise;
+  if (redisRequired && !connected) assertFallbackAllowed();
+  return getStatus();
+};
+
+const close = async () => {
+  if (!redisClient) return;
+  try {
+    if (redisClient.status === "ready") await redisClient.quit();
+    else redisClient.disconnect();
+  } finally {
+    isRedisConnected = false;
+  }
+};
+
+const incrementRateLimit = async (key, windowMs) => {
+  if (isRedisConnected && redisClient) {
+    const script = `
+      local hits = redis.call('INCR', KEYS[1])
+      if hits == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end
+      local ttl = redis.call('PTTL', KEYS[1])
+      return { hits, ttl }
+    `;
+    const [totalHits, ttl] = await redisClient.eval(script, 1, key, windowMs);
+    return {
+      totalHits: Number(totalHits),
+      resetTime: new Date(Date.now() + Math.max(1, Number(ttl))),
+    };
+  }
+
+  assertFallbackAllowed();
+  const now = Date.now();
+  const current = rateLimitMemory.get(key);
+  const next = !current || current.resetAt <= now
+    ? { totalHits: 1, resetAt: now + windowMs }
+    : { totalHits: current.totalHits + 1, resetAt: current.resetAt };
+  rateLimitMemory.set(key, next);
+  return { totalHits: next.totalHits, resetTime: new Date(next.resetAt) };
+};
+
+const decrementRateLimit = async (key) => {
+  if (isRedisConnected && redisClient) {
+    const current = Number(await redisClient.get(key)) || 0;
+    if (current > 0) await redisClient.decr(key);
+    return;
+  }
+  const current = rateLimitMemory.get(key);
+  if (current?.totalHits > 0) current.totalHits -= 1;
+};
+
+const resetRateLimit = async (key) => {
+  if (isRedisConnected && redisClient) await redisClient.del(key);
+  rateLimitMemory.delete(key);
 };
 
 module.exports = {
@@ -188,4 +277,9 @@ module.exports = {
   delPattern,
   clear,
   getStatus,
+  waitForReady,
+  close,
+  incrementRateLimit,
+  decrementRateLimit,
+  resetRateLimit,
 };

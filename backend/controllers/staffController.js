@@ -3,6 +3,7 @@
  * Quản lý nhân viên chi nhánh với cơ chế Dual-Write (Branch DB User + Central LoginIndex)
  */
 const bcrypt = require("bcryptjs");
+const { canUpdateSchedule } = require("../services/staffScheduleAccessService");
 
 // Lấy tất cả nhân viên của chi nhánh
 const getAll = async (req, res) => {
@@ -12,7 +13,9 @@ const getAll = async (req, res) => {
 
     const staff = await User.find({
       role: { $in: ["manager", "pt", "sale", "reception", "accountant", "sm", "pm", "om"] },
-    }).lean();
+    })
+      .select("-password")
+      .lean();
 
     const now = new Date();
     // Đếm số KH phụ trách hiện tại
@@ -145,7 +148,7 @@ const update = async (req, res) => {
       }
     }
 
-    const staff = await User.findByIdAndUpdate(id, updateData, { new: true });
+    const staff = await User.findByIdAndUpdate(id, updateData, { returnDocument: "after" });
     if (!staff) {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
     }
@@ -222,23 +225,7 @@ const updateSchedule = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
     }
 
-    const currentUserRole = req.user ? req.user.role : null;
-    const isSelf = req.user && req.user._id.toString() === id;
-    let hasPermission = false;
-
-    if (isSelf) {
-      hasPermission = true;
-    } else if (currentUserRole === "admin" || currentUserRole === "accountant") {
-      hasPermission = true;
-    } else if (currentUserRole === "sm" && (targetStaff.role === "sale" || targetStaff.role === "sm")) {
-      hasPermission = true;
-    } else if (currentUserRole === "pm" && (targetStaff.role === "pt" || targetStaff.role === "pm")) {
-      hasPermission = true;
-    } else if (currentUserRole === "om" && (targetStaff.role === "reception" || targetStaff.role === "om")) {
-      hasPermission = true;
-    }
-
-    if (!hasPermission) {
+    if (!canUpdateSchedule({ actor: req.user, target: targetStaff })) {
       return res.status(403).json({
         message: "Bạn không có quyền cập nhật lịch làm việc cho nhân viên thuộc bộ phận này!",
       });
@@ -247,7 +234,7 @@ const updateSchedule = async (req, res) => {
     const schedule = await Schedule.findOneAndUpdate(
       { staff: id, date: date },
       { shiftType: shiftType },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     res.json(schedule);
   } catch (error) {

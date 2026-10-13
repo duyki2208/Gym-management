@@ -15,6 +15,24 @@ function isReplicaSetConnected(connection) {
   }
 }
 
+async function runWithOptionalTransaction(connection, work) {
+  if (!isReplicaSetConnected(connection)) {
+    return work(null);
+  }
+
+  const session = await connection.startSession();
+  try {
+    let result;
+    await session.withTransaction(async () => {
+      result = await work(session);
+    });
+    return result;
+  } finally {
+    await session.endSession();
+  }
+}
+
 module.exports = {
   isReplicaSetConnected,
+  runWithOptionalTransaction,
 };

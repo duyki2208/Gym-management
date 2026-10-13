@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-09-21T15:22:13.872Z",
+  "releaseSha": "working-tree",
+  "success": true,
+  "environment": {
+    "node": "v22.15.0",
+    "platform": "win32-x64",
+    "database": "mongodb-memory-server"
+  },
+  "backupDurationMs": 88,
+  "restoreDurationMs": 220,
+  "totalDrillDurationMs": 579,
+  "verification": [
+    {
+      "collection": "customers",
+      "countMatches": true,
+      "checksumMatches": true,
+      "indexesMatch": true,
+      "count": 200,
+      "sha256": "308f8de8f65f06f6b62dae8c58a09a1d21b20fab33cf310b56011ae8564e7700"
+    },
+    {
+      "collection": "sessions",
+      "countMatches": true,
+      "checksumMatches": true,
+      "indexesMatch": true,
+      "count": 25,
+      "sha256": "9350fc94ea97a2d9f471a8287701d7d25c53bbd9c6d0f82b4579af3202b85b26"
+    },
+    {
+      "collection": "transactions",
+      "countMatches": true,
+      "checksumMatches": true,
+      "indexesMatch": true,
+      "count": 500,
+      "sha256": "11151187377e0c4a70062340f9d530b00f88f894483f4f58617fbba10f57fc38"
+    }
+  ]
+}

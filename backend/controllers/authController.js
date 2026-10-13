@@ -1,7 +1,7 @@
 /**
  * authController.js — Xử lý xác thực người dùng Đa chi nhánh (1-Step Auth & Token Rotation)
  *
- * Export: { loginUser, refreshToken, logoutUser, switchBranch }
+ * Export: { loginUser, getSession, refreshToken, logoutUser, switchBranch }
  */
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -12,6 +12,7 @@ const {
   hashToken,
 } = require("../utils/generateTokens");
 const { hashFacilityKey } = require("../utils/facilityKey");
+const { resolvePermissionsForRole } = require("../middleware/permissions");
 
 const LOGIN_FAILED_RESPONSE = {
   code: "INVALID_CREDENTIALS",
@@ -72,6 +73,7 @@ const loginUser = async (req, res) => {
         branchCode,
         isCentral: false,
       });
+      const permissions = await resolvePermissionsForRole(user.role, branchModels.Setting);
 
       // Lưu Session vào Branch DB
       await branchModels.Session.create({
@@ -95,6 +97,7 @@ const loginUser = async (req, res) => {
           branchCode,
           branchName: branch.name,
           isCentral: false,
+          permissions,
         },
       });
     }
@@ -118,6 +121,11 @@ const loginUser = async (req, res) => {
     if (!allowedBranches.includes("*") && !allowedBranches.includes(activeBranch)) {
       return rejectLogin(res);
     }
+    const branchModels = await getBranchModels(activeBranch);
+    const permissions = await resolvePermissionsForRole(
+      centralUser.role,
+      branchModels.Setting
+    );
 
     const accessToken = generateAccessToken(centralUser._id, centralUser.role, {
       allowedBranches,
@@ -152,6 +160,7 @@ const loginUser = async (req, res) => {
         activeBranch,
         branchName: branch.name,
         isCentral: true,
+        permissions,
       },
     });
 
@@ -160,6 +169,46 @@ const loginUser = async (req, res) => {
     res.status(500).json({
       code: "AUTH_SERVICE_ERROR",
       message: "Không thể xử lý đăng nhập lúc này. Vui lòng thử lại sau.",
+    });
+  }
+};
+
+// -----------------------------------------------------------------------
+// GET /api/v1/auth/me
+// Đồng bộ identity và permission hiện hành cho phiên đã lưu ở frontend.
+// -----------------------------------------------------------------------
+const getSession = async (req, res) => {
+  try {
+    const permissions = await resolvePermissionsForRole(
+      req.user.role,
+      req.models?.Setting
+    );
+    const branchCode = req.branchCode || req.user.activeBranch || req.user.branchCode;
+    const centralModels = req.centralModels || (await getCentralModels());
+    const branch = branchCode
+      ? await centralModels.Branch.findOne({ code: branchCode }).select("name")
+      : null;
+
+    return res.json({
+      success: true,
+      user: {
+        id: req.user._id,
+        username: req.user.username,
+        fullName: req.user.fullName,
+        role: req.user.role,
+        branchCode: req.user.isCentral ? undefined : branchCode,
+        activeBranch: req.user.isCentral ? branchCode : undefined,
+        allowedBranches: req.user.isCentral ? req.user.allowedBranches : undefined,
+        branchName: branch?.name,
+        isCentral: Boolean(req.user.isCentral),
+        permissions,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi lấy phiên đăng nhập:", error);
+    return res.status(500).json({
+      code: "AUTH_SERVICE_ERROR",
+      message: "Không thể đồng bộ phiên đăng nhập lúc này.",
     });
   }
 };
@@ -319,6 +368,11 @@ const switchBranch = async (req, res) => {
       activeBranch: normalizedCode,
       isCentral: true,
     });
+    const branchModels = await getBranchModels(normalizedCode);
+    const permissions = await resolvePermissionsForRole(
+      req.user.role,
+      branchModels.Setting
+    );
 
     return res.json({
       success: true,
@@ -326,6 +380,7 @@ const switchBranch = async (req, res) => {
       token: newAccessToken,
       activeBranch: normalizedCode,
       branchName: branch.name,
+      permissions,
     });
 
   } catch (error) {
@@ -363,4 +418,4 @@ const logoutUser = async (req, res) => {
   res.json({ message: "Đã đăng xuất thành công" });
 };
 
-module.exports = { loginUser, refreshToken, switchBranch, logoutUser };
+module.exports = { loginUser, getSession, refreshToken, switchBranch, logoutUser };

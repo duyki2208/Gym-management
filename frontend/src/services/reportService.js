@@ -1,68 +1,75 @@
 import api from './api';
 
+const inFlightReports = new Map();
+
+const stableParamsKey = (params = {}) => JSON.stringify(
+  Object.keys(params).sort().reduce((result, key) => {
+    result[key] = params[key];
+    return result;
+  }, {})
+);
+
+const getReport = (path, params = {}, config = {}) => {
+  const key = `${path}?${stableParamsKey(params)}`;
+  if (inFlightReports.has(key)) return inFlightReports.get(key);
+
+  const request = api.get(path, { ...config, params })
+    .then((response) => response.data)
+    .finally(() => inFlightReports.delete(key));
+  inFlightReports.set(key, request);
+  return request;
+};
+
 const getSummary = async (params = {}) => {
-  const response = await api.get('/reports/summary', { params });
-  return response.data;
+  return getReport('/reports/summary', params);
 };
 
 const getRevenueChart = async (params = {}) => {
-  const response = await api.get('/reports/revenue', { params });
-  return response.data;
+  return getReport('/reports/revenue', params);
 };
 
 const getPackageDistribution = async (params = {}) => {
-  const response = await api.get('/reports/packages', { params });
-  return response.data;
+  return getReport('/reports/packages', params);
 };
 
 const getExpiringMembers = async (params = {}) => {
-  const response = await api.get('/reports/expiring', { params });
-  return response.data;
+  return getReport('/reports/expiring', params);
 };
 
 const getRevenueDetails = async (params = {}) => {
-  const response = await api.get('/reports/revenue-details', { params });
-  return response.data;
+  return getReport('/reports/revenue-details', params);
 };
 
 const getInventoryReport = async (params = {}) => {
-  const response = await api.get('/reports/inventory', { params });
-  return response.data;
+  return getReport('/reports/inventory', params);
 };
 
 const getChurnPrediction = async (params = {}) => {
-  const response = await api.get('/reports/churn-prediction', { params });
-  return response.data;
+  return getReport('/reports/churn-prediction', params);
 };
 
 const getAuditLogs = async (params = {}) => {
-  const response = await api.get('/audit-logs', { params });
-  return response.data;
+  return getReport('/audit-logs', params);
 };
 
 const getRevenueAdvanced = async (params = {}) => {
-  const response = await api.get('/reports/revenue-advanced', { params });
-  return response.data;
+  return getReport('/reports/revenue-advanced', params);
 };
 
 const getHRSummary = async (params = {}) => {
-  const response = await api.get('/reports/hr-summary', { params });
-  return response.data;
+  return getReport('/reports/hr-summary', params);
 };
 
 const getCustomerAnalytics = async (params = {}) => {
-  const response = await api.get('/reports/customer-analytics', { params });
-  return response.data;
+  return getReport('/reports/customer-analytics', params);
 };
 
 const getNotificationsSummary = async (params = {}) => {
-  const response = await api.get('/reports/notifications-summary', { params });
-  return response.data;
+  return getReport('/reports/notifications-summary', params);
 };
 
 const getPTSessionsReport = async (params = {}) => {
-  const response = await api.get('/reports/pt-sessions', { params });
-  return response.data;
+  return getReport('/reports/pt-sessions', params);
 };
 
 const exportPTSessionsExcel = async (params = {}) => {
@@ -90,13 +97,11 @@ const updatePeriodStatus = async (data) => {
 };
 
 const getLeadConversionReport = async (params = {}) => {
-  const response = await api.get('/reports/leads-conversion', { params });
-  return response.data;
+  return getReport('/reports/leads-conversion', params);
 };
 
 const getContractStatusBreakdown = async (params = {}) => {
-  const response = await api.get('/reports/contract-status-breakdown', { params });
-  return response.data;
+  return getReport('/reports/contract-status-breakdown', params);
 };
 
 export default {

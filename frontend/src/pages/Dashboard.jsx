@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Users,
@@ -27,12 +27,11 @@ import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
 import StatCard from "../components/common/StatCard";
 import { getIconColor, getIconTone } from "../utils/iconTone";
+import RoleDashboardView from "../components/dashboard/RoleDashboardView";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const confirm = useConfirm();
-  
   // State quản lý Modals
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showNewCustomersModal, setShowNewCustomersModal] = useState(false);
@@ -58,8 +57,8 @@ const Dashboard = () => {
       }
       return response.data;
     },
-    refetchInterval: 5000, // Polling mỗi 5 giây để cập nhật lượt check-in thời gian thực
-    refetchIntervalInBackground: true,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   });
 
   if (isLoading) {
@@ -80,35 +79,54 @@ const Dashboard = () => {
 
   const stats = {
     revenue: dashboardData?.revenue || 0,
+    todayRevenue: dashboardData?.todayRevenue || 0,
     targetRevenue: dashboardData?.targetRevenue || 100000000,
     revenuePercentage: dashboardData?.revenuePercentage || 0,
     newCustomersThisMonth: dashboardData?.newCustomersThisMonth || 0,
     newCustomersList: dashboardData?.newCustomersList || [],
+    activeMembers: dashboardData?.activeMembers || 0,
+    newContractsThisMonth: dashboardData?.newContractsThisMonth || 0,
+    renewContractsThisMonth: dashboardData?.renewContractsThisMonth || 0,
+    expiringContracts7Days: dashboardData?.expiringContracts7Days || 0,
+    paymentAttentionCount: dashboardData?.paymentAttentionCount || 0,
+    paymentAttentionValue: dashboardData?.paymentAttentionValue || 0,
+    longAbsentMembers: dashboardData?.longAbsentMembers || [],
+    longAbsentCount: dashboardData?.longAbsentCount || 0,
+    revenueByPackage: dashboardData?.revenueByPackage || [],
     todayCheckIns: dashboardData?.todayCheckIns || 0,
     yesterdayCheckIns: dashboardData?.yesterdayCheckIns || 0,
     checkInChange: dashboardData?.checkInChange || 0,
     weeklyRevenue: dashboardData?.weeklyRevenue || [],
+    kpiTrends: dashboardData?.kpiTrends || {},
     pendingTasksCount: dashboardData?.pendingTasksCount || 0,
     upcomingTask: dashboardData?.upcomingTask || null,
   };
-  
+
   const peakHours = dashboardData?.peakHours || [];
   const hasPeakHourData = peakHours.some((hour) => Number(hour.count) > 0);
   
-  const activities = (dashboardData?.recentActivities || []).map(act => ({
-     id: act.id || act._id,
-     customerName: act.customerName,
-     time: act.time ? new Date(act.time).toLocaleTimeString("vi-VN", {
-       hour: "2-digit",
-       minute: "2-digit"
-     }) : "--:--",
-     type: act.type || "in"
-  }));
+  const activities = (dashboardData?.recentActivities || []).map((act) => {
+    const parsedTime = act.time ? new Date(act.time) : null;
+    const hasValidDate = parsedTime && !Number.isNaN(parsedTime.getTime());
+    const displayTime = hasValidDate
+      ? (act.type === "sale"
+          ? parsedTime.toLocaleDateString("vi-VN")
+          : parsedTime.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }))
+      : act.time || "--:--";
+
+    return {
+      id: act.id || act._id,
+      customerName: act.customerName,
+      time: displayTime,
+      type: act.type || "in",
+      note: act.note || "",
+    };
+  });
 
   // Định dạng chuỗi so sánh lượt check-in với ngày hôm qua theo yêu cầu
-  const checkInChangeText = stats.checkInChange > 0 
-    ? `+${stats.checkInChange} so với ngày hôm qua` 
-    : stats.checkInChange < 0 
+  const checkInChangeText = stats.checkInChange > 0
+    ? `+${stats.checkInChange} so với ngày hôm qua`
+    : stats.checkInChange < 0
       ? `${stats.checkInChange} so với ngày hôm qua`
       : "Bằng với ngày hôm qua";
 
@@ -123,6 +141,43 @@ const Dashboard = () => {
       setShowTasksModal(true);
     }
   };
+
+  // Dashboard theo vai trò. Khối giao diện cũ bên dưới được giữ làm fallback.
+  if (dashboardData) {
+    return (
+      <>
+        <RoleDashboardView
+          dashboardData={dashboardData}
+          stats={stats}
+          activities={activities}
+          peakHours={peakHours}
+          onOpenTasks={() => handleCardClick("tasks")}
+          onOpenRevenue={() => handleCardClick("revenue")}
+          onOpenCustomers={() => handleCardClick("newCustomers")}
+          onOpenCheckIns={() => handleCardClick("checkIn")}
+          onOpenWorkouts={() => navigate("/reports/pt-sessions")}
+          onTasksChanged={refetch}
+        />
+
+        {showRevenueModal && (
+          <RevenueDetailModal stats={stats} onClose={() => setShowRevenueModal(false)} />
+        )}
+
+        {showNewCustomersModal && (
+          <NewCustomersModal stats={stats} onClose={() => setShowNewCustomersModal(false)} />
+        )}
+
+        {showTasksModal && (
+          <TeamTasksModal
+            onClose={() => {
+              setShowTasksModal(false);
+              refetch();
+            }}
+          />
+        )}
+      </>
+    );
+  }
 
   if (dashboardData?.isPT) {
     const ptStats = dashboardData.ptStats;
@@ -159,23 +214,23 @@ const Dashboard = () => {
           <StatCard
             label="Ghi chú ca trực"
             value={
-              stats.upcomingTask 
-                ? `Lúc ${stats.upcomingTask.timeSlot}` 
-                : stats.pendingTasksCount > 0 
-                  ? `${stats.pendingTasksCount} việc` 
+              stats.upcomingTask
+                ? `Lúc ${stats.upcomingTask.timeSlot}`
+                : stats.pendingTasksCount > 0
+                  ? `${stats.pendingTasksCount} việc`
                   : "Hoàn thành"
             }
             change={
-              stats.upcomingTask 
-                ? `Cần làm: ${stats.upcomingTask.task}` 
-                : stats.pendingTasksCount > 0 
-                  ? "Việc chưa làm hôm nay" 
+              stats.upcomingTask
+                ? `Cần làm: ${stats.upcomingTask.task}`
+                : stats.pendingTasksCount > 0
+                  ? "Việc chưa làm hôm nay"
                   : "Đã làm hết việc hôm nay"
             }
             type={stats.upcomingTask ? "negative" : stats.pendingTasksCount > 0 ? "warning" : "positive"}
             icon={ClipboardList}
             colorClass={
-              stats.upcomingTask 
+              stats.upcomingTask
                 ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-semibold"
                 : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
             }
@@ -293,23 +348,23 @@ const Dashboard = () => {
           <StatCard
             label="Ghi chú ca trực"
             value={
-              stats.upcomingTask 
-                ? `Lúc ${stats.upcomingTask.timeSlot}` 
-                : stats.pendingTasksCount > 0 
-                  ? `${stats.pendingTasksCount} việc` 
+              stats.upcomingTask
+                ? `Lúc ${stats.upcomingTask.timeSlot}`
+                : stats.pendingTasksCount > 0
+                  ? `${stats.pendingTasksCount} việc`
                   : "Hoàn thành"
             }
             change={
-              stats.upcomingTask 
-                ? `Cần làm: ${stats.upcomingTask.task}` 
-                : stats.pendingTasksCount > 0 
-                  ? "Việc chưa làm hôm nay" 
+              stats.upcomingTask
+                ? `Cần làm: ${stats.upcomingTask.task}`
+                : stats.pendingTasksCount > 0
+                  ? "Việc chưa làm hôm nay"
                   : "Đã làm hết việc hôm nay"
             }
             type={stats.upcomingTask ? "negative" : stats.pendingTasksCount > 0 ? "warning" : "positive"}
             icon={ClipboardList}
             colorClass={
-              stats.upcomingTask 
+              stats.upcomingTask
                 ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-semibold"
                 : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
             }
@@ -397,11 +452,8 @@ const Dashboard = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      
       {/* Tầng 1: KPI Cards cho Nhân viên vận hành */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* 1. Tổng doanh thu tháng này */}
         <StatCard
           label="Doanh thu tháng này"
           value={`${stats.revenue.toLocaleString("vi-VN")} đ`}
@@ -412,7 +464,6 @@ const Dashboard = () => {
           onClick={() => handleCardClick("revenue")}
         />
 
-        {/* 2. Hội viên mới trong tháng */}
         <StatCard
           label="Hội viên mới tháng này"
           value={stats.newCustomersThisMonth}
@@ -422,8 +473,7 @@ const Dashboard = () => {
           colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900/30 border-blue-200/50 hover:bg-blue-50/50"
           onClick={() => handleCardClick("newCustomers")}
         />
-        
-        {/* 3. Lượt Check-In hôm nay (độc nhất) */}
+
         <StatCard
           label="Lượt check-in hôm nay"
           value={stats.todayCheckIns}
@@ -434,27 +484,26 @@ const Dashboard = () => {
           onClick={() => handleCardClick("checkIn")}
         />
 
-        {/* 4. Ghi chú ca trực (Todo List) */}
         <StatCard
           label="Ghi chú ca trực"
           value={
-            stats.upcomingTask 
-              ? `Lúc ${stats.upcomingTask.timeSlot}` 
-              : stats.pendingTasksCount > 0 
-                ? `${stats.pendingTasksCount} việc` 
+            stats.upcomingTask
+              ? `Lúc ${stats.upcomingTask.timeSlot}`
+              : stats.pendingTasksCount > 0
+                ? `${stats.pendingTasksCount} việc`
                 : "Hoàn thành"
           }
           change={
-            stats.upcomingTask 
-              ? `Cần làm: ${stats.upcomingTask.task}` 
-              : stats.pendingTasksCount > 0 
-                ? "Việc chưa làm hôm nay" 
+            stats.upcomingTask
+              ? `Cần làm: ${stats.upcomingTask.task}`
+              : stats.pendingTasksCount > 0
+                ? "Việc chưa làm hôm nay"
                 : "Đã làm hết việc hôm nay"
           }
           type={stats.upcomingTask ? "negative" : stats.pendingTasksCount > 0 ? "warning" : "positive"}
           icon={ClipboardList}
           colorClass={
-            stats.upcomingTask 
+            stats.upcomingTask
               ? "text-red-600 bg-red-100 dark:bg-red-900/30 border-red-200/50 hover:bg-red-50/50 animate-pulse font-semibold"
               : "text-orange-600 bg-orange-100 dark:bg-orange-900/30 border-orange-200/50 hover:bg-orange-50/50"
           }
@@ -464,7 +513,6 @@ const Dashboard = () => {
 
       {/* Tầng 2: Biểu đồ check-in theo giờ và Hoạt động gần đây */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Biểu đồ Giờ cao điểm hôm nay (Giữ nguyên cấu trúc bar chart div) */}
         <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Clock className={getIconColor(Clock)} size={20} />
@@ -477,21 +525,14 @@ const Dashboard = () => {
               const max = Math.max(...peakHours.map((p) => p.count)) || 1;
               const height = (h.count / max) * 100;
               return (
-                <div
-                  key={i}
-                  className="flex flex-col items-center flex-1 gap-2 group relative h-full justify-end"
-                >
+                <div key={i} className="flex flex-col items-center flex-1 gap-2 group relative h-full justify-end">
                   <div className="absolute -top-8 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                     {h.count} lượt
                   </div>
                   <div
-                    className={`w-full rounded-t-sm transition-all duration-500 ${
-                      h.count > 0
-                        ? "bg-primary/80 hover:bg-primary"
-                        : "bg-gray-100 dark:bg-gray-700"
-                    }`}
+                    className={`w-full rounded-t-sm transition-all duration-500 ${h.count > 0 ? "bg-primary/80 hover:bg-primary" : "bg-gray-100 dark:bg-gray-700"}`}
                     style={{ height: `${height || 2}%` }}
-                  ></div>
+                  />
                   <span className="text-[10px] text-gray-400 font-medium">{h.hour}h</span>
                 </div>
               );
@@ -500,9 +541,7 @@ const Dashboard = () => {
                 <div className={`mb-3 flex size-11 items-center justify-center rounded-full ${getIconTone(Activity)}`}>
                   <Activity size={20} />
                 </div>
-                <p className="text-sm font-medium text-text-light dark:text-text-dark">
-                  Hôm nay chưa có lượt check-in
-                </p>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Hôm nay chưa có lượt check-in</p>
                 <p className="mt-1 text-xs font-normal text-text-muted-light dark:text-text-muted-dark">
                   Biểu đồ sẽ hiện theo khung giờ ngay khi có dữ liệu.
                 </p>
@@ -511,49 +550,31 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Lượt check-in gần nhất của hội viên */}
         <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
           <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
             Hoạt động check-in gần đây
           </h3>
           <div className="space-y-4">
-            {activities.length > 0 ? (
-              activities.map((act) => {
-                const isCheckIn = act.type !== "out";
-                return (
-                  <div
-                    key={act.id}
-                    className="flex items-center gap-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0"
-                  >
-                    <div
-                      className={`flex items-center justify-center size-10 rounded-full shrink-0 ${
-                        isCheckIn
-                          ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-                      }`}
-                    >
-                      {isCheckIn ? <LogIn size={18} /> : <LogOut size={18} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">
-                        {act.customerName}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <span className={`text-xs font-semibold ${isCheckIn ? "text-green-600" : "text-orange-600"}`}>
-                          {isCheckIn ? "Đã Check-in" : "Đã Check-out"}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          • {act.time}
-                        </span>
-                      </div>
+            {activities.length > 0 ? activities.map((act) => {
+              const isCheckIn = act.type !== "out";
+              return (
+                <div key={act.id} className="flex items-center gap-4 p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0">
+                  <div className={`flex items-center justify-center size-10 rounded-full shrink-0 ${isCheckIn ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"}`}>
+                    {isCheckIn ? <LogIn size={18} /> : <LogOut size={18} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">{act.customerName}</p>
+                    <div className="flex items-center gap-1">
+                      <span className={`text-xs font-semibold ${isCheckIn ? "text-green-600" : "text-orange-600"}`}>
+                        {isCheckIn ? "Đã Check-in" : "Đã Check-out"}
+                      </span>
+                      <span className="text-xs text-gray-400">• {act.time}</span>
                     </div>
                   </div>
-                );
-              })
-            ) : (
-              <p className="text-text-muted-light text-sm text-center py-4">
-                Chưa có lượt check-in nào hôm nay.
-              </p>
+                </div>
+              );
+            }) : (
+              <p className="text-text-muted-light text-sm text-center py-4">Chưa có lượt check-in nào hôm nay.</p>
             )}
           </div>
         </div>
@@ -714,6 +735,65 @@ const Modal = ({ title, onClose, children }) => {
   );
 };
 
+const RevenueDetailModal = ({ stats, onClose }) => {
+  const total = stats.weeklyRevenue.reduce((sum, item) => sum + Number(item.revenue || 0), 0);
+
+  return (
+    <Modal title="Chi tiết doanh thu tuần này" onClose={onClose}>
+      <div className="space-y-5">
+        <div className="border-b border-border-light pb-4 dark:border-border-dark">
+          <p className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Tổng doanh thu từ Thứ 2 đến Chủ nhật</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-text-light dark:text-text-dark">
+            {total.toLocaleString("vi-VN")} đ
+          </p>
+        </div>
+        <div className="overflow-hidden rounded-lg border border-border-light dark:border-border-dark">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-background-light text-xs text-text-muted-light dark:bg-background-dark dark:text-text-muted-dark">
+              <tr><th className="px-4 py-3 font-medium">Ngày</th><th className="px-4 py-3 font-medium">Ngày tháng</th><th className="px-4 py-3 text-right font-medium">Doanh thu</th></tr>
+            </thead>
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
+              {stats.weeklyRevenue.map((item) => (
+                <tr key={item.date}>
+                  <td className="px-4 py-3 font-medium text-text-light dark:text-text-dark">{item.dayName}</td>
+                  <td className="px-4 py-3 text-text-muted-light dark:text-text-muted-dark">{new Date(item.date).toLocaleDateString("vi-VN")}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-text-light dark:text-text-dark">{Number(item.revenue || 0).toLocaleString("vi-VN")} đ</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const NewCustomersModal = ({ stats, onClose }) => (
+  <Modal title={`Hội viên mới trong tháng (${stats.newCustomersThisMonth})`} onClose={onClose}>
+    <div className="max-h-[460px] overflow-y-auto">
+      {stats.newCustomersList.length ? (
+        <table className="w-full text-left text-sm">
+          <thead className="sticky top-0 bg-background-light text-xs text-text-muted-light dark:bg-background-dark dark:text-text-muted-dark">
+            <tr><th className="px-3 py-3 font-medium">Hội viên</th><th className="px-3 py-3 font-medium">Liên hệ</th><th className="px-3 py-3 font-medium">Gói tập</th><th className="px-3 py-3 text-right font-medium">Giá trị</th></tr>
+          </thead>
+          <tbody className="divide-y divide-border-light dark:divide-border-dark">
+            {stats.newCustomersList.map((customer) => (
+              <tr key={customer._id}>
+                <td className="px-3 py-3"><strong className="block font-medium text-text-light dark:text-text-dark">{customer.name}</strong><small className="text-text-muted-light dark:text-text-muted-dark">{customer.code}</small></td>
+                <td className="px-3 py-3 text-text-light dark:text-text-dark">{customer.phone}</td>
+                <td className="px-3 py-3 text-text-muted-light dark:text-text-muted-dark">{customer.packageType || "Chưa chọn"}</td>
+                <td className="px-3 py-3 text-right font-semibold tabular-nums text-text-light dark:text-text-dark">{Number(customer.price || 0).toLocaleString("vi-VN")} đ</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="py-12 text-center text-sm text-text-muted-light dark:text-text-muted-dark">Chưa có hội viên mới trong tháng này.</p>
+      )}
+    </div>
+  </Modal>
+);
+
 // Component Popup Quản lý Task Ghi chú
 const TeamTasksModal = ({ onClose }) => {
   const confirm = useConfirm();
@@ -735,8 +815,8 @@ const TeamTasksModal = ({ onClose }) => {
   // Lấy thông tin user hiện tại để phân quyền UI
   const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
   const isAdminOrAccountant = user.role === "admin" || user.role === "accountant";
-  const isManager = ["sm", "pm", "om"].includes(user.role);
-  const isStaff = ["sale", "pt", "reception"].includes(user.role);
+  const isCrossTeamManager = user.role === "manager";
+  const isManager = ["manager", "sm", "pm", "om"].includes(user.role);
 
   // Xác định đội của user đăng nhập
   const userTeam = (() => {
@@ -746,8 +826,9 @@ const TeamTasksModal = ({ onClose }) => {
     return "";
   })();
 
-  // State quản lý tab (Chỉ Admin và Kế toán mới đổi được tab)
-  const [activeTab, setActiveTab] = useState(isAdminOrAccountant ? "sale" : userTeam);
+  // Tài khoản có phạm vi toàn chi nhánh chọn đội; quản lý bộ phận khóa theo đội của mình.
+  const canSwitchTeam = isAdminOrAccountant || isCrossTeamManager;
+  const [activeTab, setActiveTab] = useState(canSwitchTeam ? "sale" : userTeam);
 
   const isTaskExpired = (t) => {
     if (t.isCompleted) return false;
@@ -789,7 +870,7 @@ const TeamTasksModal = ({ onClose }) => {
     return diff < -5; // Quá giờ bắt đầu trên 5 phút
   };
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
       // Admin/Kế toán lọc theo activeTab, Manager/Staff lọc theo đội của họ
@@ -797,16 +878,16 @@ const TeamTasksModal = ({ onClose }) => {
       if (res && res.success) {
         setTasks(res.data || []);
       }
-    } catch (e) {
+    } catch {
       toast.error("Lỗi lấy danh sách ghi chú");
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     loadTasks();
-  }, [activeTab]);
+  }, [loadTasks]);
 
   const handleAddTask = async (e) => {
     e.preventDefault();
@@ -815,7 +896,7 @@ const TeamTasksModal = ({ onClose }) => {
       return;
     }
     try {
-      const targetTeam = isAdminOrAccountant ? activeTab : userTeam;
+      const targetTeam = canSwitchTeam ? activeTab : userTeam;
       const res = await teamTaskService.create({ 
         timeSlot, 
         task: taskText,
@@ -862,8 +943,8 @@ const TeamTasksModal = ({ onClose }) => {
     }
   };
 
-  const canEditOrDelete = isAdminOrAccountant || (isManager && activeTab === userTeam);
-  const canComplete = isAdminOrAccountant || (activeTab === userTeam);
+  const canEditOrDelete = canSwitchTeam || (isManager && activeTab === userTeam);
+  const canComplete = canSwitchTeam || (activeTab === userTeam);
 
   return (
     <div 
@@ -882,8 +963,8 @@ const TeamTasksModal = ({ onClose }) => {
         </div>
         
         <div className="p-6 space-y-6">
-          {/* Hệ thống Tabs phân nhóm theo đội (Chỉ Admin & Kế toán được chuyển tab) */}
-          {isAdminOrAccountant && (
+          {/* Hệ thống Tabs phân nhóm theo đội cho các role có phạm vi toàn chi nhánh */}
+          {canSwitchTeam && (
             <div className="flex border-b border-border-light dark:border-border-dark -mt-2">
               {[
                 { id: "sale", label: "Đội Sale" },
@@ -907,7 +988,7 @@ const TeamTasksModal = ({ onClose }) => {
           )}
 
           {/* Form thêm nhanh đầu việc (Ẩn đối với nhân viên thường) */}
-          {(isAdminOrAccountant || isManager) && (
+          {(canSwitchTeam || isManager) && (
             <form onSubmit={handleAddTask} className="flex flex-col gap-3 bg-background-light dark:bg-background-dark p-4 rounded-xl border border-border-light dark:border-border-dark">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="w-full sm:w-1/3">

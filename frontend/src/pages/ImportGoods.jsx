@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { productService, inventoryService } from '../services/productService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, Search } from 'lucide-react';
+import { Save, Plus, Trash2, Search, Download } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 
 const ImportGoods = () => {
   const navigate = useNavigate();
@@ -18,7 +19,9 @@ const ImportGoods = () => {
       try {
         const data = await productService.getAll(searchTerm);
         setProducts(data);
-      } catch(e) {}
+      } catch {
+        setProducts([]);
+      }
     };
     const t = setTimeout(() => fetchProds(), 300);
     return () => clearTimeout(t);
@@ -65,23 +68,29 @@ const ImportGoods = () => {
       await inventoryService.importGoods(payload);
       toast.success('Nhập kho thành công!');
       navigate('/products');
-    } catch(err) {
+    } catch {
       toast.error('Lỗi khi lưu phiếu nhập');
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 font-display h-full bg-transparent">
-      <div className="flex justify-end p-2">
-         <button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-text-light px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-all">
+    <div className="flex h-full flex-col gap-5 bg-transparent font-display">
+      <PageHeader
+        meta="Cửa hàng & kho"
+        title="Nhập hàng"
+        description="Lập phiếu nhập, cập nhật giá vốn và bổ sung số lượng tồn kho."
+        icon={Download}
+        actions={(
+         <button onClick={handleSave} className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary/90">
              <Save size={20} />
-             Xác Nhận & Lưu Phiếu Nhập
+             Lưu phiếu nhập
          </button>
-      </div>
+        )}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-250px)] min-h-[520px]">
          {/* Left Side: Product Selection */}
-         <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-[70vh]">
+         <div className="flex h-[70vh] flex-col rounded-lg border border-border-light bg-surface-light p-5 dark:border-border-dark dark:bg-surface-dark lg:col-span-1">
              <h3 className="font-bold text-text-light dark:text-text-dark mb-4 bg-background-light dark:bg-background-dark p-2 rounded-lg text-center border border-border-light dark:border-border-dark">Tìm Sản Phẩm</h3>
              <div className="relative mb-4">
                  <Search className="absolute left-3 top-3 text-subtle-light dark:text-subtle-dark" size={18} />
@@ -116,7 +125,7 @@ const ImportGoods = () => {
          </div>
 
          {/* Right Side: Form & List */}
-         <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl p-6 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-[70vh]">
+         <div className="flex h-[70vh] flex-col rounded-lg border border-border-light bg-surface-light p-6 dark:border-border-dark dark:bg-surface-dark lg:col-span-2">
             <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                    <label htmlFor="import_supplier" className="text-sm font-semibold text-text-light dark:text-text-dark block mb-1">Nhà cung cấp</label>

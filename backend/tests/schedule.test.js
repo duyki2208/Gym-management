@@ -18,7 +18,17 @@ const createUser = async (role) => {
     status: "active",
   });
   await user.save();
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = jwt.sign(
+    {
+      id: user._id,
+      role,
+      branchCode: "HN01",
+      activeBranch: "HN01",
+      allowedBranches: role === "admin" ? ["*"] : ["HN01"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
   return { token, user };
 };
 

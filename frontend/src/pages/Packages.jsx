@@ -4,7 +4,7 @@ import { Search, Plus, Pencil, Trash2, Package } from "lucide-react";
 import { packageService } from "../services/customerService";
 import PackageModal from "../components/package/PackageModal";
 import { useConfirm } from "../context/ConfirmContext";
-import { getIconColor } from "../utils/iconTone";
+import PageHeader from "../components/common/PageHeader";
 
 const Packages = () => {
   const [list, setList] = useState([]);
@@ -66,33 +66,28 @@ const Packages = () => {
   );
 
   return (
-    <div className="flex flex-col gap-6 font-display">
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
-            <Package size={24} className={getIconColor(Package)} /> Quản lý gói tập
-          </h2>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Cấu hình danh mục gói hội viên, thời hạn sử dụng, phân loại và giá bán niêm yết
-          </p>
-        </div>
-        {isAdmin && (
+    <div className="flex flex-col gap-5 font-display">
+      <PageHeader
+        meta="Sản phẩm dịch vụ"
+        title="Gói tập"
+        description="Cấu hình loại gói, thời hạn sử dụng, số buổi và giá bán niêm yết."
+        icon={Package}
+        actions={isAdmin ? (
           <button
             onClick={() => {
               setEdit(null);
               setModal(true);
             }}
-            className="flex items-center gap-2 h-10 px-4 bg-primary text-text-light rounded-xl text-xs md:text-sm font-semibold hover:bg-primary/90 shrink-0 shadow-sm transition-all cursor-pointer"
+            className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-xs font-semibold text-text-light transition-colors hover:bg-primary-hover md:text-sm"
           >
             <Plus size={18} />
             <span>Thêm gói tập</span>
           </button>
-        )}
-      </div>
+        ) : null}
+      />
 
       {/* Search Bar */}
-      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      <div className="flex items-center gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark">
         <div className="relative flex-1 max-w-md">
           <Search size={18} className="absolute left-3.5 top-3 text-gray-400" />
           <input
@@ -100,7 +95,7 @@ const Packages = () => {
             name="pkgSearch"
             type="text"
             aria-label="Tìm kiếm gói tập theo tên"
-            className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-gray-400 transition-colors"
+            className="h-10 w-full rounded-lg border border-border-light bg-background-light pl-10 pr-4 text-sm text-text-light transition-colors placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
             placeholder="Tìm tên gói tập..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -108,15 +103,15 @@ const Packages = () => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         <table className="w-full text-left">
-          <thead className="bg-background-light dark:bg-background-dark uppercase text-sm font-bold text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
+          <thead className="border-b border-border-light bg-background-light text-xs font-medium text-text-muted-light dark:border-border-dark dark:bg-background-dark dark:text-text-muted-dark">
             <tr>
-              <th className="px-6 py-4">TÊN GÓI</th>
-              <th className="px-6 py-4">LOẠI GÓI</th>
-              <th className="px-6 py-4">GIÁ (VNĐ)</th>
-              <th className="px-6 py-4">THỜI HẠN</th>
-              {isAdmin && <th className="px-6 py-4 text-center">HÀNH ĐỘNG</th>}
+              <th className="px-6 py-3">Tên gói</th>
+              <th className="px-6 py-3">Phân loại</th>
+              <th className="px-6 py-3">Giá niêm yết</th>
+              <th className="px-6 py-3">Thời hạn</th>
+              {isAdmin && <th className="px-6 py-3 text-right">Thao tác</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:border-border-dark">
@@ -124,7 +119,7 @@ const Packages = () => {
               filteredList.map((p) => (
                 <tr
                   key={p._id || p.id}
-                  className="hover:bg-primary/10 transition-colors"
+                  className="transition-colors hover:bg-background-light/70 dark:hover:bg-background-dark/70"
                 >
                   <td className="px-6 py-4 font-medium text-text-light dark:text-text-dark">
                     {p.name || "N/A"}
@@ -146,19 +141,19 @@ const Packages = () => {
                     {p.duration || 0} ngày
                   </td>
                   {isAdmin && (
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => {
                           setEdit(p);
                           setModal(true);
                         }}
-                        className="p-2 hover:bg-primary/20 rounded-xl transition-colors"
+                        className="rounded-lg p-2 transition-colors hover:bg-primary/15"
                       >
                         <Pencil size={16} className="text-text-light dark:text-text-dark" />
                       </button>
                       <button
                         onClick={() => del(p._id || p.id)}
-                        className="p-2 hover:bg-red-500/20 rounded-xl transition-colors"
+                        className="rounded-lg p-2 transition-colors hover:bg-red-500/15"
                       >
                         <Trash2 size={16} className="text-negative-light dark:text-negative-dark" />
                       </button>
@@ -168,7 +163,7 @@ const Packages = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={isAdmin ? 5 : 4} className="px-6 py-8 text-center text-gray-500">
                   Chưa có gói tập nào.
                 </td>
               </tr>

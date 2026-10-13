@@ -1,31 +1,21 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Dumbbell, Search, Calendar, Filter, Download, ChevronDown,
-  CheckCircle2, XCircle, AlertTriangle, TrendingUp,
-  Award, RefreshCw, UserCheck, ClipboardCheck
+  Search, Download,
+  ClipboardCheck
 } from 'lucide-react';
 import reportService from '../../services/reportService';
 import { staffService } from '../../services/customerService';
-import { getIconColor, getIconTone } from '../../utils/iconTone';
 import toast from 'react-hot-toast';
 import PTSessionReportModal from './PTSessionReportModal';
+import {
+  ReportMetricCell,
+  ReportMetricStrip,
+  ReportPageHeader,
+} from './ReportPrimitives';
 
 const STATUS_MAP = {
-  completed: { label: 'Hoàn thành', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800', icon: CheckCircle2 },
-  cancelled: { label: 'Đã huỷ / Vi phạm', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800', icon: XCircle },
-};
-
-const KPICard = ({ icon: Icon, label, value, sub }) => {
-  return (
-    <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-5 transition-all hover:shadow-md">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${getIconTone(Icon)}`}>
-        <Icon size={20} />
-      </div>
-      <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
-      {sub && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
-    </div>
-  );
+  completed: { label: 'Hoàn thành', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' },
+  cancelled: { label: 'Đã huỷ / Vi phạm', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800' },
 };
 
 const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, setSelectedYear, userRole = 'admin' }) => {
@@ -42,10 +32,6 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
     fetchPTList();
   }, []);
 
-  useEffect(() => {
-    fetchReportData();
-  }, [selectedMonth, selectedYear, ptFilter, statusFilter]);
-
   const fetchPTList = async () => {
     try {
       const staff = await staffService.getAll();
@@ -56,7 +42,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
     }
   };
 
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await reportService.getPTSessionsReport({
@@ -74,7 +60,11 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMonth, selectedYear, ptFilter, statusFilter]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [fetchReportData]);
 
   const handleExportExcel = async () => {
     try {
@@ -87,7 +77,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
     }
   };
 
-  const rawSessions = reportData?.sessions || [];
+  const rawSessions = useMemo(() => reportData?.sessions || [], [reportData?.sessions]);
 
   const filteredSessions = useMemo(() => {
     return rawSessions.filter((s) => {
@@ -114,16 +104,10 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
 
   return (
     <div className="space-y-6">
-      {/* Header trang */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Buổi tập PT</h2>
-          </div>
-          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Theo dõi lịch sử buổi tập và đối soát phiên dạy PT</p>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
+      <ReportPageHeader
+        title="Buổi tập PT"
+        description="Theo dõi lịch sử buổi tập và đối soát phiên dạy PT"
+      >
           {/* Chọn tháng / năm */}
           {setSelectedMonth && setSelectedYear && (
             <div className="flex items-center gap-2">
@@ -131,7 +115,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 aria-label="Chọn tháng"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-primary/50"
+                className="h-10 rounded-lg border border-border-light bg-surface-light px-3 text-base font-semibold text-text-light outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark md:text-sm"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                   <option key={m} value={m}>Tháng {m}</option>
@@ -141,7 +125,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 aria-label="Chọn năm"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-primary/50"
+                className="h-10 rounded-lg border border-border-light bg-surface-light px-3 text-base font-semibold text-text-light outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark md:text-sm"
               >
                 {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -152,70 +136,62 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
 
           <button
             onClick={() => setIsAuditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white text-xs font-semibold shadow-sm shrink-0 transition"
+            className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border-light bg-surface-light px-4 text-xs font-semibold text-text-light transition-colors hover:bg-gray-100 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark dark:hover:bg-gray-800 md:text-sm"
           >
             <ClipboardCheck size={15} /> Đối soát buổi tập PT
           </button>
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-text-light text-xs md:text-sm font-semibold shadow-sm shrink-0 transition-all cursor-pointer"
+            className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-xs font-semibold text-text-light transition-colors hover:bg-primary-hover md:text-sm"
           >
             <Download size={16} /> Xuất Excel
           </button>
-        </div>
-      </div>
+      </ReportPageHeader>
 
       {/* 1. KPI tổng quan của hệ thống */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          icon={Dumbbell}
-          label={`Tổng buổi đã dạy (${selectedMonth}/${selectedYear})`}
-          value={completedCount.toLocaleString('vi-VN')}
-          
-          tone="primary"
-        />
-        <KPICard
-          icon={TrendingUp}
-          label="TB buổi hoàn thành / PT"
-          value={avgPerPT}
-          
-          tone="emerald"
-        />
-        <KPICard
-          icon={XCircle}
-          label="Buổi bị huỷ / Vi phạm"
-          value={cancelledCount}
-          tone="red"
-        />
-        <KPICard
-          icon={AlertTriangle}
-          label="Khách sắp hết buổi"
-          value={atRiskCount}
-
-          tone="amber"
-        />
-      </div>
+      <ReportMetricStrip columns={4}>
+        <ReportMetricCell spacious>
+          <p className="mb-1 text-xs font-medium text-subtle-light dark:text-subtle-dark">
+            Tổng buổi đã dạy ({selectedMonth}/{selectedYear})
+          </p>
+          <p className="text-2xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-3xl">
+            {completedCount.toLocaleString('vi-VN')}
+          </p>
+        </ReportMetricCell>
+        <ReportMetricCell spacious>
+          <p className="mb-1 text-xs font-medium text-subtle-light dark:text-subtle-dark">TB buổi hoàn thành / PT</p>
+          <p className="text-2xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-3xl">{avgPerPT}</p>
+        </ReportMetricCell>
+        <ReportMetricCell spacious>
+          <p className="mb-1 text-xs font-medium text-subtle-light dark:text-subtle-dark">Buổi bị huỷ / Vi phạm</p>
+          <p className="text-2xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-3xl">{cancelledCount}</p>
+        </ReportMetricCell>
+        <ReportMetricCell spacious>
+          <p className="mb-1 text-xs font-medium text-subtle-light dark:text-subtle-dark">Khách sắp hết buổi</p>
+          <p className="text-2xl font-semibold tracking-tight text-text-light dark:text-text-dark sm:text-3xl">{atRiskCount}</p>
+        </ReportMetricCell>
+      </ReportMetricStrip>
 
       {/* 2 & 3. ĐỒNG BỘ THANH LỌC VÀ BẢNG DỮ LIỆU THÀNH MỘT CARD THỐNG NHẤT */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden flex flex-col">
+      <div className="flex flex-col overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         {/* Toolbar Lọc Dữ Liệu */}
         <div className="p-4 border-b border-border-light dark:border-border-dark">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 flex-1 min-w-[220px]">
+            <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-border-light bg-background-light px-3 dark:border-border-dark dark:bg-background-dark/60">
               <Search size={15} className="text-gray-400 shrink-0" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm theo tên khách, SĐT hoặc tên PT..."
-                className="bg-transparent text-xs text-gray-800 dark:text-gray-100 outline-none w-full placeholder:text-gray-400"
+                className="w-full bg-transparent text-base text-text-light outline-none placeholder:text-text-muted-light dark:text-text-dark dark:placeholder:text-text-muted-dark md:text-sm"
               />
             </div>
 
             <select
               value={ptFilter}
               onChange={(e) => setPtFilter(e.target.value)}
-              className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 outline-none"
+              className="h-10 rounded-lg border border-border-light bg-background-light px-3 text-base font-semibold text-text-light outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-background-dark/60 dark:text-text-dark md:text-sm"
             >
               <option value="all">-- Tất cả PT --</option>
               {ptList.map((pt) => (
@@ -228,7 +204,7 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 outline-none"
+              className="h-10 rounded-lg border border-border-light bg-background-light px-3 text-base font-semibold text-text-light outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-background-dark/60 dark:text-text-dark md:text-sm"
             >
               <option value="all">Tất cả trạng thái</option>
               {Object.entries(STATUS_MAP).map(([k, v]) => (
@@ -269,7 +245,6 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
               )}
               {!loading && filteredSessions.map((s) => {
                 const st = STATUS_MAP[s.status] || STATUS_MAP.completed;
-                const StIcon = st.icon;
                 const custName = s.customer?.name || 'Khách hàng';
                 const custPhone = s.customer?.phone || s.customer?.code || 'N/A';
                 const ptName = s.pt?.fullName || s.ptName || 'PT Chưa gán';
@@ -277,32 +252,32 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
                 return (
                   <tr key={s._id || s.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition-colors">
                     {/* 1. Thời gian */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-4 py-3.5 text-text-light dark:text-text-dark">
                       {new Date(s.date).toLocaleString('vi-VN', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                       })}
                     </td>
                     {/* 2. Hội viên */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3.5 text-text-light dark:text-text-dark">
                       {custName}
                     </td>
                     {/* 3. SĐT */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">{custPhone}</td>
+                    <td className="px-4 py-3.5 text-text-light dark:text-text-dark">{custPhone}</td>
                     {/* 4. Gói tập */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3.5 text-text-light dark:text-text-dark">
                       {s.packageName || 'Gói PT'}
                     </td>
                     {/* 5. Số buổi */}
-                    <td className="px-4 py-3.5 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-text-light dark:text-text-dark">
                       {s.usedSessions ?? 0}/{s.totalSessions ?? 0}
                     </td>
                     {/* 6. PT hướng dẫn */}
-                    <td className="px-4 py-3.5 text-gray-900 dark:text-gray-100">{ptName}</td>
+                    <td className="px-4 py-3.5 text-text-light dark:text-text-dark">{ptName}</td>
                     {/* 7. Trạng thái */}
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${st.color}`}>
-                        <StIcon size={13} /> {st.label}
+                        {st.label}
                       </span>
                     </td>
                   </tr>
@@ -313,17 +288,14 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
         </div>
 
         {/* Footer của Card */}
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-900/50">
+        <div className="border-t border-border-light bg-background-light/60 px-4 py-3 text-xs text-subtle-light dark:border-border-dark dark:bg-background-dark/40 dark:text-subtle-dark">
           Hiển thị {filteredSessions.length} / {rawSessions.length} buổi tập
         </div>
       </div>
 
       {/* 4. Card TOP PT Xuất Sắc (Dưới cùng của trang) */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <Award size={18} className={getIconColor(Award)} />
-          <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Top PT xuất sắc</p>
-        </div>
+      <div className="rounded-lg border border-border-light bg-surface-light p-5 dark:border-border-dark dark:bg-surface-dark">
+        <p className="mb-1 text-base font-semibold text-text-light dark:text-text-dark">Top PT xuất sắc</p>
         <p className="text-[11px] text-gray-400 mb-4">Xếp hạng theo số buổi hoàn thành trong tháng {selectedMonth}/{selectedYear}</p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -331,15 +303,15 @@ const PTSessionReportView = ({ selectedMonth, selectedYear, setSelectedMonth, se
             <p className="text-xs text-gray-400 col-span-full text-center py-4">Chưa có dữ liệu xếp hạng</p>
           )}
           {leaderboard.map((pt, idx) => (
-            <div key={pt.name || idx} className="bg-gray-50 dark:bg-gray-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700/60 flex items-center gap-3">
+            <div key={pt.name || idx} className="flex items-center gap-3 rounded-lg border border-border-light bg-background-light p-4 dark:border-border-dark dark:bg-background-dark/50">
               <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300' : 'bg-border-light text-subtle-light dark:bg-border-dark dark:text-subtle-dark'
               }`}>
                 {idx + 1}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{pt.name}</p>
-                <p className="text-[11px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{pt.sessions} buổi</p>
+                <p className="truncate text-sm font-medium text-text-light dark:text-text-dark">{pt.name}</p>
+                <p className="mt-0.5 text-xs font-semibold text-subtle-light dark:text-subtle-dark">{pt.sessions} buổi</p>
               </div>
             </div>
           ))}

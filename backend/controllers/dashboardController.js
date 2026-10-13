@@ -10,9 +10,52 @@ const WorkoutSession = require("../models/WorkoutSession");
 const {
   startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, startOfMonth, endOfMonth
 } = require("date-fns");
+const { PERMISSIONS, userHasPermission } = require("../middleware/permissions");
+const { getVisibleTeams } = require("../services/teamTaskAccessService");
+
+const defaultModels = {
+  Customer,
+  CheckIn,
+  Invoice,
+  Setting,
+  TeamTask,
+  Transaction,
+  KPITarget,
+  CustomerPackage,
+  WorkoutSession,
+};
+
+const getDashboardModels = (req) => req.models || defaultModels;
+
+const resolveDashboardView = ({ role, canReadAllReports }) => {
+  if (role === "pt") return "pt";
+  if (role === "sale") return "sale";
+  if (canReadAllReports) return "branch";
+  return "operations";
+};
+
+const buildDashboardTaskQuery = ({ date, role }) => {
+  const visibleTeams = getVisibleTeams(role);
+  if (visibleTeams.length === 0) return null;
+  return {
+    date,
+    isCompleted: false,
+    team: { $in: visibleTeams },
+  };
+};
 
 const getStats = async (req, res) => {
   try {
+    const {
+      Customer,
+      CheckIn,
+      Setting,
+      TeamTask,
+      Transaction,
+      KPITarget,
+      CustomerPackage,
+      WorkoutSession,
+    } = getDashboardModels(req);
     const today = new Date();
     const utcTime = today.getTime() + (today.getTimezoneOffset() * 60000);
     const vnTime = new Date(utcTime + (7 * 3600000));
@@ -30,6 +73,7 @@ const getStats = async (req, res) => {
     const thisMonthStart = new Date(Date.UTC(vnYear, vnMonth, 1, -7, 0, 0, 0));
     const lastDay = new Date(vnYear, vnMonth + 1, 0).getDate();
     const thisMonthEnd = new Date(Date.UTC(vnYear, vnMonth, lastDay, 16, 59, 59, 999));
+    const nextSevenDaysEnd = new Date(todayEnd.getTime() + 7 * 24 * 3600000);
 
     // Tuần này (Thứ 2 -> Chủ Nhật) theo GMT+7
     const dayOfWeek = vnTime.getDay();
@@ -44,6 +88,8 @@ const getStats = async (req, res) => {
     const todayStr = `${vnYear}-${monthStr}-${dayStr}`;
     const currentMonth = vnMonth + 1;
     const currentYear = vnYear;
+    const role = req.user?.role;
+    const userId = req.user?._id;
 
     // Lấy cấu hình hệ thống
     let setting = await Setting.findOne();
@@ -54,7 +100,10 @@ const getStats = async (req, res) => {
     const targetRevenue = setting.targetRevenue || 100000000;
 
     // Lấy toàn bộ công việc chưa hoàn thành hôm nay để phân tích
-    const todayTasks = await TeamTask.find({ date: todayStr, isCompleted: false }).lean();
+    const taskQuery = buildDashboardTaskQuery({ date: todayStr, role });
+    const todayTasks = taskQuery
+      ? await TeamTask.find(taskQuery).lean()
+      : [];
     const pendingTasksCount = todayTasks.length;
     
     // Quy đổi giờ bắt đầu theo mốc 5h sáng chuẩn ca trực
@@ -109,10 +158,10 @@ const getStats = async (req, res) => {
       } : null,
     };
 
-    const role = req.user?.role;
-    const userId = req.user?._id;
+    const canReadAllReports = await userHasPermission(req, PERMISSIONS.REPORT_READ_ALL);
+    const dashboardView = resolveDashboardView({ role, canReadAllReports });
 
-    if (role === "pt") {
+    if (dashboardView === "pt") {
       // === 🏋️ DASHBOARD PT (Xem chỉ số & KPI của PT) ===
       const [customTarget, actualSessions, assignedCustomers, sessionCustomers, newClientsCount] = await Promise.all([
         KPITarget.findOne({ staff: userId, month: currentMonth, year: currentYear }),
@@ -182,7 +231,7 @@ const getStats = async (req, res) => {
       });
     }
 
-    if (role === "sale" || role === "sm") {
+    if (dashboardView === "sale") {
       // === 💰 DASHBOARD SALE (Xem chỉ số doanh số & hợp đồng) ===
       const [customTarget, packagesSoldBySale, actualNewContracts, actualRenewContracts] = await Promise.all([
         KPITarget.findOne({ staff: userId, month: currentMonth, year: currentYear }),
@@ -279,15 +328,60 @@ const getStats = async (req, res) => {
     }
 
     // === 📊 DASHBOARD ADMIN / MANAGER / RECEPTIONIST (Tổng quan toàn phòng tập) ===
+    const activeMemberPackages = await CustomerPackage.find({
+      isDeleted: { $ne: true },
+      status: "active",
+      endDate: { $gte: todayStart },
+    })
+      .select("customer packageName startDate createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const activeCustomerById = new Map();
+    activeMemberPackages.forEach((item) => {
+      const customerId = item.customer ? String(item.customer) : null;
+      if (customerId && !activeCustomerById.has(customerId)) {
+        activeCustomerById.set(customerId, item);
+      }
+    });
+    const activeCustomerIds = [...activeCustomerById.values()].map((item) => item.customer);
+    const dayInMs = 24 * 3600000;
+    const trendStart = new Date(todayStart.getTime() - 6 * dayInMs);
+    const trendDays = Array.from({ length: 7 }, (_, index) => {
+      const start = new Date(trendStart.getTime() + index * dayInMs);
+      const vnDate = new Date(start.getTime() + 7 * 3600000);
+      const year = vnDate.getUTCFullYear();
+      const month = String(vnDate.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(vnDate.getUTCDate()).padStart(2, "0");
+      return {
+        date: `${year}-${month}-${day}`,
+        start,
+        end: new Date(start.getTime() + dayInMs - 1),
+      };
+    });
     const [
       newCustomersCount,
       uniqueCheckInCustomerIds,
       uniqueCheckInYesterdayCustomerIds,
       todayCheckInDocs,
       revenueAggregation,
+      todayRevenueAggregation,
       weeklyRevenueAggregation,
       newCustomersList,
-      recentCheckIns
+      latestCheckIns,
+      newContractsCount,
+      renewContractsCount,
+      expiringContractsCount,
+      paymentAttentionSummary,
+      activeCustomerDocs,
+      activeCustomerLastCheckIns,
+      revenueByPackage,
+      latestRegisteredCustomers,
+      latestTransactions,
+      revenueTrendAggregation,
+      checkInTrendAggregation,
+      newContractTrendAggregation,
+      trendMemberPackages,
     ] = await Promise.all([
       // Đếm hội viên mới trong tháng hiện tại (dựa trên createdAt)
       Customer.countDocuments({ createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd } }),
@@ -306,6 +400,23 @@ const getStats = async (req, res) => {
         {
           $match: {
             createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+            status: "success",
+            type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$amount" }
+          }
+        }
+      ]),
+
+      // Doanh thu thực thu trong ngày hôm nay
+      Transaction.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: todayStart, $lte: todayEnd },
             status: "success",
             type: { $in: ["package_purchase", "pos_sale", "pt_session"] }
           }
@@ -343,17 +454,253 @@ const getStats = async (req, res) => {
         .lean(),
       
       // Lấy 5 hoạt động check-in gần nhất cho panel vận hành
-      CheckIn.find().sort({ time: -1 }).limit(5).lean()
+      CheckIn.find().sort({ time: -1 }).limit(5).lean(),
+
+      CustomerPackage.countDocuments({
+        contractType: "new",
+        createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+      }),
+
+      CustomerPackage.countDocuments({
+        contractType: "renew",
+        createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+      }),
+
+      CustomerPackage.countDocuments({
+        status: "active",
+        endDate: { $gte: todayStart, $lte: nextSevenDaysEnd },
+      }),
+
+      CustomerPackage.aggregate([
+        {
+          $match: {
+            isDeleted: { $ne: true },
+            status: { $in: ["active", "pending"] },
+            paymentStatus: { $in: ["deposit", "unpaid"] },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            totalOutstanding: {
+              $sum: {
+                $max: [
+                  { $subtract: [{ $ifNull: ["$price", 0] }, { $ifNull: ["$paidAmount", 0] }] },
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+
+      Customer.find({ _id: { $in: activeCustomerIds } })
+        .select("name code phone packageType")
+        .lean(),
+
+      CheckIn.aggregate([
+        { $match: { customerId: { $in: activeCustomerIds } } },
+        { $group: { _id: "$customerId", lastCheckIn: { $max: "$time" } } },
+      ]),
+
+      Transaction.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+            status: "success",
+            type: "package_purchase",
+          },
+        },
+        {
+          $lookup: {
+            from: CustomerPackage.collection.name,
+            localField: "customerPackage",
+            foreignField: "_id",
+            as: "packageDoc",
+          },
+        },
+        {
+          $set: {
+            packageName: {
+              $ifNull: [{ $arrayElemAt: ["$packageDoc.packageName", 0] }, "Gói tập khác"],
+            },
+          },
+        },
+        { $group: { _id: "$packageName", revenue: { $sum: "$amount" } } },
+        { $sort: { revenue: -1 } },
+        { $limit: 6 },
+      ]),
+
+      Customer.find()
+        .select("name packageType createdAt")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+
+      Transaction.find({ status: "success" })
+        .select("customerName amount type createdAt")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+
+      Transaction.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: thisMonthStart, $lte: todayEnd },
+            status: "success",
+            type: { $in: ["package_purchase", "pos_sale", "pt_session"] },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } },
+            value: { $sum: "$amount" },
+          },
+        },
+      ]),
+
+      CheckIn.aggregate([
+        { $match: { time: { $gte: trendStart, $lte: todayEnd } } },
+        {
+          $group: {
+            _id: {
+              date: { $dateToString: { format: "%Y-%m-%d", date: "$time", timezone: "+07:00" } },
+              customerId: "$customerId",
+            },
+          },
+        },
+        { $group: { _id: "$_id.date", value: { $sum: 1 } } },
+      ]),
+
+      CustomerPackage.aggregate([
+        {
+          $match: {
+            contractType: "new",
+            createdAt: { $gte: thisMonthStart, $lte: todayEnd },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } },
+            value: { $sum: 1 },
+          },
+        },
+      ]),
+
+      CustomerPackage.find({
+        status: { $in: ["active", "expired", "frozen"] },
+        startDate: { $lte: todayEnd },
+        endDate: { $gte: trendStart },
+      })
+        .select("customer startDate endDate frozenPeriods")
+        .lean(),
     ]);
+
+    const activeMembersCount = activeCustomerIds.length;
+    const lastCheckInByCustomer = new Map(
+      activeCustomerLastCheckIns.map((item) => [String(item._id), item.lastCheckIn])
+    );
+    const longAbsentMembersAll = activeCustomerDocs
+      .map((customer) => {
+        const lastCheckIn = lastCheckInByCustomer.get(String(customer._id)) || null;
+        const packageInfo = activeCustomerById.get(String(customer._id));
+        const absenceSince = lastCheckIn || packageInfo?.startDate || packageInfo?.createdAt || null;
+        const daysAbsent = absenceSince
+          ? Math.max(0, Math.floor((todayStart.getTime() - new Date(absenceSince).getTime()) / (24 * 3600000)))
+          : 0;
+        return {
+          _id: customer._id,
+          name: customer.name,
+          code: customer.code,
+          phone: customer.phone,
+          packageName: packageInfo?.packageName || customer.packageType || "Gói tập",
+          lastCheckIn,
+          daysAbsent,
+        };
+      })
+      .filter((customer) => customer.daysAbsent > 14)
+      .sort((a, b) => b.daysAbsent - a.daysAbsent || a.name.localeCompare(b.name, "vi"));
+    const longAbsentMembers = longAbsentMembersAll.slice(0, 6);
+
+    const paymentAttention = paymentAttentionSummary[0] || { count: 0, totalOutstanding: 0 };
+
+    const recentActivities = [
+      ...latestCheckIns.map((item) => ({
+        id: item._id,
+        customerName: item.customerName,
+        time: item.time,
+        type: "checkin",
+        note: "Check-in thành công",
+      })),
+      ...latestRegisteredCustomers.map((item) => ({
+        id: item._id,
+        customerName: item.name,
+        time: item.createdAt,
+        type: "registration",
+        note: item.packageType ? `Đăng ký ${item.packageType}` : "Đăng ký hội viên mới",
+      })),
+      ...latestTransactions.map((item) => ({
+        id: item._id,
+        customerName: item.customerName || "Khách lẻ",
+        time: item.createdAt,
+        type: "payment",
+        note: `Thanh toán ${new Intl.NumberFormat("vi-VN").format(Number(item.amount || 0))}đ`,
+      })),
+    ]
+      .sort((a, b) => new Date(b.time) - new Date(a.time))
+      .slice(0, 6);
 
     const todayCheckInsCount = uniqueCheckInCustomerIds.length;
     const yesterdayCheckInsCount = uniqueCheckInYesterdayCustomerIds.length;
     const checkInChange = todayCheckInsCount - yesterdayCheckInsCount;
     
     const revenueThisMonth = revenueAggregation[0]?.totalRevenue || 0;
+    const revenueToday = todayRevenueAggregation[0]?.totalRevenue || 0;
     
     // Tính % hoàn thành chỉ tiêu doanh thu
     const revenuePercentage = Math.round((revenueThisMonth / targetRevenue) * 100);
+
+    const toTrendMap = (items) => new Map(items.map((item) => [item._id, Number(item.value || 0)]));
+    const buildDailyTrend = (items) => {
+      const valuesByDate = toTrendMap(items);
+      return trendDays.map((day) => ({ date: day.date, value: valuesByDate.get(day.date) || 0 }));
+    };
+    const buildCumulativeMonthTrend = (items) => {
+      const valuesByDate = toTrendMap(items);
+      let runningTotal = 0;
+      const totalsByDate = new Map();
+      const cursor = new Date(thisMonthStart);
+      while (cursor <= todayEnd) {
+        const vnDate = new Date(cursor.getTime() + 7 * 3600000);
+        const date = `${vnDate.getUTCFullYear()}-${String(vnDate.getUTCMonth() + 1).padStart(2, "0")}-${String(vnDate.getUTCDate()).padStart(2, "0")}`;
+        runningTotal += valuesByDate.get(date) || 0;
+        totalsByDate.set(date, runningTotal);
+        cursor.setTime(cursor.getTime() + dayInMs);
+      }
+      return trendDays.map((day) => ({ date: day.date, value: totalsByDate.get(day.date) || 0 }));
+    };
+    const activeMemberTrend = trendDays.map((day) => {
+      const customerIds = new Set();
+      trendMemberPackages.forEach((item) => {
+        const isWithinContract = new Date(item.startDate) <= day.end && new Date(item.endDate) >= day.start;
+        const isFrozen = (item.frozenPeriods || []).some((period) => {
+          const freezeStart = period.startDate ? new Date(period.startDate) : null;
+          const freezeEnd = period.endDate ? new Date(period.endDate) : todayEnd;
+          return freezeStart && freezeStart <= day.end && freezeEnd >= day.start;
+        });
+        if (isWithinContract && !isFrozen && item.customer) customerIds.add(String(item.customer));
+      });
+      return { date: day.date, value: customerIds.size };
+    });
+    if (activeMemberTrend.length) activeMemberTrend[activeMemberTrend.length - 1].value = activeMembersCount;
+
+    const kpiTrends = {
+      revenue: buildCumulativeMonthTrend(revenueTrendAggregation),
+      activeMembers: activeMemberTrend,
+      checkIns: buildDailyTrend(checkInTrendAggregation),
+      newContracts: buildCumulativeMonthTrend(newContractTrendAggregation),
+    };
 
     // Map doanh thu tuần này
     const allDaysInWeek = eachDayOfInterval({ start: thisWeekStart, end: thisWeekEnd });
@@ -371,7 +718,8 @@ const getStats = async (req, res) => {
     // Tính toán giờ cao điểm hôm nay (Peak Hours)
     const hoursCount = new Array(24).fill(0);
     todayCheckInDocs.forEach((doc) => {
-      const hour = new Date(doc.time).getHours();
+      const time = new Date(doc.time);
+      const hour = (time.getUTCHours() + 7) % 24;
       if (!isNaN(hour)) hoursCount[hour]++;
     });
 
@@ -384,22 +732,33 @@ const getStats = async (req, res) => {
       success: true,
       data: {
         ...commonData,
-        revenue: revenueThisMonth,
-        targetRevenue: targetRevenue,
-        revenuePercentage: revenuePercentage,
         newCustomersThisMonth: newCustomersCount,
         newCustomersList: newCustomersList,
         todayCheckIns: todayCheckInsCount,
         yesterdayCheckIns: yesterdayCheckInsCount,
         checkInChange: checkInChange,
-        weeklyRevenue: weeklyRevenue,
+        activeMembers: activeMembersCount,
+        newContractsThisMonth: newContractsCount,
+        renewContractsThisMonth: renewContractsCount,
+        expiringContracts7Days: expiringContractsCount,
+        paymentAttentionCount: paymentAttention.count,
+        paymentAttentionValue: paymentAttention.totalOutstanding,
+        longAbsentMembers,
+        longAbsentCount: longAbsentMembersAll.length,
+        revenueByPackage: revenueByPackage.map((item) => ({
+          packageName: item._id,
+          revenue: item.revenue,
+        })),
         peakHours: peakHours,
-        recentActivities: recentCheckIns.map(ci => ({
-          id: ci._id,
-          customerName: ci.customerName,
-          time: ci.time,
-          type: ci.type || 'in'
-        }))
+        recentActivities,
+        kpiTrends,
+        ...(canReadAllReports ? {
+          revenue: revenueThisMonth,
+          todayRevenue: revenueToday,
+          targetRevenue,
+          revenuePercentage,
+          weeklyRevenue,
+        } : {}),
       }
     });
   } catch (error) {
@@ -408,4 +767,4 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getStats };
+module.exports = { getStats, resolveDashboardView, buildDashboardTaskQuery };

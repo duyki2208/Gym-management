@@ -1,5 +1,10 @@
 const Setting = require("../models/Setting");
 const {
+  AUTHORIZATION_POLICY_VERSION,
+  PERMISSIONS,
+  userHasPermission,
+} = require("../middleware/permissions");
+const {
   assertValidFacilityKey,
   hashFacilityKey,
   encryptFacilityKey,
@@ -45,9 +50,16 @@ const getSettings = async (req, res) => {
       setting = new Setting();
       await setting.save();
     }
+    const data = setting.toObject();
+    if (!(await userHasPermission(req, PERMISSIONS.SETTINGS_SENSITIVE_READ))) {
+      delete data.sepayApiKey;
+      delete data.cameraRtspUrl;
+      delete data.vietqrAccountNo;
+      delete data.vietqrAccountName;
+    }
     res.json({
       success: true,
-      data: setting,
+      data,
       message: "Lấy cấu hình hệ thống thành công"
     });
   } catch (error) {
@@ -130,7 +142,10 @@ const updateSettings = async (req, res) => {
     if (cameraRtspUrl !== undefined) setting.cameraRtspUrl = cameraRtspUrl;
 
     if (reminderTemplates !== undefined) setting.reminderTemplates = reminderTemplates;
-    if (rolePermissions !== undefined) setting.rolePermissions = rolePermissions;
+    if (rolePermissions !== undefined) {
+      setting.rolePermissions = rolePermissions;
+      setting.rolePermissionsVersion = AUTHORIZATION_POLICY_VERSION;
+    }
 
     // Cập nhật các trường số
     for (const [key, value] of Object.entries(numericFields)) {
@@ -156,7 +171,7 @@ const updateSettings = async (req, res) => {
           const updatedBranch = await centralModels.Branch.findOneAndUpdate(
             { code: targetBranchCode.toUpperCase() },
             { $set: updateBranch },
-            { new: true, runValidators: true }
+            { returnDocument: "after", runValidators: true }
           );
           if (!updatedBranch) throw new Error("BRANCH_NOT_FOUND");
         }

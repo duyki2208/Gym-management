@@ -5,7 +5,12 @@ const Customer = require('../models/Customer');
 const Transaction = require('../models/Transaction');
 const Invoice = require('../models/Invoice');
 const { isReplicaSetConnected } = require('../utils/dbTransaction');
-const { getBranchModels } = require('../db/branchConnectionManager');
+const { getBranchModels, getCentralModels } = require('../db/branchConnectionManager');
+const {
+  completePosPayment,
+  PaymentCompletionError,
+} = require('../services/posPaymentService');
+const { PERMISSIONS, userHasPermission } = require('../middleware/permissions');
 
 
 exports.createCheckout = async (req, res) => {
@@ -52,7 +57,8 @@ exports.createCheckout = async (req, res) => {
       paymentMethod,
       status,
       details: [],
-      note
+      note,
+      staff: req.user?._id,
     });
 
     const invoiceItems = [];
@@ -62,7 +68,7 @@ exports.createCheckout = async (req, res) => {
       const updatedProduct = await Product.findOneAndUpdate(
         { _id: item.product, stockQuantity: { $gte: item.quantity } },
         { $inc: { stockQuantity: -item.quantity } },
-        { new: true, ...queryOptions }
+        { returnDocument: "after", ...queryOptions }
       );
 
       if (!updatedProduct) {
@@ -162,6 +168,14 @@ exports.getOrderStatus = async (req, res) => {
     if (!saleOrder) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
+    const canReadAll = await userHasPermission(req, PERMISSIONS.POS_READ_ALL);
+    if (!canReadAll && String(saleOrder.staff || '') !== String(req.user?._id || '')) {
+      return res.status(403).json({
+        success: false,
+        code: 'OBJECT_ACCESS_DENIED',
+        message: 'Bạn không có quyền truy cập đơn hàng này',
+      });
+    }
     res.status(200).json({ success: true, status: saleOrder.status });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi lấy trạng thái đơn hàng', error: error.message });
@@ -180,7 +194,19 @@ exports.handleWebhook = async (req, res) => {
     // SePay truyền thông tin giao dịch ở root (content, transferAmount, referenceCode...)
     const content = body.content || body.description || (body.data && (body.data.description || body.data.content)) || '';
     const amount = Number(body.transferAmount || body.amountIn || (body.data && body.data.amount) || 0);
-    const sepayTxId = body.id || body.referenceCode || (body.data && (body.data.id || body.data.referenceCode)) || '';
+    const sepayTxId = String(
+      body.id ||
+      body.referenceCode ||
+      (body.data && (body.data.id || body.data.referenceCode)) ||
+      ''
+    ).trim();
+
+    if (!sepayTxId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Webhook thiếu mã giao dịch ổn định để xử lý idempotency'
+      });
+    }
 
     console.log(`[Webhook SePay] [Chi nhánh ${branchCode}] Mã GD SePay: ${sepayTxId} | Nội dung: "${content}" | Số tiền: ${amount}`);
 
@@ -200,18 +226,25 @@ exports.handleWebhook = async (req, res) => {
     // 1. Tìm đơn hàng trong chi nhánh hiện tại
     let activeModels = req.models;
     let targetSaleOrderModel = activeModels?.SaleOrder || SaleOrder;
-    let targetTransactionModel = activeModels?.Transaction || Transaction;
-    let targetInvoiceModel = activeModels?.Invoice || Invoice;
-    let targetProductModel = activeModels?.Product || Product;
 
     const candidateOrders = await targetSaleOrderModel.find({}).sort({ createdAt: -1 }).limit(100).populate('customer');
     let matchedOrder = candidateOrders.find(
       order => order._id.toString().slice(-8).toLowerCase() === orderCode
     );
 
-    // 2. Nếu không tìm thấy, quét tìm đơn hàng qua các chi nhánh khác (phòng trường hợp nhân viên đổi chi nhánh trên POS)
+    // 2. Nếu không tìm thấy, lấy danh sách chi nhánh từ Central DB thay vì hard-code.
     if (!matchedOrder) {
-      const branchesToTry = ['HN01', 'HCM01', 'DN01'];
+      let branchesToTry = [];
+      try {
+        const centralModels = req.centralModels || await getCentralModels();
+        const branchDocuments = await centralModels.Branch.find({
+          isActive: { $ne: false }
+        }).select('code').lean();
+        branchesToTry = branchDocuments.map((branch) => branch.code).filter(Boolean);
+      } catch (branchListError) {
+        console.warn(`[Webhook SePay] Không thể lấy danh sách chi nhánh: ${branchListError.message}`);
+      }
+
       for (const bCode of branchesToTry) {
         if (bCode === branchCode) continue;
         try {
@@ -225,9 +258,6 @@ exports.handleWebhook = async (req, res) => {
               matchedOrder = found;
               activeModels = bModels;
               targetSaleOrderModel = bModels.SaleOrder;
-              targetTransactionModel = bModels.Transaction;
-              targetInvoiceModel = bModels.Invoice;
-              targetProductModel = bModels.Product;
               console.log(`[Webhook SePay] Đã tìm thấy đơn hàng ${matchedOrder._id} tại chi nhánh fallback: ${bCode}`);
               break;
             }
@@ -246,85 +276,47 @@ exports.handleWebhook = async (req, res) => {
       });
     }
 
-    // 1. CHỐNG XỬ LÝ TRÙNG LẶP (IDEMPOTENCY):
-    // Do đặc thù Render gói Free (spin down sau 15p), webhook lần 1 có thể timeout khiến SePay gửi lại lần 2, 3...
-    // Nếu đơn hàng đã hoàn tất trước đó, trả về 200 OK ngay để SePay dừng gửi lại.
-    if (matchedOrder.status === 'Đã thanh toán') {
-      console.log(`[Webhook SePay] Đơn hàng ${matchedOrder._id} đã được thanh toán trước đó (idempotent). Trả về 200 OK.`);
-      return res.status(200).json({
-        success: true,
-        message: 'Đơn hàng đã được ghi nhận thanh toán trước đó'
-      });
-    }
-
-    // Nếu đơn hàng đã bị hủy
-    if (matchedOrder.status === 'Đã hủy') {
-      console.warn(`[Webhook SePay] Đơn hàng ${matchedOrder._id} đã bị hủy trước đó.`);
-      return res.status(200).json({
-        success: false,
-        message: 'Đơn hàng này đã bị hủy trước khi nhận thanh toán'
-      });
-    }
-
-    // 2. KIỂM TRA SỐ TIỀN THANH TOÁN:
-    if (amount < matchedOrder.totalAmount) {
-      console.warn(`[Webhook SePay] Số tiền chuyển khoản (${amount}đ) ít hơn tổng đơn hàng (${matchedOrder.totalAmount}đ)!`);
-      return res.status(200).json({
-        success: false,
-        message: `Số tiền chuyển khoản (${amount}đ) không đủ cho đơn hàng (${matchedOrder.totalAmount}đ)`
-      });
-    }
-
-    // 3. CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG SANG 'ĐÃ THANH TOÁN'
-    matchedOrder.status = 'Đã thanh toán';
-    await matchedOrder.save();
-
-    // 4. TẠO GIAO DỊCH (TRANSACTION)
-    await targetTransactionModel.create({
-      type: 'pos_sale',
-      amount: matchedOrder.totalAmount,
+    // Không thoát sớm khi order đã paid: service sẽ kiểm tra và repair
+    // Transaction/Invoice còn thiếu từ một lần xử lý bị gián đoạn.
+    const paymentResult = await completePosPayment({
+      models: activeModels,
+      orderId: matchedOrder._id,
+      amount,
       paymentMethod: 'Chuyển khoản QR',
-      customer: matchedOrder.customer ? matchedOrder.customer._id : null,
-      customerName: matchedOrder.customer ? matchedOrder.customer.name : 'Khách Lẻ',
-      saleOrder: matchedOrder._id,
-      status: 'success'
+      paymentProvider: 'sepay',
+      providerTransactionId: sepayTxId,
     });
 
-    // 5. TRUY VẤN SẢN PHẨM & TẠO HÓA ĐƠN (INVOICE)
-    const invoiceItems = [];
-    for (const item of matchedOrder.details) {
-      const product = await targetProductModel.findById(item.product);
-      invoiceItems.push({
-        name: product ? product.name : 'Sản phẩm',
-        quantity: item.quantity,
-        price: item.sellPrice,
-        total: item.quantity * item.sellPrice
-      });
-    }
-
-    const invoice = await targetInvoiceModel.create({
-      customer: matchedOrder.customer ? matchedOrder.customer._id : null,
-      customerName: matchedOrder.customer ? matchedOrder.customer.name : 'Khách Lẻ',
-      customerPhone: matchedOrder.customer ? matchedOrder.customer.phone : '',
-      type: 'pos',
-      referenceId: matchedOrder._id,
-      items: invoiceItems,
-      subtotal: matchedOrder.totalAmount,
-      total: matchedOrder.totalAmount,
-      paymentMethod: 'Chuyển khoản QR',
-      paymentStatus: 'paid'
-    });
-
-    console.log(`[Webhook SePay] [Chi nhánh ${branchCode}] Đối soát thành công đơn hàng ${matchedOrder._id}, tạo hóa đơn ${invoice.code}`);
+    console.log(`[Webhook SePay] [Chi nhánh ${branchCode}] Đối soát thành công đơn hàng ${matchedOrder._id}, hóa đơn ${paymentResult.invoice.code}`);
 
     return res.status(200).json({
       success: true,
-      message: 'Thanh toán thành công và đã tạo hóa đơn',
+      message: paymentResult.repaired
+        ? 'Đã khôi phục đầy đủ dữ liệu thanh toán còn thiếu'
+        : paymentResult.duplicate
+          ? 'Giao dịch đã được xử lý trước đó'
+          : 'Thanh toán thành công và đã tạo hóa đơn',
       orderId: matchedOrder._id,
-      invoiceCode: invoice.code
+      invoiceCode: paymentResult.invoice.code,
+      idempotent: paymentResult.duplicate,
+      repaired: paymentResult.repaired,
+      atomic: paymentResult.usedTransaction,
     });
   } catch (error) {
     console.error('[Webhook SePay Error] Lỗi xử lý Webhook:', error);
+    if (error instanceof PaymentCompletionError) {
+      const providerStatus = [
+        'ORDER_CANCELLED',
+        'PAYMENT_AMOUNT_MISMATCH',
+      ].includes(error.code)
+        ? 200
+        : error.statusCode;
+      return res.status(providerStatus).json({
+        success: false,
+        code: error.code,
+        message: error.message,
+      });
+    }
     return res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống khi xử lý webhook SePay',
@@ -336,7 +328,12 @@ exports.handleWebhook = async (req, res) => {
 exports.getSales = async (req, res) => {
   try {
     const { startDate, endDate, search, paymentMethod, preset } = req.query;
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
     let filter = {};
+    if (!(await userHasPermission(req, PERMISSIONS.POS_READ_ALL))) {
+      filter.staff = req.user._id;
+    }
 
     // Lọc thời gian theo preset hoặc ngày tùy chọn
     let start, end;
@@ -400,13 +397,19 @@ exports.getSales = async (req, res) => {
       filter.paymentMethod = paymentMethod;
     }
 
-    let sales = await SaleOrder.find(filter)
+    const populateSales = (query) => query
       .populate('customer', 'name phone email')
-      .populate('details.product', 'name category imageUrl sellPrice')
-      .sort({ createdAt: -1 });
+      .populate('details.product', 'name category imageUrl sellPrice');
 
-    // Lọc theo từ khóa tìm kiếm (Mã đơn, tên/SĐT khách hàng, tên sản phẩm)
+    let sales;
+    let totalOrders;
+    let summaryRows;
+
     if (search && search.trim()) {
+      // Search spans populated customer/product fields, so retain the existing
+      // matching semantics and paginate only after those references are loaded.
+      sales = await populateSales(SaleOrder.find(filter).sort({ createdAt: -1 }));
+
       const q = search.trim().toLowerCase();
       sales = sales.filter(s => {
         const code = `XBH${s._id.toString().slice(-8).toUpperCase()}`.toLowerCase();
@@ -416,11 +419,37 @@ exports.getSales = async (req, res) => {
         const prodMatch = s.details?.some(d => d.product?.name?.toLowerCase().includes(q));
         return code.includes(q) || rawId.includes(q) || custName.includes(q) || custPhone.includes(q) || prodMatch;
       });
+      totalOrders = sales.length;
+      summaryRows = sales;
+      sales = sales.slice((page - 1) * limit, page * limit);
+    } else {
+      [sales, totalOrders, summaryRows] = await Promise.all([
+        populateSales(
+          SaleOrder.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+        ),
+        SaleOrder.countDocuments(filter),
+        SaleOrder.aggregate([
+          { $match: filter },
+          {
+            $group: {
+              _id: '$status',
+              count: { $sum: 1 },
+              totalAmount: { $sum: { $ifNull: ['$totalAmount', 0] } },
+            },
+          },
+        ]),
+      ]);
     }
 
     // Tính toán tổng số liệu (Summary) — Chỉ tính đơn đã thanh toán hoàn tất (không công nợ)
-    const paidSales = sales.filter(item => item.status === 'Đã thanh toán');
-    const totalAmountSum = paidSales.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+    const totalAmountSum = search && search.trim()
+      ? summaryRows
+        .filter(item => item.status === 'Đã thanh toán')
+        .reduce((sum, item) => sum + (item.totalAmount || 0), 0)
+      : (summaryRows.find(item => item._id === 'Đã thanh toán')?.totalAmount || 0);
     const paidAmountSum = totalAmountSum;
     const dueAmountSum = 0;
 
@@ -431,8 +460,14 @@ exports.getSales = async (req, res) => {
         totalAmount: totalAmountSum,
         totalPaid: paidAmountSum,
         totalDue: dueAmountSum,
-        totalOrders: sales.length
-      }
+        totalOrders
+      },
+      pagination: {
+        page,
+        limit,
+        totalItems: totalOrders,
+        totalPages: Math.max(1, Math.ceil(totalOrders / limit)),
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi lấy danh sách bán hàng', error: error.message });
@@ -443,60 +478,31 @@ exports.getSales = async (req, res) => {
 // @route   PATCH /api/v1/pos/orders/:id/confirm
 exports.confirmPayment = async (req, res) => {
   try {
-    const saleOrder = await SaleOrder.findById(req.params.id).populate('customer');
-    if (!saleOrder) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-
-    if (saleOrder.status !== 'Chờ thanh toán') {
-      return res.status(400).json({ success: false, message: 'Đơn hàng này không ở trạng thái chờ thanh toán' });
-    }
-
-    // Cập nhật trạng thái đơn hàng sang Đã thanh toán
-    saleOrder.status = 'Đã thanh toán';
-    await saleOrder.save();
-
-    // Tạo Giao dịch
-    await Transaction.create({
-      type: 'pos_sale',
-      amount: saleOrder.totalAmount,
+    const paymentResult = await completePosPayment({
+      models: req.models || { SaleOrder, Transaction, Invoice, Product },
+      orderId: req.params.id,
       paymentMethod: 'Chuyển khoản QR',
-      customer: saleOrder.customer ? saleOrder.customer._id : null,
-      customerName: saleOrder.customer ? saleOrder.customer.name : 'Khách Lẻ',
-      saleOrder: saleOrder._id,
-      status: 'success',
-      staff: req.user ? req.user._id : null
+      paymentProvider: 'manual',
+      staffId: req.user?._id,
     });
 
-    // Truy vấn thông tin sản phẩm để tạo hóa đơn
-    const invoiceItems = [];
-    for (const item of saleOrder.details) {
-      const product = await Product.findById(item.product);
-      invoiceItems.push({
-        name: product ? product.name : 'Sản phẩm',
-        quantity: item.quantity,
-        price: item.sellPrice,
-        total: item.quantity * item.sellPrice
+    res.status(200).json({
+      success: true,
+      message: paymentResult.repaired
+        ? 'Đã khôi phục đầy đủ dữ liệu thanh toán còn thiếu'
+        : paymentResult.duplicate
+          ? 'Đơn hàng đã được xác nhận thanh toán trước đó'
+          : 'Đã xác nhận thanh toán đơn hàng thành công',
+      saleOrder: paymentResult.order,
+    });
+  } catch (error) {
+    if (error instanceof PaymentCompletionError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        code: error.code,
+        message: error.message,
       });
     }
-
-    // Tạo Hóa đơn
-    await Invoice.create({
-      customer: saleOrder.customer ? saleOrder.customer._id : null,
-      customerName: saleOrder.customer ? saleOrder.customer.name : 'Khách Lẻ',
-      customerPhone: saleOrder.customer ? saleOrder.customer.phone : '',
-      type: 'pos',
-      referenceId: saleOrder._id,
-      items: invoiceItems,
-      subtotal: saleOrder.totalAmount,
-      total: saleOrder.totalAmount,
-      paymentMethod: 'Chuyển khoản QR',
-      paymentStatus: 'paid',
-      staff: req.user ? req.user._id : null
-    });
-
-    res.status(200).json({ success: true, message: 'Đã xác nhận thanh toán đơn hàng thành công', saleOrder });
-  } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi xác nhận thanh toán', error: error.message });
   }
 };
@@ -532,4 +538,3 @@ exports.cancelOrder = async (req, res) => {
     res.status(500).json({ success: false, message: 'Lỗi hủy đơn hàng', error: error.message });
   }
 };
-

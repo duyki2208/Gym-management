@@ -5,6 +5,7 @@ import StaffModal from "../components/staff/StaffModal";
 import StaffDetailModal from "../components/staff/StaffDetailModal";
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
+import PageHeader from "../components/common/PageHeader";
 
 const Staff = () => {
   const [list, setList] = useState([]);
@@ -92,22 +93,9 @@ const Staff = () => {
         await staffService.delete(id);
         await fetchStaff();
         toast.success("Đã xóa nhân viên thành công!");
-      } catch (error) {
+      } catch {
         toast.error("Không thể xóa nhân viên");
       }
-    }
-  };
-
-  // Hàm hiển thị ngày sinh
-  const formatDob = (dob) => {
-    if (!dob) return "--/--/----";
-    try {
-      const date = new Date(dob);
-      if (isNaN(date.getTime())) return "--/--/----";
-      // Format ngày VN: dd/mm/yyyy
-      return date.toLocaleDateString("vi-VN");
-    } catch (e) {
-      return "--/--/----";
     }
   };
 
@@ -128,36 +116,31 @@ const Staff = () => {
   });
 
   return (
-    <div className="flex flex-col gap-6 font-display">
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2.5 text-text-light dark:text-text-dark">
-            <UserCog size={24} className="text-primary" /> Quản lý đội ngũ nhân sự
-          </h2>
-          <p className="text-subtle-light dark:text-subtle-dark text-sm mt-1">
-            Phân quyền tài khoản, quản lý huấn luyện viên (PT), tư vấn viên (Sale) và lễ tân
-          </p>
-        </div>
-        {isAdmin && (
+    <div className="flex flex-col gap-5 font-display">
+      <PageHeader
+        meta="Tổ chức"
+        title="Đội ngũ nhân sự"
+        description="Quản lý tài khoản, vai trò, lịch làm việc và phạm vi phụ trách tại chi nhánh."
+        icon={UserCog}
+        actions={isAdmin && (
           <button
             onClick={() => { setEdit(null); setModal(true); }}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-primary text-text-light text-xs md:text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
+            className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary/90"
           >
             <Plus size={18} />
             Thêm nhân viên
           </button>
         )}
-      </div>
+      />
 
       {/* Filter & Search Bar */}
-      <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex-wrap">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border-light bg-surface-light p-3 dark:border-border-dark dark:bg-surface-dark">
         <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search size={18} className="absolute left-3.5 top-3 text-gray-400" />
           <input
             type="text"
             placeholder="Tìm theo tên, username, số điện thoại..."
-            className="w-full pl-10 pr-4 h-10 border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark placeholder:text-gray-400 transition-colors"
+            className="h-10 w-full rounded-lg border border-border-light bg-background-light pl-10 pr-4 text-sm text-text-light outline-none transition-colors placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/30 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -166,7 +149,7 @@ const Staff = () => {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full h-10 px-3 text-xs font-bold rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-gray-700 dark:text-gray-300"
+            className="h-10 w-full rounded-lg border border-border-light bg-background-light px-3 text-sm font-medium text-gray-700 dark:border-border-dark dark:bg-background-dark dark:text-gray-300"
           >
             <option value="all">Tất cả chức vụ</option>
             <option value="admin">Quản trị viên (Admin)</option>
@@ -182,16 +165,16 @@ const Staff = () => {
         </div>
       </div>
 
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-xs uppercase font-bold tracking-wider border-b border-border-light dark:border-border-dark">
+            <thead className="border-b border-border-light bg-background-light text-xs font-medium text-text-muted-light dark:border-border-dark dark:bg-background-dark dark:text-text-muted-dark">
               <tr>
-                <th className="px-6 py-4">HỌ TÊN</th>
-                <th className="px-6 py-4">CHỨC VỤ</th>
-                <th className="px-6 py-4 text-center">SỐ KH PHỤ TRÁCH</th>
-                <th className="px-6 py-4 text-center">LỊCH LÀM VIỆC</th>
-                {isAdmin && <th className="px-6 py-4 text-right">HÀNH ĐỘNG</th>}
+                <th className="px-6 py-4">Nhân viên</th>
+                <th className="px-6 py-4">Vai trò</th>
+                <th className="px-6 py-4 text-center">Khách phụ trách</th>
+                <th className="px-6 py-4 text-center">Ca hôm nay</th>
+                {isAdmin && <th className="px-6 py-4 text-right">Thao tác</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
