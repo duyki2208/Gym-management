@@ -105,6 +105,20 @@ api.interceptors.response.use(
 
         const newToken = data.token;
         localStorage.setItem("gym_token", newToken);
+        if (data.activeBranch) {
+          try {
+            const currentUser = JSON.parse(localStorage.getItem("gym_user") || "null");
+            if (currentUser) {
+              currentUser.activeBranch = data.activeBranch;
+              if (data.branchName) currentUser.branchName = data.branchName;
+              if (Array.isArray(data.permissions)) currentUser.permissions = data.permissions;
+              localStorage.setItem("gym_user", JSON.stringify(currentUser));
+              window.dispatchEvent(new CustomEvent("auth-session-updated", { detail: currentUser }));
+            }
+          } catch {
+            localStorage.removeItem("gym_user");
+          }
+        }
         originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
 
         // Giải phóng queue: cho tất cả các request đang đợi retry với token mới

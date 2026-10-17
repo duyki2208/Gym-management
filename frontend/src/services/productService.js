@@ -31,8 +31,8 @@ export const inventoryService = {
 };
 
 export const posService = {
-  checkout: async (data) => {
-    const res = await api.post('/pos/checkout', data);
+  checkout: async (data, idempotencyKey) => {
+    const res = await api.post('/pos/checkout', data, { headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {} });
     return res.data;
   },
   getSales: async (params = {}) => {

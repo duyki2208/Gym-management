@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { productService, posService } from '../services/productService';
 import { customerService } from '../services/customerService';
 import toast from 'react-hot-toast';
@@ -6,15 +6,17 @@ import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, User, 
 import { getIconColor } from '../utils/iconTone';
 
 const PointOfSale = ({ onFinish, onClose }) => {
+  const checkoutPending = useRef(false);
+  const checkoutAttempt = useRef(null);
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  
+
   const [cart, setCart] = useState([]); // { product, quantity, sellPrice }
   const [isWalkIn, setIsWalkIn] = useState(true);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  
+
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [orderStatus, setOrderStatus] = useState('');
@@ -25,9 +27,13 @@ const PointOfSale = ({ onFinish, onClose }) => {
        try {
           const prods = await productService.getAll('');
           setProducts(Array.isArray(prods) ? prods : []);
-          
+
           const custData = await customerService.getAll({ page: 1, limit: 100 });
-          setCustomers(Array.isArray(custData?.customers) ? custData.customers : []);
+          const unique = new Map();
+          for (const customer of custData?.customers || []) {
+            if (customer.customerId) unique.set(customer.customerId, customer);
+          }
+          setCustomers([...unique.values()]);
        } catch (error) {
           console.error('Không thể tải dữ liệu POS:', error);
           setProducts([]);
@@ -48,7 +54,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
         toast.error("Sản phẩm đã hết hàng!");
         return;
      }
-     
+
      const existing = cart.find(c => c.product._id === p._id);
      if (existing) {
          if (existing.quantity >= p.stockQuantity) {
@@ -73,39 +79,46 @@ const PointOfSale = ({ onFinish, onClose }) => {
   const removeFromCart = (id) => {
      setCart(cart.filter(c => c.product._id !== id));
   };
-  
+
   const totalAmount = cart.reduce((sum, item) => sum + (item.quantity * item.sellPrice), 0);
 
   const handleCheckout = async (paymentMethod) => {
      if (cart.length === 0) return toast.error("Giỏ hàng trống!");
-     
+
      let custId = null;
      if (!isWalkIn) {
          if (!selectedCustomer) return toast.error("Vui lòng chọn hội viên!");
-         custId = selectedCustomer._id;
+         custId = selectedCustomer.customerId;
      }
-     
+
+     if (checkoutPending.current) return;
+     checkoutPending.current = true;
      try {
          const payload = {
              customerId: custId,
              paymentMethod,
              details: cart.map(c => ({ product: c.product._id, quantity: c.quantity }))
          };
-         
-         const res = await posService.checkout(payload);
+
+         const fingerprint = JSON.stringify(payload);
+         if (checkoutAttempt.current?.fingerprint !== fingerprint) {
+             checkoutAttempt.current = { fingerprint, key: crypto.randomUUID() };
+         }
+         const res = await posService.checkout(payload, checkoutAttempt.current.key);
+         checkoutAttempt.current = null;
          const currentStatus = res.saleOrder.status;
          toast.success(currentStatus === 'Đã thanh toán' ? "Thanh toán thành công" : "Đã tạo đơn hàng chờ thanh toán");
-         
+
          // Show Invoice Modal
          setLastOrder({ ...res.saleOrder, cartClone: [...cart] });
          setOrderStatus(currentStatus);
          setShowInvoice(true);
-         
+
          // Reset state
          setCart([]);
          setIsWalkIn(true);
          setSelectedCustomer(null);
-         
+
          // re-fetch product stock
          const prods = await productService.getAll('');
          setProducts(prods);
@@ -113,6 +126,8 @@ const PointOfSale = ({ onFinish, onClose }) => {
          if (onFinish) onFinish();
      } catch (err) {
          toast.error(err.response?.data?.message || "Lỗi thanh toán");
+     } finally {
+         checkoutPending.current = false;
      }
   };
 
@@ -187,23 +202,23 @@ const PointOfSale = ({ onFinish, onClose }) => {
             <div className="flex gap-4 border-b border-border-light p-4 dark:border-border-dark">
                <div className="relative flex-1">
                    <Search className="absolute left-3 top-3 text-subtle-light dark:text-subtle-dark" size={18} />
-                   <input 
+                   <input
                       id="pos_search_input"
                       name="posSearch"
-                      type="text" 
-                      placeholder="Tìm tên..." 
+                      type="text"
+                      placeholder="Tìm tên..."
                       aria-label="Tìm kiếm sản phẩm"
-                      className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm" 
-                      value={searchTerm} 
-                      onChange={(e) => setSearchTerm(e.target.value)} 
+                      className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark placeholder:text-subtle-light dark:placeholder:text-subtle-dark rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                    />
                </div>
-               <select 
+               <select
                  id="pos_category_filter"
                  name="posCategory"
                  aria-label="Lọc theo danh mục sản phẩm"
-                 className="border border-border-light dark:border-border-dark rounded-lg px-4 py-2.5 outline-none bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary text-sm" 
-                 value={categoryFilter} 
+                 className="border border-border-light dark:border-border-dark rounded-lg px-4 py-2.5 outline-none bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary text-sm"
+                 value={categoryFilter}
                  onChange={(e) => setCategoryFilter(e.target.value)}
                >
                    <option value="All">Tất cả danh mục</option>
@@ -216,8 +231,8 @@ const PointOfSale = ({ onFinish, onClose }) => {
 
             <div className="grid flex-1 grid-cols-2 gap-px overflow-y-auto bg-border-light custom-scrollbar dark:bg-border-dark lg:grid-cols-4">
                 {filteredProducts.map(p => (
-                   <div 
-                      key={p._id} 
+                   <div
+                      key={p._id}
                       onClick={() => addToCart(p)}
                       className={`group relative flex aspect-square flex-col justify-between overflow-hidden bg-surface-light p-3 text-left transition-colors dark:bg-surface-dark ${p.stockQuantity <= 0 ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer hover:bg-background-light dark:hover:bg-background-dark'}`}
                    >
@@ -245,15 +260,15 @@ const PointOfSale = ({ onFinish, onClose }) => {
             <div className="p-4 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
                <h3 className="font-semibold text-xl text-text-light dark:text-text-dark flex items-center gap-2 mb-4">Giỏ hàng <span className="bg-primary text-text-light text-xs font-semibold px-2 py-1 rounded-full">{cart.length}</span></h3>
                <div className="flex gap-2 p-1 bg-background-light dark:bg-background-dark rounded-lg w-full border border-border-light dark:border-border-dark">
-                  <button 
+                  <button
                      className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-colors cursor-pointer ${isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary ring-1 ring-border-light dark:ring-border-dark' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`}
                      onClick={() => setIsWalkIn(true)}>Khách lẻ</button>
-                  <button 
+                  <button
                      className={`flex-1 py-2 text-sm font-bold text-center rounded-lg transition-colors cursor-pointer ${!isWalkIn ? 'bg-surface-light dark:bg-surface-dark text-primary ring-1 ring-border-light dark:ring-border-dark' : 'text-subtle-light dark:text-subtle-dark hover:text-text-light dark:hover:text-text-dark'}`}
                      onClick={() => setIsWalkIn(false)}>Hội viên</button>
                </div>
                {!isWalkIn && (
-                  <select 
+                  <select
                      id="pos_customer_select"
                      name="posCustomer"
                      aria-label="Chọn hội viên mua hàng"
@@ -299,7 +314,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                   <span className="text-3xl font-bold text-primary">{totalAmount.toLocaleString()} <span className="text-lg opacity-70">đ</span></span>
                </div>
                <div className="grid grid-cols-2 gap-3">
-                   <button 
+                   <button
                      onClick={() => handleCheckout('Tiền mặt')}
                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-3 font-bold flex flex-col items-center justify-center shadow-emerald-600/20 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={cart.length === 0}
@@ -307,7 +322,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      <Banknote size={20} className="mb-1" />
                      Tiền mặt
                    </button>
-                   <button 
+                   <button
                      onClick={() => handleCheckout('Chuyển khoản QR')}
                      className="bg-primary hover:bg-primary/90 text-text-light rounded-lg py-3 font-bold flex flex-col items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={cart.length === 0}
@@ -337,7 +352,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
                          <p className="text-emerald-50 mt-1">Gym Fitness Center • Đã thanh toán</p>
                      </div>
                   )}
-                 
+
                  <div className="p-6">
                      <div className="max-h-48 overflow-y-auto mb-4 border-b border-border-light dark:border-border-dark pb-4 text-sm font-medium text-text-light dark:text-text-dark">
                         {lastOrder.cartClone?.map(c => (
@@ -356,9 +371,9 @@ const PointOfSale = ({ onFinish, onClose }) => {
                      {lastOrder.paymentMethod === 'Chuyển khoản QR' && (
                          orderStatus === 'Chờ thanh toán' ? (
                             <div className="flex flex-col items-center">
-                               <img 
-                                  src={`https://img.vietqr.io/image/970422-0344075790-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=GYM${lastOrder._id?.slice(-8).toUpperCase()}`} 
-                                  alt="VietQR MBBank" 
+                               <img
+                                  src={`https://img.vietqr.io/image/${encodeURIComponent(lastOrder.paymentAccount.bank)}-${encodeURIComponent(lastOrder.paymentAccount.accountNo)}-qr_only.png?amount=${lastOrder.totalAmount}&addInfo=${encodeURIComponent(lastOrder.paymentReference)}&accountName=${encodeURIComponent(lastOrder.paymentAccount.accountName || "")}`}
+                                  alt="VietQR thanh toán chi nhánh"
                                   className="w-64 h-64 rounded-lg object-contain bg-white p-2"
                                />
                                {/* Trạng thái chờ - tự động xác nhận */}
@@ -380,9 +395,9 @@ const PointOfSale = ({ onFinish, onClose }) => {
                             </div>
                          )
                      )}
-                     
+
                      {/* Nút đóng: nếu chưa thanh toán sẽ tự hủy đơn và hoàn stock */}
-                     <button 
+                     <button
                         onClick={handleCloseInvoice}
                         disabled={isCancelling}
                         className={`w-full mt-6 font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer ${

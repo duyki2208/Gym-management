@@ -32,7 +32,18 @@ async function runWithOptionalTransaction(connection, work) {
   }
 }
 
+async function runWithRequiredTransaction(connection, work) {
+  if (!isReplicaSetConnected(connection)) {
+    const error = new Error("Thao tác này cần MongoDB replica set để bảo đảm toàn vẹn dữ liệu.");
+    error.statusCode = 503;
+    error.code = "MONGO_TRANSACTIONS_REQUIRED";
+    throw error;
+  }
+  return runWithOptionalTransaction(connection, work);
+}
+
 module.exports = {
   isReplicaSetConnected,
   runWithOptionalTransaction,
+  runWithRequiredTransaction,
 };

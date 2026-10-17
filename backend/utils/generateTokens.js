@@ -40,6 +40,7 @@ const generateRefreshToken = (userId, extraPayload = {}) => {
     process.env.JWT_REFRESH_SECRET,
     {
       expiresIn: "7d",
+      jwtid: crypto.randomUUID(),
     }
   );
 };

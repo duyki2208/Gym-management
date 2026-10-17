@@ -3,6 +3,7 @@ const {
 } = require("../controllers/reportController");
 const {
   buildDashboardTaskQuery,
+  buildWeeklyRevenue,
   resolveDashboardView,
 } = require("../controllers/dashboardController");
 
@@ -39,6 +40,23 @@ describe("Dashboard and report tenant scope", () => {
     expect(buildDashboardTaskQuery({ date: "2026-09-27", role: "admin" }).team.$in)
       .toEqual(["sale", "pt", "reception"]);
     expect(buildDashboardTaskQuery({ date: "2026-09-27", role: "staff" })).toBeNull();
+  });
+
+  test("weekly dashboard revenue always returns one Vietnamese label for each Monday-to-Sunday date", () => {
+    const mondayStartUtc = new Date("2026-10-11T17:00:00.000Z");
+    const result = buildWeeklyRevenue(mondayStartUtc, [
+      { _id: "2026-10-18", revenue: 250000 },
+    ]);
+
+    expect(result).toHaveLength(7);
+    expect(result.map((item) => item.dayName)).toEqual([
+      "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật",
+    ]);
+    expect(result.map((item) => item.date)).toEqual([
+      "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15",
+      "2026-10-16", "2026-10-17", "2026-10-18",
+    ]);
+    expect(result[6].revenue).toBe(250000);
   });
 
   test("report queries use the Customer model selected for the request tenant", async () => {

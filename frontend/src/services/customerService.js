@@ -292,7 +292,7 @@ export const workoutService = {
     }
   },
   deduct: async (customerId, data) => {
-    const response = await api.post(`/workouts/${customerId}/deduct`, data);
+    const response = await api.post(`/workouts/${customerId}/deduct`, data, { headers: { "Idempotency-Key": crypto.randomUUID() } });
     return response.data;
   },
   deleteSession: async (sessionId) => {

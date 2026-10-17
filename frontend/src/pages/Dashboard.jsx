@@ -25,9 +25,15 @@ import { teamTaskService } from "../services/teamTaskService";
 import { useQuery } from '@tanstack/react-query';
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
-import StatCard from "../components/common/StatCard";
+import BaseStatCard from "../components/common/StatCard";
 import { getIconColor, getIconTone } from "../utils/iconTone";
 import RoleDashboardView from "../components/dashboard/RoleDashboardView";
+
+const DASHBOARD_CARD_CLASS = "dashboard-card-dark !bg-background-light dark:!bg-surface-dark";
+
+const StatCard = ({ className = "", ...props }) => (
+  <BaseStatCard {...props} className={`${DASHBOARD_CARD_CLASS} ${className}`} />
+);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -103,7 +109,6 @@ const Dashboard = () => {
   };
 
   const peakHours = dashboardData?.peakHours || [];
-  const hasPeakHourData = peakHours.some((hour) => Number(hour.count) > 0);
   
   const activities = (dashboardData?.recentActivities || []).map((act) => {
     const parsedTime = act.time ? new Date(act.time) : null;
@@ -240,7 +245,7 @@ const Dashboard = () => {
 
         {/* Tầng 2: Buổi dạy gần đây & KPI Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+          <div className="dashboard-card-dark lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark shadow-sm">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
               Lịch sử các buổi dạy gần đây
             </h3>
@@ -267,7 +272,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
+          <div className="dashboard-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
               Tiến trình & Cảnh báo chỉ tiêu
             </h3>
@@ -374,7 +379,7 @@ const Dashboard = () => {
 
         {/* Tầng 2: Hợp đồng gần đây & KPI Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+          <div className="dashboard-card-dark lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark shadow-sm">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
               Lịch sử chốt hợp đồng gần đây
             </h3>
@@ -401,7 +406,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
+          <div className="dashboard-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark shadow-sm flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
               Tiến trình KPI & Doanh số
             </h3>
@@ -513,15 +518,15 @@ const Dashboard = () => {
 
       {/* Tầng 2: Biểu đồ check-in theo giờ và Hoạt động gần đây */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+        <div className="dashboard-card-dark lg:col-span-2 p-6 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Clock className={getIconColor(Clock)} size={20} />
             <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
               Khung giờ check-in hôm nay (Giờ cao điểm)
             </h3>
           </div>
-          <div className={`h-64 ${hasPeakHourData ? "flex items-end justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-2" : "flex items-center justify-center"}`}>
-            {hasPeakHourData ? peakHours.map((h, i) => {
+          <div className="flex h-64 items-end justify-between gap-2 border-b border-gray-100 pb-2 dark:border-gray-800">
+            {peakHours.map((h, i) => {
               const max = Math.max(...peakHours.map((p) => p.count)) || 1;
               const height = (h.count / max) * 100;
               return (
@@ -536,21 +541,11 @@ const Dashboard = () => {
                   <span className="text-[10px] text-gray-400 font-medium">{h.hour}h</span>
                 </div>
               );
-            }) : (
-              <div className="flex max-w-sm flex-col items-center text-center">
-                <div className={`mb-3 flex size-11 items-center justify-center rounded-full ${getIconTone(Activity)}`}>
-                  <Activity size={20} />
-                </div>
-                <p className="text-sm font-medium text-text-light dark:text-text-dark">Hôm nay chưa có lượt check-in</p>
-                <p className="mt-1 text-xs font-normal text-text-muted-light dark:text-text-muted-dark">
-                  Biểu đồ sẽ hiện theo khung giờ ngay khi có dữ liệu.
-                </p>
-              </div>
-            )}
+            })}
           </div>
         </div>
 
-        <div className="p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
+        <div className="dashboard-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-surface-dark shadow-sm">
           <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
             Hoạt động check-in gần đây
           </h3>

@@ -65,9 +65,13 @@ input[type="number"] {
   background-color: #25262e !important;
 }
 
-/* App shell surfaces only. Do not recolor semantic headers inside pages. */
-.dark aside,
-.dark .app-header {
+/* Match dashboard cards to the header surface in dark mode. */
+.dark .dashboard-card-dark.dashboard-card-dark {
+  background-color: #1e1f26 !important;
+}
+
+/* Sidebar keeps its darker shell tone; the header uses the shared surface token. */
+.dark aside {
   background-color: #141518 !important;
   border-color: #272830 !important;
 }

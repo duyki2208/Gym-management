@@ -4,7 +4,8 @@ const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Transaction = require('../models/Transaction');
 const Invoice = require('../models/Invoice');
-const { isReplicaSetConnected } = require('../utils/dbTransaction');
+const posOrderService = require('../services/posOrderService');
+const Setting = require('../models/Setting');
 const { getBranchModels, getCentralModels } = require('../db/branchConnectionManager');
 const {
   completePosPayment,
@@ -13,150 +14,17 @@ const {
 const { PERMISSIONS, userHasPermission } = require('../middleware/permissions');
 
 
+const getPosModels = (req) => req.models || { SaleOrder, Product, Customer, Transaction, Invoice, Setting, connection: mongoose.connection };
+
 exports.createCheckout = async (req, res) => {
-  let session = null;
-  let useSession = false;
-
-  const conn = req.models?.connection || mongoose.connection;
-  if (isReplicaSetConnected(conn)) {
-    try {
-      session = await conn.startSession();
-      session.startTransaction();
-      useSession = true;
-    } catch (err) {
-      useSession = false;
-      if (session) session.endSession();
-      session = null;
-    }
-  }
-
-  const queryOptions = useSession && session ? { session } : {};
-
   try {
-    const { customerId, details, paymentMethod, note } = req.body;
-    
-    let isWalkIn = true;
-    let validCustomerId = null;
-    let totalAmount = 0;
-    let cust = null;
-    
-    if (customerId) {
-      cust = await Customer.findById(customerId, null, queryOptions);
-      if (cust) {
-        isWalkIn = false;
-        validCustomerId = cust._id;
-      }
-    }
-
-    // Xác định trạng thái ban đầu của hóa đơn POS
-    const status = paymentMethod === 'Chuyển khoản QR' ? 'Chờ thanh toán' : 'Đã thanh toán';
-
-    const saleOrder = new SaleOrder({
-      customer: validCustomerId,
-      isWalkIn,
-      paymentMethod,
-      status,
-      details: [],
-      note,
-      staff: req.user?._id,
+    const saleOrder = await posOrderService.createCheckout({
+      models: getPosModels(req), data: req.body, actorId: req.user?._id,
+      idempotencyKey: req.headers?.['idempotency-key'],
     });
-
-    const invoiceItems = [];
-
-    // Tính toán và trừ tồn kho nguyên tử (atomic decrement)
-    for (const item of details) {
-      const updatedProduct = await Product.findOneAndUpdate(
-        { _id: item.product, stockQuantity: { $gte: item.quantity } },
-        { $inc: { stockQuantity: -item.quantity } },
-        { returnDocument: "after", ...queryOptions }
-      );
-
-      if (!updatedProduct) {
-        const existingProduct = await Product.findById(item.product, null, queryOptions);
-        if (!existingProduct) {
-          throw new Error(`NOT_FOUND:Không tìm thấy sản phẩm`);
-        } else {
-          throw new Error(`INSUFFICIENT_STOCK:Sản phẩm ${existingProduct.name} chỉ còn ${existingProduct.stockQuantity} trong kho.`);
-        }
-      }
-      
-      const itemTotal = item.quantity * updatedProduct.sellPrice;
-      totalAmount += itemTotal;
-      
-      saleOrder.details.push({
-        product: updatedProduct._id,
-        quantity: item.quantity,
-        sellPrice: updatedProduct.sellPrice
-      });
-
-      invoiceItems.push({
-        name: updatedProduct.name,
-        quantity: item.quantity,
-        price: updatedProduct.sellPrice,
-        total: itemTotal
-      });
-    }
-
-    saleOrder.totalAmount = totalAmount;
-    await saleOrder.save(queryOptions);
-
-    // Nếu thanh toán bằng Tiền mặt, tạo luôn Hóa đơn & Giao dịch
-    if (status === 'Đã thanh toán') {
-      await Transaction.create([
-        {
-          type: 'pos_sale',
-          amount: totalAmount,
-          paymentMethod: 'Tiền mặt',
-          customer: validCustomerId,
-          customerName: cust ? cust.name : 'Khách Lẻ',
-          saleOrder: saleOrder._id,
-          status: 'success',
-          staff: req.user ? req.user._id : undefined
-        }
-      ], queryOptions);
-
-      await Invoice.create([
-        {
-          customer: validCustomerId,
-          customerName: cust ? cust.name : 'Khách Lẻ',
-          customerPhone: cust ? cust.phone : '',
-          type: 'pos',
-          referenceId: saleOrder._id,
-          items: invoiceItems,
-          subtotal: totalAmount,
-          total: totalAmount,
-          paymentMethod: 'Tiền mặt',
-          paymentStatus: 'paid',
-          staff: req.user ? req.user._id : undefined
-        }
-      ], queryOptions);
-    }
-
-    if (useSession && session) {
-      await session.commitTransaction();
-      session.endSession();
-    }
-
-    res.status(201).json({ 
-      success: true, 
-      message: status === 'Đã thanh toán' ? 'Thanh toán thành công' : 'Đã tạo đơn hàng chờ thanh toán', 
-      saleOrder 
-    });
-
+    res.status(201).json({ success: true, saleOrder });
   } catch (error) {
-    console.error("Lỗi createCheckout:", error);
-    if (useSession && session) {
-      await session.abortTransaction().catch(() => {});
-      session.endSession();
-    }
-
-    if (error.message && error.message.startsWith("NOT_FOUND:")) {
-      return res.status(404).json({ success: false, message: error.message.replace("NOT_FOUND:", "") });
-    }
-    if (error.message && error.message.startsWith("INSUFFICIENT_STOCK:")) {
-      return res.status(400).json({ success: false, message: error.message.replace("INSUFFICIENT_STOCK:", "") });
-    }
-    res.status(500).json({ success: false, message: error.message || 'Lỗi thanh toán' });
+    res.status(error.statusCode || (error.code === 11000 ? 409 : 500)).json({ success: false, code: error.code, message: error.message });
   }
 };
 
@@ -210,63 +78,25 @@ exports.handleWebhook = async (req, res) => {
 
     console.log(`[Webhook SePay] [Chi nhánh ${branchCode}] Mã GD SePay: ${sepayTxId} | Nội dung: "${content}" | Số tiền: ${amount}`);
 
-    // Sử dụng Regex tìm mã đơn hàng dạng GYM[OrderID_last8]
-    // Ví dụ: GYM50C1DB8C hoặc GYM 50C1DB8C hoặc GYM-50C1DB8C
-    const match = content.match(/GYM[\s\-_]*([A-Za-z0-9]{8})/i);
-    if (!match) {
-      console.warn(`[Webhook SePay] Nội dung "${content}" không khớp định dạng GYMxxxxx`);
-      return res.status(200).json({
-        success: false,
-        message: 'Nội dung chuyển khoản không khớp định dạng GYMxxxxx'
-      });
-    }
-
+    // New orders use the complete ID; legacy QR references still match without a date limit.
+    const match = content.match(/GYM[\s\-_]*([a-f0-9]{24}|[a-f0-9]{8})(?![a-z0-9])/i);
+    if (!match) return res.status(200).json({ success: false, message: 'Nội dung chuyển khoản không có mã đơn hợp lệ' });
     const orderCode = match[1].toLowerCase();
-
-    // 1. Tìm đơn hàng trong chi nhánh hiện tại
-    let activeModels = req.models;
-    let targetSaleOrderModel = activeModels?.SaleOrder || SaleOrder;
-
-    const candidateOrders = await targetSaleOrderModel.find({}).sort({ createdAt: -1 }).limit(100).populate('customer');
-    let matchedOrder = candidateOrders.find(
-      order => order._id.toString().slice(-8).toLowerCase() === orderCode
-    );
-
-    // 2. Nếu không tìm thấy, lấy danh sách chi nhánh từ Central DB thay vì hard-code.
-    if (!matchedOrder) {
-      let branchesToTry = [];
-      try {
-        const centralModels = req.centralModels || await getCentralModels();
-        const branchDocuments = await centralModels.Branch.find({
-          isActive: { $ne: false }
-        }).select('code').lean();
-        branchesToTry = branchDocuments.map((branch) => branch.code).filter(Boolean);
-      } catch (branchListError) {
-        console.warn(`[Webhook SePay] Không thể lấy danh sách chi nhánh: ${branchListError.message}`);
-      }
-
-      for (const bCode of branchesToTry) {
-        if (bCode === branchCode) continue;
-        try {
-          const bModels = await getBranchModels(bCode);
-          if (bModels?.SaleOrder) {
-            const bOrders = await bModels.SaleOrder.find({}).sort({ createdAt: -1 }).limit(100).populate('customer');
-            const found = bOrders.find(
-              order => order._id.toString().slice(-8).toLowerCase() === orderCode
-            );
-            if (found) {
-              matchedOrder = found;
-              activeModels = bModels;
-              targetSaleOrderModel = bModels.SaleOrder;
-              console.log(`[Webhook SePay] Đã tìm thấy đơn hàng ${matchedOrder._id} tại chi nhánh fallback: ${bCode}`);
-              break;
-            }
-          }
-        } catch (bErr) {
-          // Bỏ qua lỗi kết nối chi nhánh khác
-        }
-      }
+    const filter = orderCode.length === 24
+      ? { paymentReference: `GYM${orderCode.toUpperCase()}` }
+      : { $expr: { $eq: [{ $substrBytes: [{ $toString: '$_id' }, 16, 8] }, orderCode] } };
+    const central = req.centralModels || await getCentralModels();
+    const branches = await central.Branch.find({ isActive: { $ne: false } }).select('code').lean();
+    const codes = [...new Set([branchCode, ...branches.map(branch => branch.code)])];
+    const matches = [];
+    for (const code of codes) {
+      const branchModels = code === branchCode ? getPosModels(req) : await getBranchModels(code);
+      const orders = await branchModels.SaleOrder.find(filter).limit(2);
+      orders.forEach(order => matches.push({ order, models: branchModels }));
     }
+    if (matches.length > 1) return res.status(409).json({ success: false, code: 'AMBIGUOUS_PAYMENT_REFERENCE', message: 'Mã thanh toán trùng, cần đối soát thủ công.' });
+    const matchedOrder = matches[0]?.order;
+    const activeModels = matches[0]?.models;
 
     if (!matchedOrder) {
       console.warn(`[Webhook SePay] Không tìm thấy đơn hàng nào có 8 ký tự cuối là GYM${orderCode.toUpperCase()}`);
@@ -511,30 +341,9 @@ exports.confirmPayment = async (req, res) => {
 // @route   PATCH /api/v1/pos/orders/:id/cancel
 exports.cancelOrder = async (req, res) => {
   try {
-    const saleOrder = await SaleOrder.findById(req.params.id);
-    if (!saleOrder) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    }
-
-    if (saleOrder.status !== 'Chờ thanh toán') {
-      return res.status(400).json({ success: false, message: 'Chỉ có thể hủy đơn hàng đang ở trạng thái chờ thanh toán' });
-    }
-
-    // Cập nhật trạng thái đơn hàng sang Đã huỷ
-    saleOrder.status = 'Đã huỷ';
-    await saleOrder.save();
-
-    // Hoàn trả tồn kho cho từng sản phẩm trong đơn hàng
-    for (const item of saleOrder.details) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        product.stockQuantity += item.quantity;
-        await product.save();
-      }
-    }
-
-    res.status(200).json({ success: true, message: 'Đã hủy đơn hàng và hoàn trả tồn kho thành công' });
+    const saleOrder = await posOrderService.cancelOrder({ models: getPosModels(req), orderId: req.params.id });
+    res.json({ success: true, saleOrder, message: 'Đã hủy đơn hàng và hoàn trả tồn kho thành công' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi hủy đơn hàng', error: error.message });
+    res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message });
   }
 };

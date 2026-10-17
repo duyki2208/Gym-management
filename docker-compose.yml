@@ -6,7 +6,8 @@ services:
       - "5000:5000"
     environment:
       - PORT=5000
-      - MONGO_URI=mongodb://mongo:27017/gym-management
+      - MONGO_URI=mongodb://mongo:27017/gym-management?replicaSet=rs0
+      - REQUIRE_MONGO_TRANSACTIONS=true
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the host environment}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set in the host environment}
       - FACILITY_LOOKUP_PEPPER=${FACILITY_LOOKUP_PEPPER:?FACILITY_LOOKUP_PEPPER must be set in the host environment}
@@ -16,7 +17,8 @@ services:
       - ./backend:/app
       - /app/node_modules
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -36,6 +38,12 @@ services:
 
   mongo:
     image: mongo:6.0
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'try { if (!rs.status().myState || rs.status().myState !== 1) quit(1); } catch (e) { rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongo:27017\"}]}); quit(1); }'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
     ports:
       - "27017:27017"
     volumes:

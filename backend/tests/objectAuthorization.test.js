@@ -82,6 +82,30 @@ describe("Object-level authorization regression", () => {
     expect(privileged.body.data.sepayApiKey).toBe("sensitive-key");
   });
 
+  test("a settings editor cannot overwrite secrets or the permission matrix", async () => {
+    const accountant = await createUser("accountant");
+    await Setting.create({
+      rolePermissionsVersion: 4,
+      rolePermissions: {
+        accountant: ["settings.read", "settings.update"],
+      },
+    });
+
+    const secretAttempt = await request(app)
+      .put("/api/v1/settings")
+      .set(auth(accountant.token))
+      .send({ facilityKey: "new-facility-key" })
+      .expect(403);
+    expect(secretAttempt.body.code).toBe("PERMISSION_DENIED");
+
+    const roleMatrixAttempt = await request(app)
+      .put("/api/v1/settings")
+      .set(auth(accountant.token))
+      .send({ rolePermissions: { accountant: ["*"] } })
+      .expect(403);
+    expect(roleMatrixAttempt.body.code).toBe("PERMISSION_DENIED");
+  });
+
   test("a sale can read their own KPI but not another employee's KPI", async () => {
     const firstSale = await createUser("sale");
     const secondSale = await createUser("sale");
@@ -339,6 +363,31 @@ describe("Object-level authorization regression", () => {
 
     expect(response.body.length).toBeGreaterThan(0);
     expect(response.body.every((staff) => staff.password === undefined)).toBe(true);
+  });
+
+  test("a manager cannot modify an admin account and a password reset revokes the old access token", async () => {
+    const manager = await createUser("manager");
+    const admin = await createUser("admin");
+    const sale = await createUser("sale");
+
+    const denied = await request(app)
+      .put(`/api/v1/staff/${admin.user._id}`)
+      .set(auth(manager.token))
+      .send({ fullName: "Attempted change" })
+      .expect(403);
+    expect(denied.body.code).toBe("OBJECT_ACCESS_DENIED");
+
+    await request(app)
+      .put(`/api/v1/staff/${sale.user._id}`)
+      .set(auth(manager.token))
+      .send({ password: "new-password-123" })
+      .expect(200);
+
+    const revoked = await request(app)
+      .get("/api/v1/auth/me")
+      .set(auth(sale.token))
+      .expect(401);
+    expect(revoked.body.code).toBe("SESSION_REVOKED");
   });
 
   test("PT reports and disputes cannot target another PT's workout", async () => {

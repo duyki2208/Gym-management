@@ -66,7 +66,7 @@ describe("Permission policy", () => {
           findOne: () => ({
             select: () => ({
               lean: async () => ({
-                rolePermissionsVersion: 3,
+                rolePermissionsVersion: 4,
                 rolePermissions: { reception: [PERMISSIONS.CHECKIN_USE] },
               }),
             }),

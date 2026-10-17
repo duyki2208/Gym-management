@@ -1,3 +1,4 @@
+process.env.TEST_MONGO_REPLICA_SET = "true";
 const request = require("supertest");
 const app = require("../server");
 const Customer = require("../models/Customer");
@@ -99,6 +100,9 @@ describe("Workout Session API Tests", () => {
 
       const session = new WorkoutSession({
         customer: customerId,
+        customerPackage: packageId,
+        deductionSource: "package",
+        deductedSessions: 1,
         ptName: "PT Hùng",
         confirmedBy: (await Customer.findOne())._id, // Lấy đại một ID user hợp lệ
         note: "Tập thử"

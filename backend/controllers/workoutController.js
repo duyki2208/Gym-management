@@ -5,9 +5,8 @@ const User = require("../models/User");
 const Commission = require("../models/Commission");
 const Setting = require("../models/Setting");
 const Transaction = require("../models/Transaction");
-const syncCustomerFields = require("../utils/syncCustomer");
-const { sendZaloNotification } = require("../utils/zaloService");
 const queueService = require("../utils/queueService");
+const { PERMISSIONS, userHasPermission } = require("../middleware/permissions");
 
 // Get workout history for a specific customer
 exports.getWorkoutsByCustomer = async (req, res) => {
@@ -20,7 +19,11 @@ exports.getWorkoutsByCustomer = async (req, res) => {
         customerId = pkg.customer;
       }
     }
-    const workouts = await WorkoutSession.find({ customer: customerId })
+    const workoutFilter = { customer: customerId };
+    if (req.user?.role === "pt" && !(await userHasPermission(req, PERMISSIONS.WORKOUT_READ_ALL))) {
+      workoutFilter.pt = req.user._id;
+    }
+    const workouts = await WorkoutSession.find(workoutFilter)
       .populate("confirmedBy", "fullName username role")
       .populate("pt", "fullName username role")
       .sort({ date: -1 });
@@ -31,234 +34,33 @@ exports.getWorkoutsByCustomer = async (req, res) => {
   }
 };
 
-// Deduct a session function
+const mutations = require("../services/workoutMutationService");
+const mongoose = require("mongoose");
+const CommissionPeriod = require("../models/CommissionPeriod");
+const modelsFor = req => req.models || { WorkoutSession, Customer, CustomerPackage, User, Commission, Setting, Transaction, CommissionPeriod, connection: mongoose.connection };
+
 exports.deductSession = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { ptId, ptName, note, payPerSession, paymentMethod } = req.body;
-
-
-
-    // Ưu tiên ptId (ObjectId). Nếu không có thì dùng ptName (backward compat)
-    let resolvedPtId = ptId || null;
-    let resolvedPtName = ptName || "";
-
-    if (ptId) {
-      // Lookup PT user để lấy tên hiển thị
-      const ptUser = await User.findById(ptId).select("fullName username role");
-      if (!ptUser) {
-        return res.status(400).json({ message: "Không tìm thấy PT với ID này" });
-      }
-      if (ptUser.role !== "pt" && ptUser.role !== "pm") {
-        return res.status(400).json({ message: "Nhân viên được chọn không phải PT hoặc PM" });
-      }
-      resolvedPtName = ptUser.fullName || ptUser.username;
-    } else if (!ptName) {
-      return res.status(400).json({ message: "Vui lòng chọn Huấn luyện viên (PT)" });
+    const operationKey = req.headers?.["idempotency-key"];
+    if (operationKey && (typeof operationKey !== "string" || operationKey.length > 200)) {
+      return res.status(400).json({ message: "Idempotency-Key không hợp lệ" });
     }
-
-    let targetPkg = null;
-    let customer = await Customer.findById(id);
-    if (!customer) {
-      targetPkg = await CustomerPackage.findById(id);
-      if (targetPkg) {
-        customer = await Customer.findById(targetPkg.customer);
-      }
-    }
-    if (!customer) {
-      return res.status(404).json({ message: "Không tìm thấy khách hàng" });
-    }
-
-    // Đồng bộ thông tin khách hàng từ gói active trước khi kiểm tra
-    await syncCustomerFields(customer._id);
-    customer = await Customer.findById(customer._id);
-
-    if (!targetPkg && customer.activePackage) {
-      targetPkg = await CustomerPackage.findById(customer.activePackage);
-    }
-
-    const setting = await Setting.findOne();
-    const sessionPrice = setting?.ptSessionPrice || 500000;
-    const isPayPerSession = payPerSession === true;
-
-    // Kiểm tra số buổi còn lại nếu không phải thanh toán trực tiếp từng buổi
-    if (!isPayPerSession) {
-      const availableSessions = targetPkg ? (targetPkg.remainingSessions || 0) : (customer.remainingSessions || 0);
-      if (availableSessions <= 0) {
-        return res.status(400).json({ message: "Khách hàng đã hết số buổi tập trong hệ thống" });
-      }
-    }
-
-    // Create session record
-    const newSession = new WorkoutSession({
-      customer: customer._id,
-      pt: resolvedPtId,
-      ptName: resolvedPtName,
-      confirmedBy: req.user._id,
-      note: note || "",
+    const result = await mutations.deductSession({ models: modelsFor(req), id: req.params.id, data: req.body, actorId: req.user._id, operationKey });
+    if (!result.duplicate && result.customer.phone) queueService.enqueue("ZALO_NOTIFICATION", {
+      phone: result.customer.phone, type: "workout_deduction",
+      message: `Kính chào ${result.customer.name}, buổi tập đã được ghi nhận. Số buổi còn lại: ${result.customer.remainingSessions}.`,
     });
-
-    await newSession.save();
-
-    // Gửi tin nhắn Zalo OA bất đồng bộ qua Queue ngầm (Non-blocking response)
-    if (customer.phone) {
-      queueService.enqueue("ZALO_NOTIFICATION", {
-        phone: customer.phone,
-        message: `Kính chào ${customer.name}, buổi tập của quý khách với PT ${resolvedPtName} đã được ghi nhận thành công lúc ${new Date().toLocaleTimeString("vi-VN")}. Số buổi còn lại: ${isPayPerSession ? 'Thanh toán trực tiếp' : (targetPkg ? Math.max(0, targetPkg.remainingSessions - 1) : Math.max(0, customer.remainingSessions - 1))}. Cảm ơn quý khách!`,
-        type: "workout_deduction"
-      });
-    }
-
-    // Tạo giao dịch nếu thanh toán trực tiếp từng buổi
-    if (isPayPerSession) {
-      try {
-        await Transaction.create({
-          type: "pt_session",
-          amount: sessionPrice,
-          paymentMethod: paymentMethod || "Tiền mặt",
-          customer: customer._id,
-          customerName: customer.name,
-          workoutSession: newSession._id,
-          status: "success",
-          staff: req.user ? req.user._id : undefined,
-        });
-      } catch (txnErr) {
-        console.error("Lỗi tạo giao dịch pt_session:", txnErr);
-      }
-    }
-
-    // Tự động tạo bản ghi hoa hồng PT nếu có ptId
-    if (resolvedPtId) {
-      try {
-        const now = new Date();
-        const commissionRate = setting?.ptCommissionRate || 10;
-        const commissionAmount = sessionPrice * (commissionRate / 100);
-
-        await Commission.create({
-          type: "pt",
-          staff: resolvedPtId,
-          amount: commissionAmount,
-          rate: commissionRate,
-          baseAmount: sessionPrice,
-          workoutSession: newSession._id,
-          customer: customer._id,
-          month: now.getMonth() + 1,
-          year: now.getFullYear(),
-        });
-      } catch (commErr) {
-        console.error("Lỗi tạo bản ghi hoa hồng PT:", commErr);
-        // Không block việc trừ buổi — hoa hồng có thể tính lại sau
-      }
-    }
-
-    // Deduct from target package or customer
-    if (!isPayPerSession) {
-      if (targetPkg) {
-        targetPkg.remainingSessions = Math.max(0, targetPkg.remainingSessions - 1);
-        await targetPkg.save();
-      } else {
-        customer.remainingSessions = Math.max(0, customer.remainingSessions - 1);
-        await customer.save();
-      }
-      await syncCustomerFields(customer._id);
-      customer = await Customer.findById(customer._id);
-    }
-
-    // Populate PT info trước khi trả response
-    await newSession.populate("pt", "fullName username role");
-    await newSession.populate("confirmedBy", "fullName username role");
-
-    res.status(201).json({
-      message: "Trừ buổi tập thành công",
-      session: newSession,
-      remainingSessions: customer.remainingSessions
-    });
+    res.status(201).json({ message: "Trừ buổi tập thành công", session: result.workout, remainingSessions: result.customer.remainingSessions });
   } catch (error) {
-    console.error("Lỗi khi trừ buổi tập:", error);
-    res.status(500).json({ message: "Lỗi Server" });
+    res.status(error.statusCode || (error.code === 11000 ? 409 : 500)).json({ code: error.code, message: error.message });
   }
 };
 
-// Delete a session (Only Admin)
 exports.deleteSession = async (req, res) => {
   try {
-    const { id } = req.params; // Workout session ID
-    const session = await WorkoutSession.findById(id);
-
-    if (!session) {
-      return res.status(404).json({ message: "Không tìm thấy buổi tập" });
-    }
-
-    // Kiểm tra kỳ hoa hồng PT đã bị khóa (approved hoặc paid) chưa
-    const CommissionPeriod = require("../models/CommissionPeriod");
-    const sessionMonth = new Date(session.date).getMonth() + 1;
-    const sessionYear = new Date(session.date).getFullYear();
-    const lockedPeriod = await CommissionPeriod.findOne({
-      month: sessionMonth,
-      year: sessionYear,
-      type: "pt",
-      status: { $in: ["approved", "paid"] }
-    });
-    if (lockedPeriod) {
-      return res.status(400).json({ message: "Kỳ thanh toán hoa hồng PT của buổi tập này đã được duyệt hoặc chi trả, không thể xóa." });
-    }
-
-    const customer = await Customer.findById(session.customer);
-    if (!customer) {
-      return res.status(404).json({ message: "Không tìm thấy khách hàng của buổi tập này" });
-    }
-
-    // Thu hồi hoa hồng liên quan (nếu có)
-    try {
-      await Commission.updateMany(
-        { workoutSession: id, status: "active" },
-        {
-          status: "revoked",
-          revokedReason: "Xóa buổi tập",
-          revokedAt: new Date(),
-          revokedBy: req.user._id,
-        }
-      );
-    } catch (commErr) {
-      console.error("Lỗi thu hồi hoa hồng:", commErr);
-    }
-
-    // Hủy bỏ giao dịch liên quan (nếu có) để loại bỏ khỏi doanh thu
-    try {
-      await Transaction.updateMany(
-        { workoutSession: id },
-        { status: "failed" }
-      );
-    } catch (txnErr) {
-      console.error("Lỗi hủy giao dịch pt_session:", txnErr);
-    }
-
-    // Xóa session
-    await session.deleteOne();
-
-    // Hoàn lại 1 buổi tập cho customer package nếu có
-    if (customer.activePackage) {
-      const activePkg = await CustomerPackage.findById(customer.activePackage);
-      if (activePkg) {
-        activePkg.remainingSessions += 1;
-        await activePkg.save();
-        await syncCustomerFields(customer._id);
-        customer.remainingSessions = activePkg.remainingSessions;
-      } else {
-        customer.remainingSessions += 1;
-        await customer.save();
-      }
-    } else {
-      customer.remainingSessions += 1;
-      await customer.save();
-    }
-
-    res.json({
-      message: "Xóa buổi tập thành công và đã hoàn lại 1 buổi",
-      remainingSessions: customer.remainingSessions
-    });
+    const result = await mutations.deleteSession({ models: modelsFor(req), id: req.params.id, actorId: req.user._id });
+    res.json({ message: result.refunded ? "Xóa buổi tập thành công và đã hoàn lại 1 buổi" : "Đã xóa buổi tập thanh toán trực tiếp", remainingSessions: result.customer.remainingSessions });
   } catch (error) {
-    console.error("Lỗi khi xóa buổi tập:", error);
-    res.status(500).json({ message: "Lỗi Server" });
+    res.status(error.statusCode || 500).json({ code: error.code, message: error.message });
   }
 };

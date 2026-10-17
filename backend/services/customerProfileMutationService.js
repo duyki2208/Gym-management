@@ -153,7 +153,7 @@ const applyPackageUpdates = (customerPackage, data) => {
 
 const syncTransaction = async ({ models, customer, customerPackage, actorId, session }) => {
   let transaction = await withSession(
-    models.Transaction.findOne({ customerPackage: customerPackage._id }),
+    models.Transaction.findOne({ customerPackage: customerPackage._id, type: "package_purchase" }),
     session
   );
   const paymentMethod = customerPackage.paymentStatus === "paid"
@@ -279,15 +279,38 @@ const updateCustomerProfile = async ({ models, packageId, data = {}, actorId }) 
         );
       }
 
+      const changed = (field) => data[field] !== undefined &&
+        String(data[field] ?? "") !== String(customerPackage[field] ?? "");
+      const financialChanged = ["price", "paidAmount", "paymentStatus"].some(changed);
+      const commissionChanged = ["price", "contractType", "assignedStaff"].some(changed);
+      if ((financialChanged || changed("contractType")) &&
+          ["upgrade", "transfer"].includes(customerPackage.contractType)) {
+        throw new CustomerProfileMutationError(
+          "Hợp đồng nâng cấp/chuyển nhượng cần điều chỉnh tài chính riêng, không sửa khoản thu trong hồ sơ.",
+          409, "CONTRACT_FINANCIAL_ADJUSTMENT_REQUIRED"
+        );
+      }
+      if (commissionChanged) {
+        const commissions = await withSession(models.Commission.find({ customerPackage: customerPackage._id }), session);
+        const periods = commissions.map(({ type, month, year }) => ({ type, month, year }));
+        if (periods.length && await withSession(models.CommissionPeriod.findOne({
+          status: { $in: ["approved", "paid"] }, $or: periods,
+        }), session)) {
+          throw new CustomerProfileMutationError("Kỳ hoa hồng đã khóa, không thể sửa dữ liệu liên quan.", 409, "COMMISSION_PERIOD_LOCKED");
+        }
+      }
+
       await validateAssignedStaff({ models, customerPackage, data, session });
       const normalizedData = { ...data, paidAmount: resolvePaidAmount(customerPackage, data) };
       applyCustomerUpdates(customer, normalizedData);
       applyPackageUpdates(customerPackage, normalizedData);
       await saveWithSession(customer, session);
       await saveWithSession(customerPackage, session);
-      await syncTransaction({ models, customer, customerPackage, actorId, session });
-      await syncCommissions({ models, customerPackage, data: normalizedData, actorId, session });
-      await syncInvoice({ models, customer, customerPackage, actorId, session });
+      if (financialChanged) {
+        await syncTransaction({ models, customer, customerPackage, actorId, session });
+        await syncInvoice({ models, customer, customerPackage, actorId, session });
+      }
+      if (commissionChanged) await syncCommissions({ models, customerPackage, data: normalizedData, actorId, session });
       await syncCustomerFields(customer._id, { session }, models);
       return { packageId: customerPackage._id };
     }

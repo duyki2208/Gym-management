@@ -67,7 +67,7 @@ const globalSearch = async (req, res) => {
         .lean();
     }
 
-    if (requestedCategories.includes('staff')) {
+    if (requestedCategories.includes('staff') && can(PERMISSIONS.STAFF_READ)) {
       searchPromises.staff = User.find({
         role: { $in: ['manager', 'pt', 'sale', 'reception', 'accountant', 'sm', 'pm', 'om'] },
         $or: [

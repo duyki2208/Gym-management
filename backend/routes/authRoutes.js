@@ -50,6 +50,6 @@ router.get("/branches", protect, async (req, res) => {
 });
 
 // POST /api/v1/auth/logout — Xóa Session của thiết bị hiện tại (cần protect để lấy req.user)
-router.post("/logout", protect, logoutUser);
+router.post("/logout", logoutUser);
 
 module.exports = router;

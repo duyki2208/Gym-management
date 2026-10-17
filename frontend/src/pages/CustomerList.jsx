@@ -21,6 +21,7 @@ import CustomerDetailModal from "../components/customer/CustomerDetailModal"; //
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
 import PageHeader from "../components/common/PageHeader";
+import { useAuth } from "../context/AuthContext";
 
 const getCustomerStatus = (startDate, endDate, status) => {
   if (status === "frozen") return { status: "frozen", label: "Bảo lưu" };
@@ -40,6 +41,12 @@ const getCustomerStatus = (startDate, endDate, status) => {
 };
 
 const CustomerList = () => {
+  const { hasPermission } = useAuth();
+  const canCreateCustomer = hasPermission("customer.create");
+  const canUpdateCustomer = hasPermission("customer.update");
+  const canDeleteCustomer = hasPermission("customer.delete");
+  const canExportCustomers = hasPermission("customer.export");
+  const canManageCustomers = canUpdateCustomer || canDeleteCustomer;
   const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -135,13 +142,6 @@ const CustomerList = () => {
     }
   }, [searchParams, setSearchParams]);
   
-  // Check Admin Role
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
-    setIsAdmin(user.role === "admin" || user.role === "accountant");
-  }, []);
-
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -305,15 +305,15 @@ const CustomerList = () => {
         icon={Users}
         actions={(
           <>
-          <button
+          {canExportCustomers && <button
             onClick={() => handleExportExcel()}
             disabled={isExporting}
             className="flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-border-light bg-surface-light px-4 text-sm font-semibold text-text-secondary-light transition-colors hover:border-primary disabled:opacity-50 dark:border-border-dark dark:bg-surface-dark dark:text-text-secondary-dark"
           >
             <Download size={16} />
             {isExporting ? "Đang xuất..." : "Xuất Excel"}
-          </button>
-          {isAdmin && (
+          </button>}
+          {canCreateCustomer && (
             <button
               onClick={() => { setSelectedCustomer(null); setShowEditModal(true); }}
               className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary-hover"
@@ -604,7 +604,7 @@ const CustomerList = () => {
               <th className="p-4 w-[15%]">Số điện thoại</th>
               <th className="p-4 pl-8 w-[20%]">Gói tập</th>
               <th className="p-4 w-[20%]">Trạng thái</th>
-              {isAdmin && <th className="p-4 text-right w-[15%]">Thao tác</th>}
+              {canManageCustomers && <th className="p-4 text-right w-[15%]">Thao tác</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark font-display">
@@ -666,10 +666,10 @@ const CustomerList = () => {
                         {st.label}
                       </span>
                     </td>
-                    {isAdmin && (
+                    {canManageCustomers && (
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
-                          <button
+                          {canUpdateCustomer && <button
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent opening detail modal
                               setSelectedCustomer(c);
@@ -679,8 +679,8 @@ const CustomerList = () => {
                             title="Sửa thông tin"
                           >
                             <Pencil size={18} />
-                          </button>
-                          <button
+                          </button>}
+                          {canDeleteCustomer && <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleDelete(c._id || c.id);
@@ -689,7 +689,7 @@ const CustomerList = () => {
                             title="Xóa khách hàng"
                           >
                              <Trash2 size={18} />
-                          </button>
+                          </button>}
                         </div>
                       </td>
                     )}
@@ -697,7 +697,7 @@ const CustomerList = () => {
                 );
               }) : (
                  <tr>
-                    <td colSpan={isAdmin ? 6 : 5} className="p-12 text-center text-gray-500">
+                    <td colSpan={canManageCustomers ? 6 : 5} className="p-12 text-center text-gray-500">
                         <div className="flex flex-col items-center gap-3">
                             <div className="bg-gray-100 p-4 rounded-full">
                                 <SearchX size={28} className="text-gray-400" />

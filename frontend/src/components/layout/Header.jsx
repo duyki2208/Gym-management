@@ -798,7 +798,7 @@ const Header = () => {
   const [isDark, toggleDark] = useDarkMode();
 
   return (
-    <header className="app-header sticky top-0 z-30 h-16 flex items-center shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 gap-3">
+    <header className="app-header sticky top-0 z-30 h-16 flex items-center shrink-0 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark px-4 gap-3">
       {/* ── CENTER / BREADCRUMB & SEARCH ── */}
       <div className="flex-1 flex items-center gap-4 min-w-0">
         <Breadcrumb />

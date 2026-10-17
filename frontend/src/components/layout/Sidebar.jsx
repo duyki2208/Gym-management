@@ -76,7 +76,7 @@ const menuStructure = [
         icon: UserCog,
         label: 'Nhân sự',
         children: [
-          { path: '/staff', icon: UserCog, label: 'Nhân viên', roles: ALL_ROLES },
+          { path: '/staff', icon: UserCog, label: 'Nhân viên', permission: 'staff.read' },
           { path: '/commissions', icon: Coins, label: 'Hoa hồng', permission: 'commission.read' },
         ],
       },

@@ -8,7 +8,7 @@ const KPITarget = require("../models/KPITarget");
 const CustomerPackage = require("../models/CustomerPackage");
 const WorkoutSession = require("../models/WorkoutSession");
 const {
-  startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, startOfMonth, endOfMonth
+  startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth
 } = require("date-fns");
 const { PERMISSIONS, userHasPermission } = require("../middleware/permissions");
 const { getVisibleTeams } = require("../services/teamTaskAccessService");
@@ -42,6 +42,27 @@ const buildDashboardTaskQuery = ({ date, role }) => {
     isCompleted: false,
     team: { $in: visibleTeams },
   };
+};
+
+const buildWeeklyRevenue = (weekStart, revenueByDate = []) => {
+  const dayNames = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
+
+  return dayNames.map((dayName, index) => {
+    const dayStart = new Date(weekStart.getTime() + index * 24 * 3600000);
+    const vnDate = new Date(dayStart.getTime() + 7 * 3600000);
+    const date = [
+      vnDate.getUTCFullYear(),
+      String(vnDate.getUTCMonth() + 1).padStart(2, "0"),
+      String(vnDate.getUTCDate()).padStart(2, "0"),
+    ].join("-");
+    const matchedRevenue = revenueByDate.find((item) => item._id === date);
+
+    return {
+      dayName,
+      date,
+      revenue: matchedRevenue ? matchedRevenue.revenue : 0,
+    };
+  });
 };
 
 const getStats = async (req, res) => {
@@ -703,17 +724,7 @@ const getStats = async (req, res) => {
     };
 
     // Map doanh thu tuần này
-    const allDaysInWeek = eachDayOfInterval({ start: thisWeekStart, end: thisWeekEnd });
-    const dayNames = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"];
-    const weeklyRevenue = allDaysInWeek.map((day, idx) => {
-      const formattedDate = format(day, "yyyy-MM-dd");
-      const found = weeklyRevenueAggregation.find(r => r._id === formattedDate);
-      return {
-        dayName: dayNames[idx] || format(day, "EEEE"),
-        date: formattedDate,
-        revenue: found ? found.revenue : 0
-      };
-    });
+    const weeklyRevenue = buildWeeklyRevenue(thisWeekStart, weeklyRevenueAggregation);
 
     // Tính toán giờ cao điểm hôm nay (Peak Hours)
     const hoursCount = new Array(24).fill(0);
@@ -723,8 +734,8 @@ const getStats = async (req, res) => {
       if (!isNaN(hour)) hoursCount[hour]++;
     });
 
-    const peakHours = hoursCount.slice(6, 22).map((count, i) => ({
-      hour: i + 6,
+    const peakHours = hoursCount.slice(5, 22).map((count, i) => ({
+      hour: i + 5,
       count,
     }));
 
@@ -767,4 +778,4 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getStats, resolveDashboardView, buildDashboardTaskQuery };
+module.exports = { getStats, resolveDashboardView, buildDashboardTaskQuery, buildWeeklyRevenue };

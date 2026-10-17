@@ -211,229 +211,24 @@ const previewClosureCompensation = async (req, res) => {
 // @desc    Tạo sự kiện đóng cửa và thực thi bù hạn gói tập
 // @route   POST /api/v1/closures
 // @access  Private (Admin, Manager)
-const createClosure = async (req, res) => {
+const closureMutations = require("../services/closureMutationService");
+const mongoose = require("mongoose");
+const closureModels = req => req.models || { Customer, CustomerPackage, ClosureEvent, connection: mongoose.connection };
+const mutateClosure = action => async (req, res) => {
   try {
-    const { title, startDate, endDate, reason, type } = req.body;
-    const branchCode = req.branchCode || req.user?.activeBranch || "HN01";
-
-    if (!title || !startDate || !endDate || !reason) {
-      return res.status(400).json({
-        success: false,
-        message: "Vui lòng nhập đầy đủ: Tiêu đề, Ngày bắt đầu, Ngày kết thúc và Lý do",
-      });
-    }
-
-    const cStart = toStartOfDay(startDate);
-    const cEnd = toEndOfDay(endDate);
-
-    if (cEnd < cStart) {
-      return res.status(400).json({
-        success: false,
-        message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
-      });
-    }
-
-    // 1. Kiểm tra trùng khoảng ngày với sự kiện active khác cùng branch
-    const existingConflict = await ClosureEvent.findOne({
-      branchCode,
-      status: "active",
-      startDate: { $lte: cEnd },
-      endDate: { $gte: cStart },
+    const closure = await closureMutations[action]({
+      models: closureModels(req), data: req.body, id: req.params.id,
+      branchCode: req.branchCode || req.user?.activeBranch || "HN01", actorId: req.user?._id,
     });
-
-    if (existingConflict) {
-      return res.status(400).json({
-        success: false,
-        message: `Khoảng thời gian này bị trùng với sự kiện đóng cửa đang hoạt động: "${existingConflict.title}" (${format(new Date(existingConflict.startDate), "dd/MM/yyyy")} - ${format(new Date(existingConflict.endDate), "dd/MM/yyyy")})`,
-      });
-    }
-
-    // 2. Tạo bản ghi ClosureEvent
-    const newClosure = new ClosureEvent({
-      branchCode,
-      title: title.trim(),
-      startDate: cStart,
-      endDate: cEnd,
-      reason: reason.trim(),
-      type: type === "emergency" ? "emergency" : "planned",
-      status: "active",
-      createdBy: req.user?._id,
-    });
-    await newClosure.save();
-
-    // 3. Thực thi bù hạn các CustomerPackage thỏa điều kiện
-    const activePackages = await CustomerPackage.find({
-      status: "active",
-      isDeleted: { $ne: true },
-      startDate: { $lte: cEnd },
-      endDate: { $gte: cStart },
-    });
-
-    let totalPackagesAffected = 0;
-    let totalDaysAdded = 0;
-    const uniqueCustomerIds = new Set();
-
-    for (const pkg of activePackages) {
-      // Chống double-apply: nếu gói này đã áp dụng closureId này thì bỏ qua
-      const alreadyApplied = (pkg.appliedClosures || []).some(
-        (c) => c.closureEventId.toString() === newClosure._id.toString()
-      );
-      if (alreadyApplied) continue;
-
-      const daysToAdd = calculateOverlapDays(pkg.startDate, pkg.endDate, cStart, cEnd);
-      if (daysToAdd > 0) {
-        const prevEnd = new Date(pkg.endDate);
-        const newEnd = new Date(prevEnd.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
-
-        pkg.endDate = newEnd;
-        if (!pkg.appliedClosures) pkg.appliedClosures = [];
-        pkg.appliedClosures.push({
-          closureEventId: newClosure._id,
-          daysAdded: daysToAdd,
-          previousEndDate: prevEnd,
-          newEndDate: newEnd,
-          appliedAt: new Date(),
-        });
-
-        await pkg.save();
-
-        totalPackagesAffected++;
-        totalDaysAdded += daysToAdd;
-        if (pkg.customer) {
-          uniqueCustomerIds.add(pkg.customer.toString());
-        }
-      }
-    }
-
-    // 4. Cập nhật thống kê vào ClosureEvent
-    newClosure.compensationStats = {
-      totalPackagesAffected,
-      totalCustomersAffected: uniqueCustomerIds.size,
-      totalDaysAdded,
-      executedAt: new Date(),
-    };
-    await newClosure.save();
-
-    // 5. Ghi AuditLog
-    try {
-      await AuditLog.create({
-        user: req.user?._id,
-        action: `Tạo sự kiện đóng cửa & Bù hạn: ${newClosure.title} (${totalPackagesAffected} gói, +${totalDaysAdded} ngày)`,
-        target: newClosure._id,
-        targetModel: "ClosureEvent",
-        details: {
-          title: newClosure.title,
-          branchCode,
-          startDate: cStart,
-          endDate: cEnd,
-          totalPackagesAffected,
-          totalDaysAdded,
-        },
-        ipAddress: req.ip,
-      });
-    } catch (auditErr) {
-      console.warn("Lỗi ghi AuditLog tạo closure:", auditErr.message);
-    }
-
-    return res.status(201).json({
-      success: true,
-      data: newClosure,
-      message: `Tạo sự kiện đóng cửa thành công. Đã tự động bù hạn cho ${totalPackagesAffected} hợp đồng (tổng cộng +${totalDaysAdded} ngày).`,
-    });
+    await AuditLog.create({ user: req.user?._id, action: `${action}: ${closure.title}`, target: closure._id, targetModel: "ClosureEvent", ipAddress: req.ip }).catch(error => console.warn("Lỗi ghi audit closure:", error.message));
+    res.status(action === "createClosure" ? 201 : 200).json({ success: true, data: closure,
+      message: action === "createClosure" ? "Đã bù hạn và đồng bộ hồ sơ hội viên." : "Đã hoàn tác số ngày bù của sự kiện." });
   } catch (error) {
-    console.error("Lỗi createClosure:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Lỗi máy chủ khi tạo sự kiện đóng cửa",
-    });
+    res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message });
   }
 };
-
-// @desc    Hoàn tác (Reverse) bù hạn khi sự kiện bị hủy
-// @route   POST /api/v1/closures/:id/reverse
-// @access  Private (Admin, Manager)
-const reverseClosure = async (req, res) => {
-  try {
-    const closure = await ClosureEvent.findById(req.params.id);
-    if (!closure) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy sự kiện đóng cửa",
-      });
-    }
-
-    if (closure.status === "reversed") {
-      return res.status(400).json({
-        success: false,
-        message: "Sự kiện đóng cửa này đã được hoàn tác trước đó rồi",
-      });
-    }
-
-    // Tìm tất cả gói tập đã nhận bù hạn từ closure này
-    const affectedPackages = await CustomerPackage.find({
-      "appliedClosures.closureEventId": closure._id,
-    });
-
-    let reversedCount = 0;
-
-    for (const pkg of affectedPackages) {
-      const entry = (pkg.appliedClosures || []).find(
-        (c) => c.closureEventId.toString() === closure._id.toString()
-      );
-
-      if (entry) {
-        // Khôi phục chính xác về previousEndDate để tránh bất kỳ sai lệch nào
-        if (entry.previousEndDate) {
-          pkg.endDate = new Date(entry.previousEndDate);
-        } else if (entry.daysAdded) {
-          pkg.endDate = new Date(pkg.endDate.getTime() - entry.daysAdded * 24 * 60 * 60 * 1000);
-        }
-
-        // Gỡ bỏ closure khỏi mảng appliedClosures
-        pkg.appliedClosures = pkg.appliedClosures.filter(
-          (c) => c.closureEventId.toString() !== closure._id.toString()
-        );
-
-        await pkg.save();
-        reversedCount++;
-      }
-    }
-
-    closure.status = "reversed";
-    closure.compensationStats.reversedAt = new Date();
-    closure.compensationStats.reversedBy = req.user?._id;
-    await closure.save();
-
-    // Ghi AuditLog
-    try {
-      await AuditLog.create({
-        user: req.user?._id,
-        action: `Hoàn tác (Reverse) bù hạn sự kiện đóng cửa: ${closure.title} (${reversedCount} gói)`,
-        target: closure._id,
-        targetModel: "ClosureEvent",
-        details: {
-          title: closure.title,
-          reversedPackagesCount: reversedCount,
-        },
-        ipAddress: req.ip,
-      });
-    } catch (auditErr) {
-      console.warn("Lỗi ghi AuditLog reverse closure:", auditErr.message);
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: closure,
-      message: `Đã hoàn tác bù hạn thành công cho ${reversedCount} hợp đồng. Ngày hết hạn đã được khôi phục về trạng thái ban đầu.`,
-    });
-  } catch (error) {
-    console.error("Lỗi reverseClosure:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Lỗi máy chủ khi hoàn tác bù hạn",
-    });
-  }
-};
+const createClosure = mutateClosure("createClosure");
+const reverseClosure = mutateClosure("reverseClosure");
 
 // @desc    Gửi mail thông báo đóng cửa chi nhánh (soạn tự do kiểu Gmail + đính kèm file)
 // @route   POST /api/v1/closures/:id/send-email

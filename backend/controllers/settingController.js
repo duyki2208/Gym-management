@@ -98,6 +98,32 @@ const updateSettings = async (req, res) => {
       reminderTemplates, rolePermissions,
     } = req.body;
 
+    const sensitiveFields = [
+      facilityKey,
+      vietqrAccountNo,
+      vietqrAccountName,
+      sepayApiKey,
+      cameraRtspUrl,
+    ];
+    if (
+      sensitiveFields.some((value) => value !== undefined) &&
+      !(await userHasPermission(req, PERMISSIONS.SETTINGS_SENSITIVE_UPDATE))
+    ) {
+      return res.status(403).json({
+        code: "PERMISSION_DENIED",
+        message: "Bạn không có quyền cập nhật cấu hình nhạy cảm.",
+      });
+    }
+    if (
+      rolePermissions !== undefined &&
+      !(await userHasPermission(req, PERMISSIONS.SETTINGS_PERMISSIONS_UPDATE))
+    ) {
+      return res.status(403).json({
+        code: "PERMISSION_DENIED",
+        message: "Bạn không có quyền thay đổi ma trận phân quyền.",
+      });
+    }
+
     let normalizedFacilityKey;
     if (facilityKey !== undefined) {
       try {

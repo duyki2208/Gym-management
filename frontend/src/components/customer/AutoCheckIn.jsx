@@ -17,6 +17,7 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
   const lastCheckInRef = useRef({ time: 0, id: null }); // Chống spam check-in
+  const requestPendingRef = useRef(false);
 
   const [cameraError, setCameraError] = useState('');
   const [statusText, setStatusText] = useState('Đang khởi động camera...');
@@ -58,7 +59,7 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
   // Chụp frame và gửi lên server
   // ──────────────────────────────────────────────
   const captureAndRecognize = useCallback(async () => {
-    if (!videoRef.current || videoRef.current.paused || isCheckingIn) return;
+    if (!videoRef.current || videoRef.current.paused || isCheckingIn || requestPendingRef.current) return;
     if (videoRef.current.videoWidth === 0) return;
 
     // Vẽ frame hiện tại lên canvas ẩn
@@ -67,8 +68,9 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
     canvas.height = videoRef.current.videoHeight;
     canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
 
+    requestPendingRef.current = true;
     canvas.toBlob(async (blob) => {
-      if (!blob) return;
+      if (!blob) { requestPendingRef.current = false; return; }
       try {
         const formData = new FormData();
         formData.append('image', blob, 'frame.jpg');
@@ -79,6 +81,12 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
         });
 
         const data = res.data;
+        if (data.duplicate) return;
+        if (data.rejected) {
+          setStatusText(data.message || "Không thể check-in");
+          setStatusColor('red');
+          return;
+        }
 
         if (!data.matched) {
           // Không nhận diện được — reset trạng thái hiện tại
@@ -128,6 +136,8 @@ const AutoCheckIn = ({ onCheckIn, isCheckingIn }) => {
           setStatusColor('red');
         }
         // Lỗi mạng thông thường — im lặng, thử lại sau
+      } finally {
+        requestPendingRef.current = false;
       }
     }, 'image/jpeg', 0.85);
   }, [isCheckingIn, onCheckIn]);

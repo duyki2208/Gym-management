@@ -1,0 +1,109 @@
+[
+  {
+    "name": "Empty permission override restores defaults",
+    "reproduced": true,
+    "evidence": {
+      "configured": [],
+      "effectivePermissionCount": 17,
+      "paymentConfirm": true
+    }
+  },
+  {
+    "name": "Negative checkout quantity increases stock",
+    "reproduced": true,
+    "evidence": {
+      "status": 201,
+      "stockBefore": 10,
+      "stockAfter": 12,
+      "totalAmount": -200
+    }
+  },
+  {
+    "name": "Failed standalone checkout leaves stock deducted",
+    "reproduced": true,
+    "evidence": {
+      "status": 404,
+      "stockBefore": 10,
+      "stockAfter": 8
+    }
+  },
+  {
+    "name": "POS uses contract ID and silently creates walk-in order",
+    "reproduced": true,
+    "evidence": {
+      "status": 201,
+      "isWalkIn": true,
+      "customer": null
+    }
+  },
+  {
+    "name": "Deleting pay-per-session adds a prepaid session",
+    "reproduced": true,
+    "evidence": {
+      "sessionsBefore": 5,
+      "sessionsAfter": 6
+    }
+  },
+  {
+    "name": "Frozen package still permits session deduction",
+    "reproduced": true,
+    "evidence": {
+      "packageStatus": "frozen",
+      "httpStatus": 201,
+      "remainingSessions": 4
+    }
+  },
+  {
+    "name": "Closure projection stale and reversal overwrites later extension",
+    "reproduced": true,
+    "evidence": {
+      "customerAfterCompensation": "2027-01-01T00:00:00.000Z",
+      "contractAfterCompensation": "2027-01-03T00:00:00.000Z",
+      "laterExtensionDaysLost": 10,
+      "contractAfterReversal": "2027-01-01T00:00:00.000Z"
+    }
+  },
+  {
+    "name": "Profile edit changes upgrade delta revenue to full price",
+    "reproduced": true,
+    "evidence": {
+      "actualUpgradePayment": 200,
+      "transactionAfterNameEdit": 1000
+    }
+  },
+  {
+    "name": "Profile edit mutates commission in a paid period",
+    "reproduced": true,
+    "evidence": {
+      "periodStatus": "paid",
+      "commissionBefore": 100,
+      "commissionAfter": 200
+    }
+  },
+  {
+    "name": "Staff update returns password field",
+    "reproduced": true,
+    "evidence": {
+      "status": 200,
+      "passwordFieldExposed": true
+    }
+  },
+  {
+    "name": "Switch branch is undone by refresh token",
+    "reproduced": true,
+    "evidence": {
+      "switchedBranch": "HCM01",
+      "refreshedBranch": "HN01",
+      "switchRotatedRefreshCookie": false
+    }
+  },
+  {
+    "name": "Branch transfer accepts another customers package",
+    "reproduced": true,
+    "evidence": {
+      "status": 200,
+      "transferredPackageBelongsTo": "B",
+      "targetCustomerCopiedFrom": "A"
+    }
+  }
+]

@@ -271,14 +271,28 @@ const recognizeFace = async (req, res) => {
     const CheckIn = req.models.CheckIn;
     const Customer = req.models.Customer;
 
+    const now = new Date();
+    const claimedCustomer = await Customer.findOneAndUpdate({
+      _id: result.member_id,
+      $or: [{ lastAutoCheckInAt: { $exists: false } }, { lastAutoCheckInAt: { $lte: new Date(now.getTime() - 10000) } }],
+    }, { $set: { lastAutoCheckInAt: now } }, { returnDocument: "after" });
+    if (!claimedCustomer) {
+      return res.json({ success: true, matched: true, duplicate: true, confidence: result.confidence,
+        member: { _id: result.member_id, ...meta } });
+    }
     const checkin = new CheckIn({
       customerId: result.member_id,
       customerName: meta.name || "",
       customerCode: meta.code || "",
       packageType: meta.packageType || "",
-      time: new Date(),
+      time: now,
     });
-    await checkin.save();
+    try {
+      await checkin.save();
+    } catch (error) {
+      await Customer.updateOne({ _id: result.member_id, lastAutoCheckInAt: now }, { $unset: { lastAutoCheckInAt: 1 } });
+      throw error;
+    }
 
     const matchedCustomer = await Customer.findById(result.member_id).select("phone name");
     if (matchedCustomer && matchedCustomer.phone) {

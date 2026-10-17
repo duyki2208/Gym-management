@@ -12,13 +12,26 @@ jest.setTimeout(60000);
 
 // Khởi chạy cơ sở dữ liệu giả lập trong RAM trước khi chạy các file test
 beforeAll(async () => {
+  const useReplicaSet = process.env.TEST_MONGO_REPLICA_SET === "true";
   mongoServer = await MongoMemoryServer.create({
-    instance: { launchTimeout: 60000 },
+    instance: { launchTimeout: 60000, ...(useReplicaSet ? { replSet: "reviewTests" } : {}) },
   });
   // HN01 resolves to the database name from MONGO_URI. Keeping the default
   // mongoose connection on the same database makes legacy model proxies and
   // request-scoped branch models observe the same test data.
-  const mongoUri = mongoServer.getUri("gym_management");
+  let mongoUri = mongoServer.getUri("gym_management");
+  if (useReplicaSet) {
+    // Use the same driver as Mongoose for replica initialization and application queries.
+    const bootstrap = await mongoose.createConnection(`${mongoUri}?directConnection=true`).asPromise();
+    try {
+      await bootstrap.db.admin().command({ replSetInitiate: {
+        _id: "reviewTests", members: [{ _id: 0, host: new URL(mongoUri).host }],
+      } });
+    } finally {
+      await bootstrap.close();
+    }
+    mongoUri += "?replicaSet=reviewTests";
+  }
   
   // Gán URI giả lập vào environment để connectDB đọc
   process.env.MONGO_URI = mongoUri;

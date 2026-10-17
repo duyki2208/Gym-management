@@ -40,6 +40,12 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  useEffect(() => {
+    const updateSession = (event) => setUser(event.detail || authService.getCurrentUser());
+    window.addEventListener("auth-session-updated", updateSession);
+    return () => window.removeEventListener("auth-session-updated", updateSession);
+  }, []);
+
   const login = async (facilityKey, username, password) => {
     try {
       const userData = await authService.login(facilityKey, username, password);

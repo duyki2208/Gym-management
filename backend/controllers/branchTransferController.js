@@ -65,9 +65,9 @@ const transferCustomerBranch = async (req, res) => {
 
     let sourcePackage = null;
     if (packageId) {
-      sourcePackage = await sourceModels.CustomerPackage.findById(packageId);
+      sourcePackage = await sourceModels.CustomerPackage.findOne({ _id: packageId, customer: sourceCustomer._id });
     } else if (sourceCustomer.activePackage) {
-      sourcePackage = await sourceModels.CustomerPackage.findById(sourceCustomer.activePackage);
+      sourcePackage = await sourceModels.CustomerPackage.findOne({ _id: sourceCustomer.activePackage, customer: sourceCustomer._id });
     }
 
     if (!sourcePackage) {

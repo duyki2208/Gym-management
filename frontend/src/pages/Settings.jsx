@@ -109,13 +109,18 @@ const SwitchToggle = ({ label, description, checked, onChange, disabled }) => {
   { id: "customer.read", label: "Xem danh sách hội viên", group: "Hội viên" },
   { id: "customer.check_existing", label: "Kiểm tra hội viên đã tồn tại", group: "Hội viên" },
   { id: "customer.export", label: "Xuất danh sách hội viên", group: "Hội viên" },
+  { id: "customer.create", label: "Tạo hội viên", group: "Hội viên" },
+  { id: "customer.update", label: "Cập nhật hội viên", group: "Hội viên" },
+  { id: "customer.delete", label: "Xóa hội viên", group: "Hội viên" },
   { id: "contract.manage", label: "Bảo lưu, gia hạn và nâng cấp hợp đồng", group: "Hợp đồng" },
   { id: "contract.transfer", label: "Chuyển nhượng hợp đồng", group: "Hợp đồng" },
+  { id: "contract.expiry_adjust", label: "Điều chỉnh hạn hợp đồng", group: "Hợp đồng" },
   { id: "contract.history.read", label: "Xem lịch sử điều chỉnh hợp đồng", group: "Hợp đồng" },
   { id: "customer.face_enroll", label: "Đăng ký khuôn mặt hội viên", group: "Vận hành" },
     { id: "checkin.use", label: "Thực hiện và xem lịch sử check-in", group: "Vận hành" },
     { id: "workout.deduct", label: "Trừ buổi tập PT", group: "Vận hành" },
     { id: "workout.read_all", label: "Xem buổi tập của mọi PT", group: "Vận hành" },
+    { id: "workout.delete", label: "Xóa buổi tập", group: "Vận hành" },
   { id: "package.manage", label: "Thêm, sửa, xóa gói tập", group: "Hợp đồng" },
   { id: "product.manage", label: "Thêm, sửa, xóa sản phẩm", group: "Kho & POS" },
   { id: "inventory.read", label: "Xem phiếu nhập kho", group: "Kho & POS" },
@@ -126,13 +131,18 @@ const SwitchToggle = ({ label, description, checked, onChange, disabled }) => {
     { id: "commission.read", label: "Xem hoa hồng", group: "Tài chính" },
     { id: "commission.read_all", label: "Xem hoa hồng của nhân viên khác", group: "Tài chính" },
   { id: "commission.manage", label: "Duyệt và thanh toán hoa hồng", group: "Tài chính" },
+  { id: "commission.revoke", label: "Thu hồi hoa hồng", group: "Tài chính" },
+  { id: "pt.dispute", label: "Gửi khiếu nại hoa hồng PT", group: "Tài chính" },
   { id: "notification.broadcast", label: "Gửi thông báo hàng loạt", group: "Truyền thông" },
   { id: "notification.read", label: "Xem bảng thông báo", group: "Truyền thông" },
   { id: "team_task.read", label: "Xem công việc ca trực", group: "Vận hành" },
   { id: "team_task.complete", label: "Hoàn tất công việc ca trực", group: "Vận hành" },
   { id: "team_task.manage", label: "Tạo, sửa, xóa công việc ca trực", group: "Vận hành" },
   { id: "staff.schedule", label: "Cập nhật lịch làm việc", group: "Nhân sự" },
+  { id: "staff.read", label: "Xem danh sách nhân viên", group: "Nhân sự" },
+  { id: "staff.create", label: "Tạo tài khoản nhân viên", group: "Nhân sự" },
   { id: "staff.update", label: "Cập nhật thông tin nhân viên", group: "Nhân sự" },
+  { id: "staff.delete", label: "Xóa tài khoản nhân viên", group: "Nhân sự" },
     { id: "kpi.manage", label: "Cập nhật chỉ tiêu KPI", group: "Nhân sự" },
     { id: "kpi.read_all", label: "Xem KPI của nhân viên khác", group: "Nhân sự" },
     { id: "lead.create", label: "Tạo khách hàng tiềm năng", group: "Khách tiềm năng" },
@@ -144,6 +154,10 @@ const SwitchToggle = ({ label, description, checked, onChange, disabled }) => {
     { id: "report.read_all", label: "Xem báo cáo tổng hợp toàn cơ sở", group: "Báo cáo" },
     { id: "audit.read", label: "Xem nhật ký hệ thống", group: "Hệ thống" },
     { id: "settings.read", label: "Xem cài đặt hệ thống", group: "Hệ thống" },
+    { id: "settings.update", label: "Cập nhật cài đặt hệ thống", group: "Hệ thống" },
+    { id: "settings.sensitive.read", label: "Xem cấu hình nhạy cảm", group: "Hệ thống" },
+    { id: "settings.sensitive.update", label: "Cập nhật cấu hình nhạy cảm", group: "Hệ thống" },
+    { id: "settings.permissions.update", label: "Thay đổi ma trận phân quyền", group: "Hệ thống" },
   { id: "closure.manage", label: "Quản lý đóng cửa và bù hạn", group: "Hệ thống" },
   { id: "branch_transfer.create", label: "Chuyển hội viên sang chi nhánh khác", group: "Hệ thống" },
   { id: "branch_transfer.read", label: "Xem yêu cầu chuyển chi nhánh", group: "Hệ thống" },
@@ -156,7 +170,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       "customer.face_enroll", "checkin.use", "workout.deduct", "workout.read_all", "package.manage",
     "product.manage", "inventory.read", "inventory.import",
       "payment.confirm", "payment.cancel", "commission.read", "commission.read_all",
-      "notification.broadcast", "staff.schedule", "staff.update",
+      "notification.broadcast", "staff.schedule", "staff.read", "staff.update",
       "notification.read", "team_task.read", "team_task.complete", "team_task.manage",
       "kpi.manage", "kpi.read_all", "lead.create", "lead.read",
       "lead.read_all", "lead.update", "lead.convert", "lead.delete",
@@ -168,29 +182,29 @@ const DEFAULT_ROLE_PERMISSIONS = {
     "inventory.import", "payment.confirm", "payment.cancel",
       "commission.read", "commission.read_all", "commission.manage", "notification.broadcast",
       "notification.read", "team_task.read", "team_task.complete", "team_task.manage",
-      "staff.schedule", "workout.read_all", "kpi.read_all", "lead.create", "lead.read",
+      "staff.schedule", "staff.read", "workout.read_all", "kpi.read_all", "lead.create", "lead.read",
       "lead.read_all", "lead.update", "lead.convert", "lead.delete",
       "pos.read_all", "report.read_all", "settings.read",
   ],
   sale: [
       "customer.read", "customer.check_existing", "customer.export",
-      "contract.manage", "checkin.use", "commission.read", "staff.schedule",
+      "contract.manage", "checkin.use", "commission.read", "staff.schedule", "staff.read",
       "lead.create", "lead.read", "lead.update", "lead.convert",
       "notification.read", "team_task.read", "team_task.complete",
   ],
-  pt: ["customer.read", "customer.export", "checkin.use", "commission.read", "pt.dispute", "staff.schedule", "notification.read", "team_task.read", "team_task.complete"],
+  pt: ["customer.read", "customer.export", "checkin.use", "commission.read", "pt.dispute", "staff.schedule", "staff.read", "notification.read", "team_task.read", "team_task.complete"],
   reception: [
     "customer.read", "customer.check_existing", "customer.export",
     "contract.manage", "customer.face_enroll", "checkin.use",
     "workout.deduct", "inventory.read", "inventory.import",
-      "payment.confirm", "payment.cancel", "staff.schedule",
+      "payment.confirm", "payment.cancel", "staff.schedule", "staff.read",
       "branch_transfer.create", "pos.read_all",
       "notification.read", "team_task.read", "team_task.complete",
   ],
 };
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const currentBranchCode = user?.activeBranch || user?.branchCode || "HN01";
 
   const [activeTab, setActiveTab] = useState("general");
@@ -198,7 +212,10 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
 
-  const isAdmin = user?.role === "admin" || user?.role === "accountant";
+  const canUpdateSettings = hasPermission("settings.update");
+  const canReadSensitiveSettings = hasPermission("settings.sensitive.read");
+  const canUpdateSensitiveSettings = hasPermission("settings.sensitive.update");
+  const canUpdatePermissions = hasPermission("settings.permissions.update");
 
   // === 1. THÔNG TIN CHUNG & CHỈ TIÊU DOANH THU ===
   const [gymName, setGymName] = useState("Gym Admin Fitness");
@@ -321,7 +338,7 @@ const Settings = () => {
         }
         // Tab 5
         if (d.rolePermissions) {
-          const isLegacyPolicy = (d.rolePermissionsVersion || 1) < 3;
+          const isLegacyPolicy = (d.rolePermissionsVersion || 1) < 4;
           const migratedPermissions = Object.fromEntries(
             Object.entries(DEFAULT_ROLE_PERMISSIONS).map(([role, defaults]) => {
               const configured = d.rolePermissions?.[role];
@@ -347,7 +364,7 @@ const Settings = () => {
         setFaceMatchThreshold(d.faceMatchThreshold ?? 0.6);
         setCameraRtspUrl(d.cameraRtspUrl || "");
       }
-      if (user?.role === "admin") {
+      if (canReadSensitiveSettings) {
         const facilityRes = await settingsService.getFacilityKey(currentBranchCode);
         setFacilityKey(facilityRes?.data?.facilityKey || "");
       }
@@ -357,7 +374,7 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentBranchCode, user?.role]);
+  }, [canReadSensitiveSettings, currentBranchCode]);
 
   useEffect(() => {
     loadSettings();
@@ -365,7 +382,7 @@ const Settings = () => {
 
   // Lưu cài đặt
   const handleSave = async () => {
-    if (!isAdmin) {
+    if (!canUpdateSettings) {
       toast.error("Bạn không có quyền thay đổi cài đặt hệ thống!");
       return;
     }
@@ -373,18 +390,16 @@ const Settings = () => {
       toast.error("Tên phòng tập không được để trống!");
       return;
     }
-    if (!/^[A-Za-z0-9][A-Za-z0-9-]{2,63}$/.test(facilityKey.trim())) {
+    if (canUpdateSensitiveSettings && !/^[A-Za-z0-9][A-Za-z0-9-]{2,63}$/.test(facilityKey.trim())) {
       toast.error("Mã cơ sở phải dài 3-64 ký tự và chỉ gồm chữ, số hoặc dấu gạch ngang!");
       return;
     }
 
     try {
       setSaving(true);
-      const res = await settingsService.update(
-        {
+      const updatePayload = {
           gymName,
           address,
-          facilityKey: facilityKey.trim(),
           targetRevenue: Number(targetRevenue),
           ptSessionPrice: Number(ptSessionPrice),
           ptCommissionRate: Number(ptCommissionRate),
@@ -403,16 +418,24 @@ const Settings = () => {
           sendInactiveReminder,
           inactiveDays: Number(inactiveDays),
           reminderTemplates,
-          rolePermissions,
           vietqrBank,
-          vietqrAccountNo,
-          vietqrAccountName,
           posTerminalId,
-          sepayApiKey,
           faceAiServerUrl,
           faceMatchThreshold: Number(faceMatchThreshold),
+        };
+      if (canUpdateSensitiveSettings) {
+        Object.assign(updatePayload, {
+          facilityKey: facilityKey.trim(),
+          vietqrAccountNo,
+          vietqrAccountName,
+          sepayApiKey,
           cameraRtspUrl,
-        },
+        });
+      }
+      if (canUpdatePermissions) updatePayload.rolePermissions = rolePermissions;
+
+      const res = await settingsService.update(
+        updatePayload,
         currentBranchCode
       );
 
@@ -433,7 +456,7 @@ const Settings = () => {
 
   // Helper toggle permission cho role
   const handleTogglePermission = (role, permId) => {
-    if (!isAdmin) return;
+    if (!canUpdatePermissions) return;
     setRolePermissions((prev) => {
       const currentList = prev[role] || [];
       const hasPerm = currentList.includes(permId);
@@ -449,6 +472,7 @@ const Settings = () => {
 
   // Khôi phục quyền mặc định
   const handleResetPermissions = () => {
+    if (!canUpdatePermissions) return;
     setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
     toast.success("Đã khôi phục ma trận phân quyền mặc định. Nhớ bấm 'Lưu cấu hình' để ghi nhớ.");
   };
@@ -575,7 +599,7 @@ const Settings = () => {
         title="Cài đặt hệ thống"
         description="Cấu hình vận hành, mẫu nhắc nhở và phân quyền áp dụng cho chi nhánh hiện tại."
         icon={ShieldCheck}
-        actions={(
+        actions={canUpdateSettings && (
         <button
           onClick={handleSave}
           disabled={saving || loading}
@@ -679,7 +703,7 @@ const Settings = () => {
                         spellCheck="false"
                         minLength={3}
                         maxLength={64}
-                        disabled={user?.role !== "admin"}
+                        disabled={!canReadSensitiveSettings || !canUpdateSensitiveSettings}
                       />
                       <p className="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">
                         Người dùng phải nhập đúng mã này cùng tên đăng nhập và mật khẩu.
@@ -1390,7 +1414,8 @@ const Settings = () => {
                     <button
                       type="button"
                       onClick={handleResetPermissions}
-                      className="px-3.5 py-1.5 rounded-xl border border-border-light dark:border-border-dark text-xs font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light flex items-center gap-1.5 self-start sm:self-auto"
+                      disabled={!canUpdatePermissions}
+                      className="px-3.5 py-1.5 rounded-xl border border-border-light dark:border-border-dark text-xs font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light flex items-center gap-1.5 self-start sm:self-auto disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <RotateCcw size={13} /> Khôi phục mặc định
                     </button>
@@ -1435,7 +1460,8 @@ const Settings = () => {
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => handleTogglePermission(role, perm.id)}
-                                    className="w-4 h-4 accent-primary rounded cursor-pointer transition-transform hover:scale-110"
+                                    disabled={!canUpdatePermissions}
+                                    className="w-4 h-4 accent-primary rounded cursor-pointer transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
                                     title={`Bật/tắt quyền ${perm.label} cho vai trò ${role}`}
                                   />
                                 </td>

@@ -197,11 +197,15 @@ python -m venv venv
 venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS/Linux
 
-pip install -r requirements.txt
-gunicorn app:app --bind 0.0.0.0:8000
+python -m pip install -r requirements.txt
+# Set INTERNAL_SERVICE_SECRET to the same value as backend (at least 32 characters).
+# Linux/macOS:
+gunicorn app:app --bind 0.0.0.0:5001 --timeout 120
 ```
 
-> On Windows without Gunicorn, use `start.bat` or run `flask run --port 8000`.
+> Use Python 3.10–3.12. InsightFace 0.7.3 builds a native extension: install a C++ build toolchain (Microsoft C++ Build Tools on Windows, build-essential/python3-dev on Linux). On Windows use `start.bat` or `python app.py` (port 5001). Set `INTERNAL_SERVICE_SECRET` before starting; the backend's `FACE_SERVICE_URL` must point to this service. Gunicorn is only installed on non-Windows platforms.
+
+> POS checkout/cancellation, PT session mutations and closure compensation require MongoDB transactions. Docker Compose starts a single-node replica set `rs0`; for a host-side connection use `mongodb://localhost:27017/gym-management?replicaSet=rs0&directConnection=true`. Existing standalone deployments must enable a replica set before these write operations become available. No database migration is run automatically by the application.
 
 ---
 

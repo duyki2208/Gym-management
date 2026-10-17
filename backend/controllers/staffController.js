@@ -3,7 +3,11 @@
  * Quản lý nhân viên chi nhánh với cơ chế Dual-Write (Branch DB User + Central LoginIndex)
  */
 const bcrypt = require("bcryptjs");
-const { canUpdateSchedule } = require("../services/staffScheduleAccessService");
+const {
+  canUpdateSchedule,
+  canUpdateStaffAccount,
+  canCreateStaffAccount,
+} = require("../services/staffScheduleAccessService");
 
 // Lấy tất cả nhân viên của chi nhánh
 const getAll = async (req, res) => {
@@ -52,6 +56,12 @@ const create = async (req, res) => {
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         message: `Role không hợp lệ. Chỉ chấp nhận: ${allowedRoles.join(", ")}`,
+      });
+    }
+    if (!canCreateStaffAccount({ actor: req.user, role })) {
+      return res.status(403).json({
+        code: "OBJECT_ACCESS_DENIED",
+        message: "Bạn không có quyền tạo tài khoản cho vai trò này.",
       });
     }
 
@@ -106,7 +116,8 @@ const create = async (req, res) => {
       throw new Error(`Lỗi đồng bộ danh mục trung tâm: ${centralErr.message}`);
     }
 
-    res.status(201).json(createdUser);
+    const { password: _password, ...publicUser } = createdUser.toObject();
+    res.status(201).json(publicUser);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -118,6 +129,23 @@ const update = async (req, res) => {
     const { id } = req.params;
     const { password, fullName, role, dob, phone, specialty, isActive } = req.body;
     const User = req.models.User;
+
+    const targetStaff = await User.findById(id).select("+authVersion");
+    if (!targetStaff) {
+      return res.status(404).json({ message: "Không tìm thấy nhân viên" });
+    }
+    if (!canUpdateStaffAccount({ actor: req.user, target: targetStaff, nextRole: role })) {
+      return res.status(403).json({
+        code: "OBJECT_ACCESS_DENIED",
+        message: "Bạn không có quyền cập nhật tài khoản nhân viên này.",
+      });
+    }
+    if (String(req.user._id) === String(targetStaff._id) && (role || isActive === false)) {
+      return res.status(403).json({
+        code: "SELF_PRIVILEGE_CHANGE_DENIED",
+        message: "Không thể tự đổi vai trò hoặc tự khóa tài khoản.",
+      });
+    }
 
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
@@ -135,6 +163,10 @@ const update = async (req, res) => {
     if (password) {
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(password, salt);
+      updateData.authVersion = Number(targetStaff.authVersion || 0) + 1;
+    }
+    if (isActive === false && updateData.authVersion === undefined) {
+      updateData.authVersion = Number(targetStaff.authVersion || 0) + 1;
     }
 
     if (dob !== undefined) {
@@ -148,9 +180,13 @@ const update = async (req, res) => {
       }
     }
 
-    const staff = await User.findByIdAndUpdate(id, updateData, { returnDocument: "after" });
+    const staff = await User.findByIdAndUpdate(id, updateData, { returnDocument: "after" }).select("-password");
     if (!staff) {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
+    }
+
+    if ((password || isActive === false) && req.models.Session) {
+      await req.models.Session.deleteMany({ userId: staff._id });
     }
 
     // Cập nhật role trong LoginIndex nếu có thay đổi
@@ -175,11 +211,24 @@ const remove = async (req, res) => {
     const staff = await User.findById(id);
 
     if (staff) {
+      if (!canUpdateStaffAccount({ actor: req.user, target: staff })) {
+        return res.status(403).json({
+          code: "OBJECT_ACCESS_DENIED",
+          message: "Bạn không có quyền xóa tài khoản nhân viên này.",
+        });
+      }
+      if (String(req.user._id) === String(staff._id)) {
+        return res.status(403).json({
+          code: "SELF_PRIVILEGE_CHANGE_DENIED",
+          message: "Không thể tự xóa tài khoản.",
+        });
+      }
       if (req.centralModels) {
         await req.centralModels.LoginIndex.deleteOne({ username: staff.username }).catch((e) =>
           console.warn(`Lỗi xóa LoginIndex: ${e.message}`)
         );
       }
+      if (req.models.Session) await req.models.Session.deleteMany({ userId: staff._id });
       await User.findByIdAndDelete(id);
     }
 

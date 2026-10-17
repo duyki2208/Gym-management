@@ -22,7 +22,7 @@ const protect = async (req, res, next) => {
 
       // 1. Central/branch is an identity property, not an inference from role.
       if (decoded.isCentral === true) {
-        user = await req.centralModels.CentralUser.findById(decoded.id).select("-password");
+        user = await req.centralModels.CentralUser.findById(decoded.id).select("+authVersion");
         if (user) {
           isCentral = true;
         }
@@ -32,12 +32,12 @@ const protect = async (req, res, next) => {
       if (!user) {
         const targetBranch = decoded.branchCode || req.branchCode || "HN01";
         const branchModels = await getBranchModels(targetBranch);
-        user = await branchModels.User.findById(decoded.id).select("-password");
+        user = await branchModels.User.findById(decoded.id).select("+authVersion");
       }
 
       // 3. Fallback: Nếu vẫn chưa thấy, tìm trong CentralUser theo ID bất kể role
       if (!user) {
-        user = await req.centralModels.CentralUser.findById(decoded.id).select("-password");
+        user = await req.centralModels.CentralUser.findById(decoded.id).select("+authVersion");
         if (user) isCentral = true;
       }
 
@@ -46,7 +46,7 @@ const protect = async (req, res, next) => {
         const loginEntry = await req.centralModels.LoginIndex.findOne({ username: decoded.username });
         if (loginEntry) {
           const branchModels = await getBranchModels(loginEntry.branchCode);
-          user = await branchModels.User.findById(loginEntry.userId).select("-password");
+          user = await branchModels.User.findById(loginEntry.userId).select("+authVersion");
         }
       }
 
@@ -62,6 +62,13 @@ const protect = async (req, res, next) => {
         return res.status(401).json({
           code: "USER_DEACTIVATED",
           message: "Tài khoản của bạn đã bị vô hiệu hóa / khóa.",
+        });
+      }
+
+      if (Number(decoded.authVersion || 0) !== Number(user.authVersion || 0)) {
+        return res.status(401).json({
+          code: "SESSION_REVOKED",
+          message: "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.",
         });
       }
 

@@ -69,7 +69,7 @@ const App = () => {
                             <Route path="/checkin" element={withPermission('checkin.use', <CheckIn />)} />
                             <Route path="/history" element={withPermission('checkin.use', <History />)} />
                             <Route path="/packages" element={<Packages />} />
-                            <Route path="/staff" element={<Staff />} />
+                            <Route path="/staff" element={withPermission('staff.read', <Staff />)} />
                             <Route path="/reports/pt-sessions" element={<Reports />} />
                             <Route path="/reports/*" element={withPermission('report.read_all', <Reports />)} />
                             <Route path="/commissions" element={withPermission('commission.read', <Commissions />)} />

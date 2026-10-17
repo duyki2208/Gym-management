@@ -6,8 +6,26 @@ import StaffDetailModal from "../components/staff/StaffDetailModal";
 import toast from "react-hot-toast";
 import { useConfirm } from "../context/ConfirmContext";
 import PageHeader from "../components/common/PageHeader";
+import { useAuth } from "../context/AuthContext";
+
+const ACCOUNT_MANAGED_ROLES = {
+  admin: ["*"],
+  manager: ["manager", "sm", "pm", "om", "pt", "sale", "reception"],
+  sm: ["sale", "sm"],
+  pm: ["pt", "pm"],
+  om: ["reception", "om"],
+};
 
 const Staff = () => {
+  const { user, hasPermission } = useAuth();
+  const canCreateStaff = hasPermission("staff.create");
+  const canUpdateStaff = hasPermission("staff.update");
+  const canDeleteStaff = hasPermission("staff.delete");
+  const canScheduleStaff = hasPermission("staff.schedule");
+  const canManageAccountTarget = (target) => {
+    const managed = ACCOUNT_MANAGED_ROLES[user?.role] || [];
+    return managed.includes("*") || managed.includes(target?.role);
+  };
   const [list, setList] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -16,7 +34,6 @@ const Staff = () => {
   const [todaySchedules, setTodaySchedules] = useState([]);
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const confirm = useConfirm();
 
   const fetchStaff = async () => {
@@ -65,8 +82,6 @@ const Staff = () => {
   };
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("gym_user") || "{}");
-    setIsAdmin(user.role === "admin" || user.role === "accountant");
     fetchStaff();
   }, []);
 
@@ -122,7 +137,7 @@ const Staff = () => {
         title="Đội ngũ nhân sự"
         description="Quản lý tài khoản, vai trò, lịch làm việc và phạm vi phụ trách tại chi nhánh."
         icon={UserCog}
-        actions={isAdmin && (
+        actions={canCreateStaff && (
           <button
             onClick={() => { setEdit(null); setModal(true); }}
             className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-text-light transition-colors hover:bg-primary/90"
@@ -174,7 +189,7 @@ const Staff = () => {
                 <th className="px-6 py-4">Vai trò</th>
                 <th className="px-6 py-4 text-center">Khách phụ trách</th>
                 <th className="px-6 py-4 text-center">Ca hôm nay</th>
-                {isAdmin && <th className="px-6 py-4 text-right">Thao tác</th>}
+                {(canUpdateStaff || canDeleteStaff) && <th className="px-6 py-4 text-right">Thao tác</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -188,6 +203,8 @@ const Staff = () => {
                 filteredList.map((s) => {
                   const shiftData = todaySchedules.find(sch => sch.staff && (sch.staff._id === (s._id || s.id) || sch.staff === (s._id || s.id)));
                   const shift = shiftData ? shiftData.shiftType : "Nghỉ";
+                  const canUpdateTarget = canUpdateStaff && canManageAccountTarget(s);
+                  const canDeleteTarget = canDeleteStaff && canManageAccountTarget(s);
                   
                   return (
                   <tr
@@ -257,10 +274,10 @@ const Staff = () => {
                       </span>
                     </td>
 
-                    {isAdmin && (
+                    {(canUpdateStaff || canDeleteStaff) && (
                       <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
-                          <button
+                          {canUpdateTarget && <button
                             onClick={() => {
                               setEdit(s);
                               setModal(true);
@@ -269,14 +286,14 @@ const Staff = () => {
                             title="Sửa"
                           >
                             <Pencil size={18} />
-                          </button>
-                          <button
+                          </button>}
+                          {canDeleteTarget && <button
                             onClick={() => del(s._id || s.id)}
                             className="p-2 hover:bg-red-50 text-red-600 rounded-full transition-colors"
                             title="Xóa"
                           >
                             <Trash2 size={18} />
-                          </button>
+                          </button>}
                         </div>
                       </td>
                     )}
@@ -312,18 +329,10 @@ const Staff = () => {
         <StaffDetailModal
           staff={detailStaff}
           isAdmin={
-            (() => {
-              const currentUser = JSON.parse(localStorage.getItem("gym_user") || "{}");
-              const isSelf = currentUser._id === (detailStaff?._id || detailStaff?.id);
-              return (
-                isSelf ||
-                currentUser.role === "admin" ||
-                currentUser.role === "accountant" ||
-                (currentUser.role === "sm" && (detailStaff?.role === "sale" || detailStaff?.role === "sm")) ||
-                (currentUser.role === "pm" && (detailStaff?.role === "pt" || detailStaff?.role === "pm")) ||
-                (currentUser.role === "om" && (detailStaff?.role === "reception" || detailStaff?.role === "om"))
-              );
-            })()
+            canScheduleStaff && (
+              String(user?._id) === String(detailStaff?._id || detailStaff?.id) ||
+              canManageAccountTarget(detailStaff)
+            )
           }
           onClose={() => setDetailStaff(null)}
           onScheduleUpdate={async () => {

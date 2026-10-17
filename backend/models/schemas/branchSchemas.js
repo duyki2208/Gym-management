@@ -39,6 +39,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String },
     specialty: { type: String },
     isActive: { type: Boolean, default: true },
+    authVersion: { type: Number, default: 0, select: false },
   },
   { timestamps: true }
 );
@@ -58,6 +59,7 @@ const customerSchema = new mongoose.Schema(
     name: { type: String, required: true },
     code: { type: String, required: true },
     phone: { type: String, required: true },
+    lastAutoCheckInAt: { type: Date },
     dob: { type: Date },
     gender: { type: String },
     address: { type: String },
@@ -405,7 +407,7 @@ const saleOrderSchema = new mongoose.Schema(
     details: [
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-        quantity: { type: Number, required: true },
+        quantity: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
         sellPrice: { type: Number, required: true },
       },
     ],
@@ -414,6 +416,9 @@ const saleOrderSchema = new mongoose.Schema(
     paymentProvider: { type: String, trim: true },
     providerTransactionId: { type: String, trim: true },
     paidAt: { type: Date },
+    paymentReference: { type: String },
+    operationKey: { type: String },
+    paymentAccount: { bank: String, accountNo: String, accountName: String },
   },
   { timestamps: true }
 );
@@ -429,6 +434,9 @@ saleOrderSchema.index(
     partialFilterExpression: { providerTransactionId: { $type: "string" } },
   }
 );
+
+saleOrderSchema.index({ paymentReference: 1 }, { unique: true, partialFilterExpression: { paymentReference: { $type: "string" } } });
+saleOrderSchema.index({ operationKey: 1 }, { unique: true, partialFilterExpression: { operationKey: { $type: "string" } } });
 
 // 9. Product Schema
 const productSchema = new mongoose.Schema(
@@ -805,6 +813,10 @@ const workoutSessionSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
+    customerPackage: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPackage" },
+    deductionSource: { type: String, enum: ["none", "package", "customer"] },
+    deductedSessions: { type: Number, min: 0, max: 1 },
+    operationKey: { type: String },
     pt: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -834,6 +846,7 @@ const workoutSessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+workoutSessionSchema.index({ operationKey: 1 }, { unique: true, partialFilterExpression: { operationKey: { $type: "string" } } });
 workoutSessionSchema.index({ customer: 1 });
 workoutSessionSchema.index({ date: -1 });
 workoutSessionSchema.index({ pt: 1, date: -1 });

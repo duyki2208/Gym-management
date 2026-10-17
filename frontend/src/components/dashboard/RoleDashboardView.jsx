@@ -79,7 +79,7 @@ const formatCompactCurrency = (value) => {
 };
 
 const Surface = ({ className = "", children }) => (
-  <section className={`rounded-lg border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark ${className}`}>
+  <section className={`dashboard-card-dark rounded-lg border border-border-light bg-background-light dark:border-border-dark dark:bg-surface-dark ${className}`}>
     {children}
   </section>
 );
@@ -142,9 +142,9 @@ const MetricStrip = ({ items }) => (
         key={item.label}
         onClick={item.onClick}
         disabled={!item.onClick}
-        className={`group min-w-0 bg-surface-light px-4 py-4 text-left transition-colors dark:bg-surface-dark sm:px-5 ${item.onClick ? "hover:bg-background-light dark:hover:bg-white/[0.03]" : "cursor-default"}`}
+        className={`dashboard-card-dark group min-w-0 bg-background-light px-4 py-4 text-left transition-colors dark:bg-surface-dark sm:px-5 ${item.onClick ? "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]" : "cursor-default"}`}
       >
-        <span className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">{item.label}</span>
+        <span className="text-xs font-medium text-black dark:text-text-dark">{item.label}</span>
         <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
           <strong title={item.fullValue || String(item.value)} className="min-w-0 text-xl font-semibold tabular-nums text-text-light dark:text-text-dark sm:text-2xl">
             {item.value}
@@ -269,58 +269,49 @@ const TasksPanel = ({ enabled, onOpenAll, onChanged }) => {
 };
 
 const PeakHoursChart = ({ peakHours, onOpen }) => {
-  const hasData = peakHours.some((item) => Number(item.count) > 0);
   const chartData = peakHours.map((item) => ({
     ...item,
-    label: `${String(item.hour).padStart(2, "0")}:00`,
+    label: `${item.hour}h`,
     count: Number(item.count || 0),
   }));
 
   return (
     <Surface className="overflow-hidden">
-      <SectionHeader title="Lượt check-in theo giờ" subtitle="Hôm nay · 06:00–21:00" action="Xem lịch sử" onAction={onOpen} />
+      <SectionHeader title="Lượt check-in theo giờ" subtitle="Hôm nay · 05:00–21:00" action="Xem lịch sử" onAction={onOpen} />
       <button type="button" onClick={onOpen} className="block w-full px-4 pb-4 pt-5 text-left transition-colors hover:bg-background-light/60 dark:hover:bg-white/[0.02] sm:px-5">
-        {hasData ? (
-          <div className="w-full overflow-x-auto" role="img" aria-label={`Biểu đồ check-in hôm nay, tổng ${chartData.reduce((sum, item) => sum + item.count, 0)} lượt`}>
-            <div className="h-64 min-w-[640px] w-full text-primary">
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-                minWidth={0}
-                initialDimension={{ width: 720, height: 256 }}
-              >
-                <BarChart data={chartData} margin={{ top: 22, right: 2, bottom: 0, left: 2 }} barCategoryGap="28%">
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={{ stroke: "currentColor", opacity: 0.16 }}
-                    interval={0}
-                    tick={({ x, y, payload }) => (
-                      <text x={x} y={y + 14} textAnchor="middle" className="fill-text-muted-light text-[11px] dark:fill-text-muted-dark">
-                        {payload.value}
-                      </text>
-                    )}
+        <div className="w-full overflow-x-auto" role="img" aria-label={`Biểu đồ check-in hôm nay, tổng ${chartData.reduce((sum, item) => sum + item.count, 0)} lượt`}>
+          <div className="h-64 min-w-[640px] w-full text-primary">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              initialDimension={{ width: 720, height: 256 }}
+            >
+              <BarChart data={chartData} margin={{ top: 22, right: 2, bottom: 0, left: 2 }} barCategoryGap="28%">
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={{ stroke: "currentColor", opacity: 0.16 }}
+                  interval={0}
+                  tick={({ x, y, payload }) => (
+                    <text x={x} y={y + 14} textAnchor="middle" className="fill-text-muted-light text-[11px] dark:fill-text-muted-dark">
+                      {payload.value}
+                    </text>
+                  )}
+                />
+                <YAxis hide domain={[0, "dataMax + 1"]} />
+                <Bar dataKey="count" fill="currentColor" radius={[6, 6, 0, 0]} maxBarSize={28} minPointSize={2} isAnimationActive={false}>
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    formatter={(value) => Number(value) > 0 ? value : ""}
+                    className="fill-text-muted-light text-[11px] font-medium dark:fill-text-muted-dark"
                   />
-                  <YAxis hide domain={[0, "dataMax + 1"]} />
-                  <Bar dataKey="count" fill="currentColor" radius={[6, 6, 0, 0]} maxBarSize={28} isAnimationActive={false}>
-                    <LabelList
-                      dataKey="count"
-                      position="top"
-                      formatter={(value) => Number(value) > 0 ? value : ""}
-                      className="fill-text-muted-light text-[11px] font-medium dark:fill-text-muted-dark"
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        ) : (
-          <div className="flex h-64 items-center justify-center text-center">
-            <p className="max-w-sm text-pretty text-sm text-text-muted-light dark:text-text-muted-dark">
-              Chưa có lượt check-in hôm nay. Biểu đồ sẽ xuất hiện sau lượt check-in đầu tiên.
-            </p>
-          </div>
-        )}
+        </div>
       </button>
     </Surface>
   );
@@ -592,7 +583,7 @@ const RoleDashboardView = ({
       : hasRevenueMetric
         ? [
             { label: "Doanh thu tháng", value: formatCompactCurrency(stats.revenue), fullValue: `${formatCurrency(stats.revenue)}đ`, caption: `${stats.revenuePercentage}% chỉ tiêu · Hôm nay ${formatCurrency(stats.todayRevenue)}đ`, points: stats.kpiTrends?.revenue, onClick: onOpenRevenue },
-            { label: "Hội viên hoạt động", value: stats.activeMembers, caption: "Hợp đồng còn hiệu lực", points: stats.kpiTrends?.activeMembers, onClick: onOpenCustomers },
+            { label: "Hội viên hoạt động", value: stats.activeMembers, caption: "Hợp đồng còn hiệu lực", points: stats.kpiTrends?.activeMembers, onClick: () => navigate("/customers?status=active") },
             { label: "Lượt check-in", value: stats.todayCheckIns, caption: stats.checkInChange === 0 ? "Bằng ngày hôm qua" : `${stats.checkInChange > 0 ? "+" : ""}${stats.checkInChange} so với hôm qua`, points: stats.kpiTrends?.checkIns, onClick: onOpenCheckIns },
             { label: "Hợp đồng mới trong tháng", value: stats.newContractsThisMonth, caption: "Không gồm hợp đồng gia hạn", points: stats.kpiTrends?.newContracts, onClick: onOpenCustomers },
           ]

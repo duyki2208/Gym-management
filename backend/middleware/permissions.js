@@ -38,9 +38,12 @@ const PERMISSIONS = Object.freeze({
   PT_DISPUTE: "pt.dispute",
   REPORT_READ_ALL: "report.read_all",
   SETTINGS_SENSITIVE_READ: "settings.sensitive.read",
+  SETTINGS_SENSITIVE_UPDATE: "settings.sensitive.update",
+  SETTINGS_PERMISSIONS_UPDATE: "settings.permissions.update",
   SETTINGS_READ: "settings.read",
   SETTINGS_UPDATE: "settings.update",
   STAFF_SCHEDULE: "staff.schedule",
+  STAFF_READ: "staff.read",
   STAFF_CREATE: "staff.create",
   STAFF_UPDATE: "staff.update",
   STAFF_DELETE: "staff.delete",
@@ -53,7 +56,7 @@ const PERMISSIONS = Object.freeze({
   WORKOUT_READ_ALL: "workout.read_all",
 });
 
-const AUTHORIZATION_POLICY_VERSION = 3;
+const AUTHORIZATION_POLICY_VERSION = 4;
 
 const managerPermissions = [
   PERMISSIONS.AUDIT_READ,
@@ -88,6 +91,7 @@ const managerPermissions = [
   PERMISSIONS.PRODUCT_MANAGE,
   PERMISSIONS.REPORT_READ_ALL,
   PERMISSIONS.STAFF_SCHEDULE,
+  PERMISSIONS.STAFF_READ,
   PERMISSIONS.STAFF_UPDATE,
   PERMISSIONS.TEAM_TASK_READ,
   PERMISSIONS.TEAM_TASK_MANAGE,
@@ -125,6 +129,7 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.REPORT_READ_ALL,
     PERMISSIONS.SETTINGS_READ,
     PERMISSIONS.STAFF_SCHEDULE,
+    PERMISSIONS.STAFF_READ,
     PERMISSIONS.TEAM_TASK_READ,
     PERMISSIONS.TEAM_TASK_MANAGE,
     PERMISSIONS.TEAM_TASK_COMPLETE,
@@ -140,6 +145,7 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.LEAD_UPDATE,
     PERMISSIONS.LEAD_CONVERT,
     PERMISSIONS.CONTRACT_MANAGE,
+    PERMISSIONS.STAFF_READ,
     PERMISSIONS.NOTIFICATION_READ,
   ],
   sale: [
@@ -154,6 +160,7 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.LEAD_CONVERT,
     PERMISSIONS.CONTRACT_MANAGE,
     PERMISSIONS.STAFF_SCHEDULE,
+    PERMISSIONS.STAFF_READ,
     PERMISSIONS.TEAM_TASK_READ,
     PERMISSIONS.TEAM_TASK_COMPLETE,
     PERMISSIONS.NOTIFICATION_READ,
@@ -165,6 +172,7 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.CUSTOMER_EXPORT,
     PERMISSIONS.PT_DISPUTE,
     PERMISSIONS.STAFF_SCHEDULE,
+    PERMISSIONS.STAFF_READ,
     PERMISSIONS.TEAM_TASK_READ,
     PERMISSIONS.TEAM_TASK_COMPLETE,
     PERMISSIONS.NOTIFICATION_READ,
@@ -183,6 +191,7 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.PAYMENT_CANCEL,
     PERMISSIONS.POS_READ_ALL,
     PERMISSIONS.STAFF_SCHEDULE,
+    PERMISSIONS.STAFF_READ,
     PERMISSIONS.WORKOUT_DEDUCT,
     PERMISSIONS.TEAM_TASK_READ,
     PERMISSIONS.TEAM_TASK_COMPLETE,
@@ -202,7 +211,12 @@ const resolvePermissionsForRole = async (role, Setting) => {
   const setting = await Setting.findOne()
     .select("rolePermissions rolePermissionsVersion")
     .lean();
-  const configured = setting?.rolePermissions?.[role];
+  const configured = setting?.rolePermissions?.[role] ??
+    (["sm", "pm", "om"].includes(role) ? setting?.rolePermissions?.manager : undefined);
+
+  if (Array.isArray(configured) && setting.rolePermissionsVersion >= AUTHORIZATION_POLICY_VERSION) {
+    return configured;
+  }
 
   // Existing installations store legacy UI permissions such as
   // `view_dashboard`. Only opt into backend enforcement after a role has been
