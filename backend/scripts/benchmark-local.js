@@ -81,11 +81,14 @@ const main = async () => {
   const requests = Number(process.env.BENCH_REQUESTS || 80);
   const concurrency = Number(process.env.BENCH_CONCURRENCY || 8);
   const mongoServer = await MongoMemoryServer.create();
-  process.env.MONGO_URI = mongoServer.getUri("gym_management");
+  process.env.MONGO_URI = mongoServer.getUri("gympro_branch_hn01");
 
   let httpServer;
   try {
     await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connection.getClient().db("gympro_central").collection("branches").updateOne(
+      { code: "HN01" }, { $set: { name: "Benchmark Hanoi", dbName: "gympro_branch_hn01", isActive: true } }, { upsert: true }
+    );
     const app = require("../server");
     const User = require("../models/User");
     const Customer = require("../models/Customer");

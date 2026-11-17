@@ -44,11 +44,11 @@ const runTests = async () => {
     const hnModels = await getBranchModels("HN01");
     const hcmModels = await getBranchModels("HCM01");
 
-    assert(hnModels.dbName === "gym_management", "Branch HN01 map đúng DB gốc chứa dữ liệu: gym_management");
+    assert(hnModels.dbName === "gympro_branch_hn01", "Branch HN01 map đúng DB độc lập: gympro_branch_hn01");
     assert(hcmModels.dbName === "gympro_branch_hcm01", "Branch HCM01 map đúng DB: gympro_branch_hcm01");
 
     const existingHNCustomers = await hnModels.Customer.countDocuments();
-    console.log(`  -> Số lượng hội viên hiện có tại cơ sở HN01 (gym_management): ${existingHNCustomers}`);
+    console.log(`  -> Số lượng hội viên hiện có tại cơ sở HN01 (gympro_branch_hn01): ${existingHNCustomers}`);
     assert(existingHNCustomers >= 0, "Đã kết nối và đọc thành công dữ liệu từ DB HN01");
 
     // Tạo bản ghi test tại HN01

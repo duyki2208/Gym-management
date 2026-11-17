@@ -1,0 +1,26 @@
+process.env.TEST_MONGO_REPLICA_SET = 'true';
+const mongoose = require('mongoose');
+const { migrate } = require('../scripts/migrate-hn01-database');
+test('migration preserves IDs and links and switches mapping only after verified copy', async () => {
+  const client = mongoose.connection.getClient();
+  const central = client.db('gympro_central').collection('branches');
+  await central.updateOne({ code: 'HN01' }, { $set: { dbName: 'gym_management' } });
+  const old = client.db('gym_management');
+  const customerId = new mongoose.Types.ObjectId();
+  const packageId = new mongoose.Types.ObjectId();
+  await old.collection('users').insertOne({ _id: new mongoose.Types.ObjectId(), username: 'migration-user' });
+  await old.collection('customers').insertOne({ _id: customerId, name: 'Migration member', activePackage: packageId });
+  await old.collection('customerpackages').insertOne({ _id: packageId, customer: customerId });
+  const target = client.db('gympro_branch_hn01');
+  await target.collection('settings').insertOne({ stale: true });
+  await old.collection('customers').createIndex({ name: 1 }, { unique: true });
+  await target.collection('customers').createIndex({ name: 1 });
+  await migrate(client, true, { backendStopped: true });
+  expect((await central.findOne({ code: 'HN01' })).dbName).toBe('gympro_branch_hn01');
+  expect((await target.collection('customers').findOne({ _id: customerId })).activePackage).toEqual(packageId);
+  expect((await target.collection('customerpackages').findOne({ _id: packageId })).customer).toEqual(customerId);
+  expect(await target.collection('settings').countDocuments()).toBe(0);
+  expect(await old.collection('customers').countDocuments()).toBe(1);
+  const indexes = await target.collection('customers').listIndexes().toArray();
+  expect(indexes.find(i => i.name === 'name_1').unique).toBe(true);
+});

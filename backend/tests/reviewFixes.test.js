@@ -72,7 +72,7 @@ test("concurrent refresh requests keep the winning session usable", async () => 
   const central = await manager.getCentralModels();
   await central.Branch.updateOne(
     { code: "HN01" },
-    { $set: { name: "Default", dbName: "gym_management", isActive: true } },
+    { $set: { name: "Default", dbName: "gympro_branch_hn01", isActive: true } },
     { upsert: true }
   );
   const user = await central.CentralUser.create({

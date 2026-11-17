@@ -38,8 +38,7 @@ const loadTenantContext = async (req, res, next) => {
       const branch = await req.centralModels.Branch.findOne({ code: req.branchCode })
         .select("code isActive")
         .lean();
-      const isLegacyDefault = !branch && req.branchCode === (process.env.DEFAULT_BRANCH_CODE || "HN01") && !branchWasRequested;
-      if ((!branch || branch.isActive === false) && !isLegacyDefault) {
+      if (!branch || branch.isActive === false) {
         return res.status(403).json({
           code: "BRANCH_ACCESS_DENIED",
           message: `Chi nhánh ${req.branchCode} không tồn tại hoặc đã ngừng hoạt động`,

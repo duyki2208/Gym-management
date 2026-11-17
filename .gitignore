@@ -54,3 +54,6 @@ __pycache__/
 
 # Local documentation (keep on disk, exclude from Git)
 /docs/
+
+# Private database migration backups
+backend/backups/

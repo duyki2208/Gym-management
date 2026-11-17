@@ -12,7 +12,7 @@ let central, source, target, other, customer, pkg;
 const modelNames = ["Customer", "CustomerPackage", "Invoice", "Transaction", "Counter", "User", "CheckIn", "Setting"];
 beforeAll(async () => {
   central = await manager.getCentralModels();
-  for (const [code, dbName] of [["HN01", "gym_management"], ["HCM01", "transfer_target"], ["DAN01", "transfer_other"]]) {
+  for (const [code, dbName] of [["HN01", "gympro_branch_hn01"], ["HCM01", "transfer_target"], ["DAN01", "transfer_other"]]) {
     await central.Branch.updateOne({ code }, { $set: { name: code, dbName, isActive: true } }, { upsert: true });
   }
   source = await manager.getBranchModels("HN01"); target = await manager.getBranchModels("HCM01"); other = await manager.getBranchModels("DAN01");

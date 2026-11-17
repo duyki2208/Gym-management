@@ -16,10 +16,10 @@ beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create({
     instance: { launchTimeout: 60000, ...(useReplicaSet ? { replSet: "reviewTests" } : {}) },
   });
-  // HN01 resolves to the database name from MONGO_URI. Keeping the default
+  // Keep fixtures and registered HN01 models on the dedicated branch DB. The default
   // mongoose connection on the same database makes legacy model proxies and
   // request-scoped branch models observe the same test data.
-  let mongoUri = mongoServer.getUri("gym_management");
+  let mongoUri = mongoServer.getUri("gympro_branch_hn01");
   if (useReplicaSet) {
     // Use the same driver as Mongoose for replica initialization and application queries.
     const bootstrap = await mongoose.createConnection(`${mongoUri}?directConnection=true`).asPromise();
@@ -44,10 +44,15 @@ beforeAll(async () => {
   }
   
   await mongoose.connect(mongoUri);
+  const central = mongoose.connection.getClient().db("gympro_central");
+  await central.collection("branches").updateOne({ code: "HN01" }, {
+    $set: { name: "Test Hanoi", dbName: "gympro_branch_hn01", isActive: true },
+  }, { upsert: true });
 });
 
 // Đóng kết nối và tắt Mongo ảo sau khi kết thúc toàn bộ test
 afterAll(async () => {
+  await jest.requireActual("../db/branchConnectionManager").closeAllConnections();
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
   }

@@ -15,56 +15,37 @@ const branchSchemas = require("../models/schemas/branchSchemas");
 
 // Database Names
 const CENTRAL_DB_NAME = process.env.CENTRAL_DB_NAME || "gympro_central";
-const BRANCH_DB_PREFIX = process.env.BRANCH_DB_PREFIX || "gympro_branch_";
-
-// Lấy DB name mặc định từ MONGO_URI (ví dụ: gym_management)
-const getLegacyDbName = () => {
-  const uri = process.env.MONGO_URI || "";
-  const match = uri.match(/^(mongodb(?:\+srv)?:\/\/[^\/]+\/)([^?\/]+)?(\?.*)?$/);
-  return (match && match[2]) ? match[2] : "gym_management";
-};
-
 let centralConnection = null;
 let centralModels = null;
 const branchModelsCache = new Map();
-const branchDbNameCache = new Map();
 
-/**
- * Format / resolve database name for a branch code
- * @param {string} branchCode - e.g. "HN01", "HCM01"
- * @returns {Promise<string>} - e.g. "gym_management" (HN01) or "gympro_branch_hcm01" (HCM01)
- */
+/** Resolve only registered, active branches. Never invent a database name. */
 const resolveBranchDbName = async (branchCode) => {
-  if (!branchCode) {
-    throw new Error("branchCode is required to resolve branch database name");
+  const normalized = String(branchCode || "").trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9_-]{1,31}$/.test(normalized)) {
+    throw Object.assign(new Error("Mã chi nhánh không hợp lệ"), { statusCode: 400, code: "INVALID_BRANCH_CODE" });
   }
-  const normalized = branchCode.trim().toUpperCase();
-
-  if (branchDbNameCache.has(normalized)) {
-    return branchDbNameCache.get(normalized);
+  const { Branch } = await getCentralModels();
+  const branch = await Branch.findOne({ code: normalized }).lean();
+  if (!branch || branch.isActive === false) {
+    throw Object.assign(new Error(`Chi nhánh ${normalized} không tồn tại hoặc đã ngừng hoạt động`), {
+      statusCode: 403, code: "BRANCH_ACCESS_DENIED",
+    });
   }
-
-  // Tra cứu dbName từ Central DB nếu đã có
-  try {
-    if (centralModels && centralModels.Branch) {
-      const branchDoc = await centralModels.Branch.findOne({ code: normalized }).lean();
-      if (branchDoc && branchDoc.dbName) {
-        branchDbNameCache.set(normalized, branchDoc.dbName);
-        return branchDoc.dbName;
-      }
-    }
-  } catch (err) {
-    console.warn(`[resolveBranchDbName] Could not query Central DB for ${normalized}: ${err.message}`);
+  const dbName = branch.dbName;
+  if (!dbName || dbName === "gym_management" || dbName === CENTRAL_DB_NAME ||
+      !/^[a-zA-Z0-9_-]+$/.test(dbName)) {
+    throw Object.assign(new Error(`Database chi nhánh ${normalized} chưa được cấu hình độc lập`), {
+      statusCode: 503, code: "BRANCH_DATABASE_NOT_MIGRATED",
+    });
   }
-
-  // Fallback: Nếu là HN01 -> trỏ về DB gốc (gym_management); nếu chi nhánh khác -> prefix gympro_branch_<code>
-  const fallbackDbName =
-    normalized === "HN01"
-      ? getLegacyDbName()
-      : `${BRANCH_DB_PREFIX}${normalized.toLowerCase()}`;
-
-  branchDbNameCache.set(normalized, fallbackDbName);
-  return fallbackDbName;
+  const shared = await Branch.exists({ code: { $ne: normalized }, dbName });
+  if (shared) {
+    throw Object.assign(new Error("Các chi nhánh không được dùng chung database"), {
+      statusCode: 503, code: "BRANCH_DATABASE_SHARED",
+    });
+  }
+  return dbName;
 };
 
 /**
@@ -155,16 +136,14 @@ const getBranchModels = async (branchCode, forceRefresh = false) => {
 
   const normalizedCode = branchCode.trim().toUpperCase();
 
-  if (!forceRefresh && branchModelsCache.has(normalizedCode)) {
-    return branchModelsCache.get(normalizedCode);
-  }
-
   if (!centralConnection || centralConnection.readyState !== 1) {
     await initCentralConnection();
   }
 
-  // Tra cứu tên DB thật từ Central Branch metadata (hoặc fallback)
+  // Recheck metadata even for cached models: remapping/deactivation must take effect.
   const branchDbName = await resolveBranchDbName(normalizedCode);
+  const cached = branchModelsCache.get(normalizedCode);
+  if (!forceRefresh && cached?.dbName === branchDbName) return cached;
 
   // useDb shares the same underlying connection pool
   const branchConn = centralConnection.useDb(branchDbName, { useCache: true });
@@ -216,7 +195,6 @@ const closeAllConnections = async () => {
     centralConnection = null;
     centralModels = null;
     branchModelsCache.clear();
-    branchDbNameCache.clear();
   }
 };
 
@@ -228,7 +206,6 @@ module.exports = {
   getBranchModels,
   ensureBranchIndexes,
   resolveBranchDbName,
-  getLegacyDbName,
   closeAllConnections,
   getCentralConnectionState,
 };
