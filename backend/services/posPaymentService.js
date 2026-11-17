@@ -271,6 +271,16 @@ const completePosPayment = async ({
     throw new Error("Thiếu model cần thiết để hoàn tất thanh toán POS");
   }
 
+  // Manual confirmation may omit amount; provider events must never bypass it.
+  if ((paymentProvider !== "manual" || amount !== undefined) &&
+      (!Number.isSafeInteger(amount) || amount <= 0)) {
+    throw new PaymentCompletionError("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không hợp lệ", 422);
+  }
+  if (paymentProvider !== "manual" &&
+      (typeof providerTransactionId !== "string" || !providerTransactionId.trim())) {
+    throw new PaymentCompletionError("INVALID_PAYMENT_EVENT", "Thiếu mã giao dịch nhà cung cấp", 422);
+  }
+
   const normalizedProviderTransactionId = providerTransactionId
     ? String(providerTransactionId).trim()
     : undefined;

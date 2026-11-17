@@ -1,5 +1,6 @@
 const ExcelJS = require("exceljs");
 const { escapeRegex } = require("./customerLookupService");
+const { searchText } = require("../utils/queryLimits");
 
 class CustomerExportError extends Error {
   constructor(message) {
@@ -19,7 +20,7 @@ const parseDate = (value, field) => {
 const buildExportQuery = async ({ Customer, filters, now = new Date() }) => {
   const andConditions = [];
   if (filters.search) {
-    const pattern = escapeRegex(String(filters.search).trim());
+    const pattern = escapeRegex(searchText(filters.search));
     const customers = await Customer.find({
       $or: ["name", "phone", "code"].map((field) => ({
         [field]: { $regex: pattern, $options: "i" },

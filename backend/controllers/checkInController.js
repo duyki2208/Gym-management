@@ -5,6 +5,7 @@
 const faceClient = require("../utils/faceServiceClient");
 const { sendZaloNotification } = require("../utils/zaloService");
 const queueService = require("../utils/queueService");
+const { literalSearch, pagination, QUERY_TIMEOUT_MS, queryError } = require("../utils/queryLimits");
 
 // Cache embeddings theo từng chi nhánh: Map<branchCode, { data: [], fetchedAt: number }>
 const embeddingCacheMap = new Map();
@@ -22,24 +23,16 @@ async function getEmbeddingCandidatesForBranch(models, branchCode) {
     { faceEmbedding: { $exists: true, $not: { $size: 0 } } },
     "_id name code faceEmbedding packageType endDate activePackage"
   )
-    .populate("activePackage", "status")
+    .limit(2001).maxTimeMS(QUERY_TIMEOUT_MS)
+    .populate({ path: "activePackage", select: "status", options: { maxTimeMS: QUERY_TIMEOUT_MS } })
     .lean();
+  if (customers.length > 2000) {
+    throw Object.assign(new Error("Cơ sở vượt giới hạn 2.000 hồ sơ khuôn mặt; cần phân vùng trước khi nhận diện"), { statusCode: 503, code: "FACE_CANDIDATE_LIMIT" });
+  }
 
   const formattedCandidates = [];
   for (const c of customers) {
     let status = c.activePackage?.status || "active";
-    if (!c.activePackage) {
-      const latestPkg = await models.CustomerPackage.findOne({
-        customer: c._id,
-        isDeleted: { $ne: true },
-      })
-        .sort({ createdAt: -1 })
-        .select("status")
-        .lean();
-      if (latestPkg?.status === "transferred") {
-        status = "transferred";
-      }
-    }
     formattedCandidates.push({
       member_id: c._id.toString(),
       embedding: c.faceEmbedding,
@@ -74,7 +67,8 @@ function invalidateEmbeddingCache(branchCode = null) {
 const getCheckInList = async (req, res) => {
   try {
     const Customer = req.models.Customer;
-    const { search = "", page = 1, limit = 50 } = req.query;
+    const search = literalSearch(req.query.search);
+    const { page, limit, skip } = pagination(req.query);
 
     const query = {};
     if (search) {
@@ -88,12 +82,11 @@ const getCheckInList = async (req, res) => {
     const customers = await Customer.find(query)
       .select("_id name code phone packageType startDate endDate avatar activePackage")
       .populate("activePackage", "status")
-      .sort({ name: 1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit))
+      .sort({ name: 1, _id: 1 })
+      .skip(skip).limit(limit).maxTimeMS(QUERY_TIMEOUT_MS)
       .lean();
 
-    const total = await Customer.countDocuments(query);
+    const total = await Customer.countDocuments(query).maxTimeMS(QUERY_TIMEOUT_MS);
 
     res.json({
       success: true,
@@ -106,7 +99,7 @@ const getCheckInList = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi lấy danh sách check-in:", error);
-    res.status(500).json({ success: false, message: "Lỗi lấy danh sách khách hàng" });
+    queryError(res, error, "Lỗi lấy danh sách khách hàng");
   }
 };
 
@@ -114,14 +107,13 @@ const getCheckInList = async (req, res) => {
 const getAll = async (req, res) => {
   try {
     const CheckIn = req.models.CheckIn;
-    const { page = 1, limit = 50 } = req.query;
+    const { page, limit, skip } = pagination(req.query);
     const checkins = await CheckIn.find()
-      .sort({ time: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit))
+      .sort({ time: -1, _id: -1 })
+      .skip(skip).limit(limit).maxTimeMS(QUERY_TIMEOUT_MS)
       .lean();
 
-    const total = await CheckIn.countDocuments();
+    const total = await CheckIn.countDocuments().maxTimeMS(QUERY_TIMEOUT_MS);
 
     res.json({
       success: true,
@@ -134,7 +126,7 @@ const getAll = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi lấy lịch sử check-in:", error);
-    res.status(500).json({ success: false, message: "Lỗi lấy lịch sử check-in" });
+    queryError(res, error, "Lỗi lấy lịch sử check-in");
   }
 };
 
@@ -248,7 +240,19 @@ const recognizeFace = async (req, res) => {
     }
 
     const matchedCandidate = candidates.find((c) => c.member_id === result.member_id);
-    const meta = matchedCandidate?._meta || {};
+    // Embedding caches may belong to another instance and outlive a branch transfer.
+    // Re-read entitlement before admitting the member; cached vectors only identify them.
+    const currentCustomer = await req.models.Customer.findById(result.member_id)
+      .select("name code packageType endDate activePackage").populate("activePackage", "status").lean();
+    if (!currentCustomer) return res.json({ success: true, matched: false, reason: "customer_unavailable" });
+    let currentStatus = currentCustomer.activePackage?.status;
+    if (!currentStatus) {
+      const latest = await req.models.CustomerPackage.findOne({ customer: currentCustomer._id, isDeleted: { $ne: true } })
+        .sort({ createdAt: -1 }).select("status").lean();
+      currentStatus = latest?.status || "active";
+    }
+    const meta = { ...matchedCandidate?._meta, name: currentCustomer.name, code: currentCustomer.code,
+      packageType: currentCustomer.packageType, endDate: currentCustomer.endDate, status: currentStatus };
 
     if (meta.status === "transferred") {
       return res.json({
@@ -274,6 +278,7 @@ const recognizeFace = async (req, res) => {
     const now = new Date();
     const claimedCustomer = await Customer.findOneAndUpdate({
       _id: result.member_id,
+      activePackage: currentCustomer.activePackage?._id || null,
       $or: [{ lastAutoCheckInAt: { $exists: false } }, { lastAutoCheckInAt: { $lte: new Date(now.getTime() - 10000) } }],
     }, { $set: { lastAutoCheckInAt: now } }, { returnDocument: "after" });
     if (!claimedCustomer) {
@@ -335,7 +340,9 @@ const recognizeFace = async (req, res) => {
       });
     }
     console.error("recognizeFace error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    const status = error.statusCode || ([400, 413, 503].includes(error.response?.status) ? error.response.status : 500);
+    res.status(status).json({ success: false, code: error.statusCode ? error.code : undefined,
+      message: error.statusCode ? error.message : "Không thể xử lý nhận diện khuôn mặt lúc này" });
   }
 };
 

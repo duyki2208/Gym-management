@@ -36,6 +36,7 @@ const PointOfSale = ({ onFinish, onClose }) => {
           setCustomers([...unique.values()]);
        } catch (error) {
           console.error('Không thể tải dữ liệu POS:', error);
+          toast.error(error.response?.data?.message || error.message || 'Không thể tải dữ liệu POS');
           setProducts([]);
           setCustomers([]);
        }

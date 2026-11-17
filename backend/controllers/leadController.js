@@ -1,4 +1,5 @@
 const Lead = require("../models/Lead");
+const { literalSearch, searchText, pagination, QUERY_TIMEOUT_MS, queryError } = require("../utils/queryLimits");
 const { PERMISSIONS, userHasPermission } = require("../middleware/permissions");
 
 const isAssignedToUser = (lead, user) =>
@@ -14,7 +15,9 @@ const denyObjectAccess = (res) => res.status(403).json({
 // @route   GET /api/v1/leads
 const getAllLeads = async (req, res) => {
   try {
-    const { search, status, source, assignedSale } = req.query;
+    const status = searchText(req.query.status), source = searchText(req.query.source), assignedSale = searchText(req.query.assignedSale);
+    const search = literalSearch(req.query.search);
+    const { page, limit, skip } = pagination(req.query, 100);
     const query = {};
     const canReadAll = await userHasPermission(req, PERMISSIONS.LEAD_READ_ALL);
 
@@ -30,14 +33,15 @@ const getAllLeads = async (req, res) => {
       ];
     }
 
+    const total = await Lead.countDocuments(query).maxTimeMS(QUERY_TIMEOUT_MS);
     const leads = await Lead.find(query)
       .populate("assignedSale", "fullName username role")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).maxTimeMS(QUERY_TIMEOUT_MS);
 
-    res.json({ success: true, data: leads });
+    res.json({ success: true, data: leads, pagination: { page, limit, totalItems: total, totalPages: Math.max(1, Math.ceil(total / limit)) } });
   } catch (error) {
     console.error("Lỗi lấy danh sách leads:", error);
-    res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+    queryError(res, error);
   }
 };
 

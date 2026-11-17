@@ -113,7 +113,7 @@ gym-management/
 
 ### Prerequisites
 
-- **Node.js** >= 18
+- **Node.js** 24 LTS (see `.nvmrc`; Docker and CI use the same major version)
 - **MongoDB** (local or [Atlas](https://www.mongodb.com/atlas))
 - **Python** >= 3.9 (for the face recognition service)
 - **Docker & Docker Compose** *(optional, for containerized setup)*

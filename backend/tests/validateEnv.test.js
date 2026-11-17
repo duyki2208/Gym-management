@@ -12,6 +12,9 @@ const validProductionEnv = () => ({
 });
 
 describe("production environment validation", () => {
+  test("rejects unsupported webhook authentication mode", () => {
+    expect(() => validateEnvironment({ ...validProductionEnv(), SEPAY_WEBHOOK_AUTH_MODE: "none" })).toThrow("SEPAY_WEBHOOK_AUTH_MODE");
+  });
   test("accepts a complete production configuration", () => {
     expect(validateEnvironment(validProductionEnv())).toEqual({
       valid: true,

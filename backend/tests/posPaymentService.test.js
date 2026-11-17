@@ -33,6 +33,21 @@ const createPendingOrder = async () => {
 };
 
 describe("POS payment completion", () => {
+  test.each([undefined, null, NaN, Infinity, -Infinity, 0, -1, 20000.5, "20000", Number.MAX_SAFE_INTEGER + 1])("rejects invalid provider amount %s before any payment writes", async (amount) => {
+    const order = await createPendingOrder();
+    await expect(completePosPayment({ models: baseModels(), orderId: order._id, amount,
+      paymentProvider: "sepay", providerTransactionId: "invalid-amount-event" })).rejects.toMatchObject({ code: "INVALID_PAYMENT_AMOUNT" });
+    expect((await SaleOrder.findById(order._id)).status).toBe("Chờ thanh toán");
+    expect(await Transaction.countDocuments()).toBe(0);
+    expect(await Invoice.countDocuments()).toBe(0);
+  });
+
+  test("manual confirmation can still omit amount", async () => {
+    const order = await createPendingOrder();
+    const result = await completePosPayment({ models: baseModels(), orderId: order._id });
+    expect(result.order.status).toBe("Đã thanh toán");
+  });
+
   beforeEach(async () => {
     await Promise.all([
       Product.syncIndexes(),

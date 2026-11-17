@@ -21,6 +21,7 @@ const Package = require('../models/Package');
 const Lead = require('../models/Lead');
 const Product = require('../models/Product');
 const { PERMISSIONS, resolvePermissions } = require('../middleware/permissions');
+const { searchText, literalSearch, pagination, QUERY_TIMEOUT_MS, queryError } = require('../utils/queryLimits');
 
 // Các nhóm tìm kiếm hợp lệ
 const ALL_CATEGORIES = ['customers', 'staff', 'packages', 'leads', 'products'];
@@ -30,15 +31,18 @@ const globalSearch = async (req, res) => {
     const { q, categories, limit = 5 } = req.query;
 
     // Validate query
-    if (!q || !q.trim()) {
+    if (!searchText(q)) {
       return res.status(400).json({
         success: false,
         message: 'Thiếu từ khóa tìm kiếm (q)',
       });
     }
 
-    const query = q.trim();
-    const maxLimit = Math.min(parseInt(limit) || 5, 10); // Tối đa 10 mỗi nhóm
+    const query = searchText(q);
+    const { limit: maxLimit } = pagination({ limit }, 5, 10);
+    if (categories !== undefined && (typeof categories !== 'string' || categories.length > 100)) {
+      return res.status(400).json({ success: false, code: 'INVALID_QUERY', message: 'categories không hợp lệ' });
+    }
 
     // Parse categories filter
     const requestedCategories = categories
@@ -49,7 +53,7 @@ const globalSearch = async (req, res) => {
       permissions.includes('*') || permissions.includes(permission);
 
     // Regex tìm kiếm (không phân biệt hoa thường)
-    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const regex = new RegExp(literalSearch(query), 'i');
 
     // Chạy song song — chỉ query category được yêu cầu
     const searchPromises = {};
@@ -114,7 +118,7 @@ const globalSearch = async (req, res) => {
 
     // Chờ tất cả query hoàn thành
     const keys = Object.keys(searchPromises);
-    const values = await Promise.allSettled(Object.values(searchPromises));
+    const values = await Promise.allSettled(Object.values(searchPromises).map(query => query.maxTimeMS(QUERY_TIMEOUT_MS)));
 
     const results = {};
     let total = 0;
@@ -139,10 +143,7 @@ const globalSearch = async (req, res) => {
     });
   } catch (err) {
     console.error('[SearchController] Error:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi tìm kiếm',
-    });
+    return queryError(res, err, 'Lỗi tìm kiếm');
   }
 };
 

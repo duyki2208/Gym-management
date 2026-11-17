@@ -1,17 +1,23 @@
 const Product = require('../models/Product');
+const { literalSearch, pagination, QUERY_TIMEOUT_MS, queryError } = require('../utils/queryLimits');
 
 // Lấy danh sách sản phẩm (có hỗ trợ tìm kiếm theo tên)
 exports.getProducts = async (req, res) => {
   try {
-    const { search } = req.query;
+    const search = literalSearch(req.query.search);
+    const { page, limit, skip } = pagination(req.query, 100);
     let query = {};
     if (search) {
       query.name = { $regex: search, $options: 'i' };
     }
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const total = await Product.countDocuments(query).maxTimeMS(QUERY_TIMEOUT_MS);
+    const products = await Product.find(query).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).maxTimeMS(QUERY_TIMEOUT_MS);
+    res.set('X-Total-Pages', String(Math.max(1, Math.ceil(total / limit))));
+    res.set('X-Total-Count', String(total));
+    res.set('X-Page', String(page));
     res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi lấy danh sách sản phẩm', error: error.message });
+    queryError(res, error, 'Lỗi khi lấy danh sách sản phẩm');
   }
 };
 

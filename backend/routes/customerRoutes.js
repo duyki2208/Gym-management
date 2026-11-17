@@ -17,6 +17,9 @@ const {
 // Multer cho upload ảnh khuôn mặt
 const upload = createMemoryUpload({
   maxBytes: 5 * 1024 * 1024,
+  // Compatibility for older clients sending one duplicate imageBase64 field.
+  maxFields: 1,
+  maxFieldBytes: 7 * 1024 * 1024,
   allowedTypes: IMAGE_UPLOAD_TYPES,
 });
 

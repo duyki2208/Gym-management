@@ -1,9 +1,12 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "engines": {
+    "node": "24.x"
+  },
   "main": "server.js",
   "scripts": {
-    "test": "jest --runInBand --detectOpenHandles --forceExit",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --forceExit",
     "benchmark:local": "node scripts/benchmark-local.js",
     "smoke:staging": "node scripts/staging-smoke.js",
     "load:staging": "node scripts/staging-load.js",
@@ -42,8 +45,8 @@
     "helmet": "^8.2.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "9.7.2",
-    "multer": "^2.2.0",
+    "mongoose": "9.12.2",
+    "multer": "^2.5.0",
     "node-cron": "^4.2.1"
   },
   "devDependencies": {

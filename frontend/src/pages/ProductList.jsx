@@ -22,8 +22,8 @@ const ProductList = () => {
     try {
       const data = await productService.getAll(search);
       setProducts(data);
-    } catch {
-      toast.error('Lỗi khi tải danh sách sản phẩm');
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách sản phẩm');
     } finally {
       setLoading(false);
     }

@@ -1,11 +1,10 @@
-FROM node:20-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci \
-  && npm install --no-save @rollup/rollup-linux-x64-musl@4.53.3
+RUN npm ci --include=optional
 
 FROM dependencies AS development
 

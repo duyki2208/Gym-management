@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import api from "../services/api";
+import { leadService } from "../services/leadService";
 import {
   Users,
   Search,
@@ -52,13 +52,13 @@ const Leads = () => {
       if (statusFilter) params.status = statusFilter;
       if (sourceFilter) params.source = sourceFilter;
 
-      const response = await api.get("/leads", { params });
+      const response = await leadService.getAll(params);
       if (response.data.success) {
         setLeads(response.data.data);
       }
     } catch (err) {
       console.error(err);
-      toast.error("Không thể tải danh sách khách hàng tiềm năng");
+      toast.error(err.response?.data?.message || err.message || "Không thể tải danh sách khách hàng tiềm năng");
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ const Leads = () => {
 
   const fetchSales = useCallback(async () => {
     try {
-      const response = await api.get("/staff");
+      const response = await leadService.getStaff();
       if (Array.isArray(response.data)) {
         setSales(response.data.filter((s) => ["sale", "sm", "pm", "manager"].includes(s.role)));
       }
@@ -86,7 +86,7 @@ const Leads = () => {
   const handleCreateLead = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.post("/leads", formData);
+      const response = await leadService.create(formData);
       if (response.data.success) {
         toast.success(response.data.message);
         setShowAddModal(false);
@@ -104,7 +104,7 @@ const Leads = () => {
   const handleUpdateLead = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.put(`/leads/${selectedLead._id}`, {
+      const response = await leadService.update(selectedLead._id, {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -129,7 +129,7 @@ const Leads = () => {
     e.preventDefault();
     if (!newNote.trim()) return;
     try {
-      const response = await api.put(`/leads/${selectedLead._id}`, { note: newNote });
+      const response = await leadService.update(selectedLead._id, { note: newNote });
       if (response.data.success) {
         toast.success("Thêm ghi chú chăm sóc thành công");
         setSelectedLead(response.data.data);
@@ -144,7 +144,7 @@ const Leads = () => {
 
   const handleConvertLead = async (lead) => {
     try {
-      const response = await api.post(`/leads/${lead._id}/convert`);
+      const response = await leadService.convert(lead._id);
       if (response.data.success) {
         toast.success("Đã chuyển đổi thành công! Chuyển hướng tới trang đăng ký.");
         
@@ -169,7 +169,7 @@ const Leads = () => {
   const handleDeleteLead = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa khách hàng tiềm năng này?")) return;
     try {
-      const response = await api.delete(`/leads/${id}`);
+      const response = await leadService.delete(id);
       if (response.data.success) {
         toast.success(response.data.message);
         fetchLeads();

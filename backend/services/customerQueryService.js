@@ -1,4 +1,5 @@
 const { CUSTOMER_STATUS } = require("../utils/constants");
+const { pagination, searchText } = require("../utils/queryLimits");
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -59,11 +60,10 @@ const flattenPackage = (pkg) => {
 };
 
 const listCustomers = async ({ Customer, CustomerPackage, filters = {}, now = new Date() }) => {
-  const page = Math.max(1, Number.parseInt(filters.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, Number.parseInt(filters.limit, 10) || 10));
+  const { page, limit } = pagination(filters, 10);
   const conditions = [];
 
-  const search = String(filters.search || "").trim();
+  const search = searchText(filters.search);
   if (search) {
     const pattern = escapeRegex(search.slice(0, 100));
     const customers = await Customer.find({

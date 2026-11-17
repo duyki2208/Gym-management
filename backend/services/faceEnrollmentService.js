@@ -19,7 +19,6 @@ const enrollCustomerFace = async ({
   CustomerPackage,
   customerId,
   file,
-  imageBase64,
   faceClient,
   cloudinary,
 }) => {
@@ -53,7 +52,7 @@ const enrollCustomerFace = async ({
     customer.avatar = "";
   } catch (error) {
     // Embedding enrollment remains usable if the optional avatar upload fails.
-    if (imageBase64) customer.avatar = imageBase64;
+    customer.avatar = `data:${file.mimetype || "image/jpeg"};base64,${file.buffer.toString("base64")}`;
   }
   await customer.save();
   return { embeddingSize: result.embedding.length, avatarUrl: customer.avatarUrl };

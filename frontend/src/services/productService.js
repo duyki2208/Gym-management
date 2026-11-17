@@ -1,9 +1,12 @@
 import api from './api';
+import { readAllPages } from './paginatedList';
 
 export const productService = {
   getAll: async (search = '') => {
-    const res = await api.get(`/products?search=${search}`);
-    return res.data;
+    return readAllPages(async (page, limit) => {
+      const res = await api.get('/products', { params: { search, page, limit } });
+      return { items: res.data, totalPages: Number(res.headers['x-total-pages'] ?? 1) };
+    });
   },
   create: async (data) => {
     const res = await api.post('/products', data);

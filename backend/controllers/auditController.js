@@ -1,19 +1,20 @@
 const AuditLog = require("../models/AuditLog");
 const asyncHandler = require("../middleware/asyncHandler");
+const { sanitizeAuditRecord } = require("../utils/auditSanitizer");
+const { literalSearch, pagination, QUERY_TIMEOUT_MS } = require("../utils/queryLimits");
 
 // @desc    Lấy danh sách nhật ký hệ thống
 // @route   GET /api/v1/audit-logs
 // @access  Private (Admin, Manager)
 const getAuditLogs = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 10;
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = pagination(req.query, 10);
+  const search = literalSearch(req.query.search);
 
   const query = {};
 
   // Tìm kiếm theo tên nhân viên, hành động hoặc phương thức
-  if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search, "i");
+  if (search) {
+    const searchRegex = new RegExp(search, "i");
     query.$or = [
       { username: searchRegex },
       { action: searchRegex },
@@ -26,17 +27,18 @@ const getAuditLogs = asyncHandler(async (req, res) => {
     query.method = req.query.method;
   }
 
-  const totalLogs = await AuditLog.countDocuments(query);
+  const totalLogs = await AuditLog.countDocuments(query).maxTimeMS(QUERY_TIMEOUT_MS);
   const logs = await AuditLog.find(query)
     .populate("user", "name role email")
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit).maxTimeMS(QUERY_TIMEOUT_MS);
 
   res.status(200).json({
     success: true,
     data: {
-      logs,
+      // Historical rows may predate write-time redaction.
+      logs: logs.map(sanitizeAuditRecord),
       totalLogs,
       totalPages: Math.ceil(totalLogs / limit),
       currentPage: page,

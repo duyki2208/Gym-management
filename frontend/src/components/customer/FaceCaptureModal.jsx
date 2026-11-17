@@ -78,7 +78,6 @@ const FaceCaptureModal = ({ customer, onClose, onSuccess }) => {
 
       const formData = new FormData();
       formData.append('image', blob, 'face.jpg');
-      formData.append('imageBase64', preview);
 
       const customerId = customer.customerId || customer._id;
       const res = await api.post(

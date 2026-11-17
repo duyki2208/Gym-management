@@ -10,14 +10,46 @@ Chạy: python app.py
 Port: 5001
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, Request, request, jsonify, g
 import numpy as np
-import cv2
 import json
 import os
 import hmac
+import io
+import threading
+import warnings
+from PIL import Image, ImageOps, PngImagePlugin, UnidentifiedImageError
+from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__)
+
+
+class UploadRequest(Request):
+    """Close even partially parsed upload streams when a multipart limit fails."""
+    def _get_file_stream(self, *args, **kwargs):
+        stream = super()._get_file_stream(*args, **kwargs)
+        self.__dict__.setdefault("_upload_streams", []).append(stream)
+        return stream
+
+    def close(self):
+        try:
+            super().close()
+        finally:
+            for stream in self.__dict__.pop("_upload_streams", []):
+                stream.close()
+
+
+app.request_class = UploadRequest
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_PIXELS = 4_000_000
+MAX_IMAGE_DIMENSION = 4096
+MAX_CANDIDATES = 2000
+app.config.update(MAX_CONTENT_LENGTH=32 * 1024 * 1024,
+                  MAX_FORM_MEMORY_SIZE=24 * 1024 * 1024, MAX_FORM_PARTS=6)
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
+PngImagePlugin.MAX_TEXT_CHUNK = 64 * 1024
+PngImagePlugin.MAX_TEXT_MEMORY = 1024 * 1024
+face_slot = threading.BoundedSemaphore(1)
 
 INTERNAL_SECRET = os.environ.get("INTERNAL_SERVICE_SECRET", "")
 if len(INTERNAL_SECRET) < 32:
@@ -32,7 +64,79 @@ if not 0.0 <= MATCH_THRESHOLD <= 1.0:
 def verify_internal_secret():
     """Bắt buộc xác thực mọi request xử lý dữ liệu khuôn mặt."""
     secret = request.headers.get("X-Internal-Secret")
-    return bool(secret) and hmac.compare_digest(secret, INTERNAL_SECRET)
+    return bool(secret) and len(secret) <= 256 and hmac.compare_digest(secret.encode("utf-8"), INTERNAL_SECRET.encode("utf-8"))
+
+
+@app.before_request
+def guard_face_request():
+    if request.path not in ("/embed", "/recognize"):
+        return None
+    if not verify_internal_secret():
+        return jsonify({"success": False, "reason": "unauthorized"}), 401
+    if request.content_length is not None and request.content_length > app.config["MAX_CONTENT_LENGTH"]:
+        raise RequestEntityTooLarge()
+    if not face_slot.acquire(blocking=False):
+        return jsonify({"success": False, "reason": "face_service_busy"}), 503
+    g.face_slot = True
+
+
+@app.teardown_request
+def release_face_slot(_error):
+    if getattr(g, "face_slot", False):
+        g.face_slot = False
+        face_slot.release()
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def too_large(_error):
+    return jsonify({"success": False, "reason": "payload_too_large"}), 413
+
+
+class FaceInputError(ValueError):
+    pass
+
+
+@app.errorhandler(FaceInputError)
+def invalid_face_input(error):
+    return jsonify({"success": False, "reason": str(error)}), 400
+
+
+def valid_vector(value):
+    if not isinstance(value, (list, np.ndarray)):
+        return False
+    try:
+        if len(value) != 512:
+            return False
+        vector = np.asarray(value, dtype=np.float64)
+        return vector.shape == (512,) and bool(np.all(np.isfinite(vector))) and bool(0 < np.linalg.norm(vector) < 1e6)
+    except (ValueError, TypeError, OverflowError):
+        return False
+
+
+def parse_candidates(raw):
+    try:
+        candidates = json.loads(raw)
+    except (ValueError, TypeError):
+        raise FaceInputError("invalid_candidates_json")
+    if not isinstance(candidates, list) or len(candidates) > MAX_CANDIDATES:
+        raise FaceInputError("invalid_candidates_count")
+    seen = set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise FaceInputError("invalid_candidate")
+        member_id, vector = candidate.get("member_id"), candidate.get("embedding")
+        if not isinstance(member_id, str) or not 1 <= len(member_id) <= 100 or member_id in seen:
+            raise FaceInputError("invalid_member_id")
+        if not isinstance(vector, list) or len(vector) != 512 or any(isinstance(n, bool) or not isinstance(n, (int, float)) for n in vector) or not valid_vector(vector):
+            raise FaceInputError("invalid_embedding")
+        seen.add(member_id)
+    return candidates
+
+
+def image_upload():
+    if set(request.files) != {"image"} or len(request.files.getlist("image")) != 1:
+        raise FaceInputError("expected_one_image")
+    return request.files["image"]
 
 # ──────────────────────────────────────────────
 # Khởi tạo InsightFace — load 1 lần khi start
@@ -62,13 +166,26 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def decode_image(file_storage) -> np.ndarray | None:
-    """Decode file upload thành OpenCV image (BGR)."""
+    """Inspect dimensions before decoding pixels; return bounded BGR input."""
+    raw = file_storage.read(MAX_IMAGE_BYTES + 1)
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise RequestEntityTooLarge()
     try:
-        buf = np.frombuffer(file_storage.read(), np.uint8)
-        img = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-        return img
-    except Exception:
-        return None
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(raw), formats=["JPEG", "PNG", "WEBP"]) as image:
+                width, height = image.size
+                if (width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION or
+                        width * height > MAX_IMAGE_PIXELS or getattr(image, "is_animated", False)):
+                    raise FaceInputError("image_dimensions_or_animation_not_allowed")
+                rgb = ImageOps.exif_transpose(image).convert("RGB")
+                return np.asarray(rgb, dtype=np.uint8)[:, :, ::-1].copy()
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise FaceInputError("image_pixel_limit_exceeded")
+    except FaceInputError:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise FaceInputError("invalid_image")
 
 
 # ──────────────────────────────────────────────
@@ -80,7 +197,7 @@ def health():
     return jsonify({
         'status': 'ok',
         'model_loaded': face_app is not None
-    })
+    }), 200 if face_app is not None else 503
 
 
 @app.route('/embed', methods=['POST'])
@@ -97,7 +214,7 @@ def embed():
     if face_app is None:
         return jsonify({'found': False, 'embedding': None, 'message': 'Model chưa được load'}), 503
 
-    file = request.files.get('image')
+    file = image_upload()
     if not file:
         return jsonify({'found': False, 'embedding': None, 'message': 'Thiếu file ảnh'}), 400
 
@@ -107,8 +224,8 @@ def embed():
 
     try:
         faces = face_app.get(img)
-    except Exception as e:
-        return jsonify({'found': False, 'embedding': None, 'message': str(e)}), 500
+    except Exception:
+        return jsonify({'found': False, 'embedding': None, 'message': 'detection_error'}), 500
 
     if not faces:
         return jsonify({
@@ -119,6 +236,8 @@ def embed():
 
     face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     embedding = face.embedding.tolist()
+    if not valid_vector(embedding):
+        return jsonify({'found': False, 'embedding': None, 'message': 'invalid_model_output'}), 503
 
     return jsonify({
         'found': True,
@@ -141,15 +260,12 @@ def recognize():
     if face_app is None:
         return jsonify({'matched': False, 'reason': 'model_not_loaded'}), 503
 
-    file = request.files.get('image')
+    file = image_upload()
     if not file:
         return jsonify({'matched': False, 'reason': 'missing_image'}), 400
 
     candidates_raw = request.form.get('candidates', '[]')
-    try:
-        candidates = json.loads(candidates_raw)
-    except json.JSONDecodeError:
-        return jsonify({'matched': False, 'reason': 'invalid_candidates_json'}), 400
+    candidates = parse_candidates(candidates_raw)
 
     if not candidates:
         return jsonify({'matched': False, 'reason': 'no_candidates'})
@@ -170,14 +286,16 @@ def recognize():
 
     try:
         faces = face_app.get(img)
-    except Exception as e:
-        return jsonify({'matched': False, 'reason': f'detection_error: {str(e)}'}), 500
+    except Exception:
+        return jsonify({'matched': False, 'reason': 'detection_error'}), 500
 
     if not faces:
         return jsonify({'matched': False, 'reason': 'no_face_detected'})
 
     face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     query_vec = face.embedding
+    if not valid_vector(query_vec):
+        return jsonify({'matched': False, 'reason': 'invalid_model_output'}), 503
 
     best_member_id = None
     best_score = 0.0

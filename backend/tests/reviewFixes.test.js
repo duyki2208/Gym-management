@@ -267,11 +267,11 @@ test("parallel camera matches persist one check-in and send one notification", a
 
 test("webhook finds legacy order older than 100 newer orders", async () => {
   const p = await product();
-  const old = await models.SaleOrder.create({ totalAmount: 100, paymentMethod: "Chuyển khoản QR", status: "Chờ thanh toán", details: [{ product: p._id, quantity: 1, sellPrice: 100 }], createdAt: new Date("2020-01-01") });
+  const old = await models.SaleOrder.create({ totalAmount: 100, paymentMethod: "Chuyển khoản QR", paymentAccount: { bank: "VCB", accountNo: "123456789" }, status: "Chờ thanh toán", details: [{ product: p._id, quantity: 1, sellPrice: 100 }], createdAt: new Date("2020-01-01") });
   await models.SaleOrder.insertMany(Array.from({ length: 101 }, () => ({ totalAmount: 100, details: [], status: "Chờ thanh toán" })));
   const res = response();
   await require("../controllers/posController").handleWebhook({ models, branchCode: "HN01", centralModels: { Branch: { find: () => ({ select: () => ({ lean: async () => [] }) }) } },
-    body: { id: "review-legacy-event", content: `GYM${String(old._id).slice(-8)}`, transferAmount: 100 } }, res);
+    body: { id: 92704, content: `GYM${String(old._id).slice(-8)}`, transferAmount: 100, transferType: "in", gateway: "Vietcombank", accountNumber: "123456789" } }, res);
   expect(res.statusCode).toBe(200); expect(res.body.success).toBe(true);
   expect((await models.SaleOrder.findById(old._id)).status).toBe("Đã thanh toán");
 });

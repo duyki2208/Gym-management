@@ -29,7 +29,7 @@ const getAllCustomers = async (req, res) => {
     res.json(await listCustomers({ ...models, filters: req.query }));
   } catch (error) {
     console.error("Lỗi lấy danh sách khách hàng:", error);
-    res.status(error.code === "INVALID_DATE_FILTER" ? 400 : 500).json({ message: error.message });
+    res.status(error.statusCode || (error.code === "INVALID_DATE_FILTER" ? 400 : 500)).json({ message: error.message });
   }
 };
 
@@ -93,7 +93,6 @@ const enrollFace = async (req, res) => {
       ...models,
       customerId: req.params.id,
       file: req.file,
-      imageBase64: req.body?.imageBase64,
       faceClient,
       cloudinary: {
         uploadBuffer: cloudinaryConfig.uploadBuffer,
@@ -117,7 +116,9 @@ const enrollFace = async (req, res) => {
       });
     }
     console.error("enrollFace error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    const status = error.statusCode || ([400, 413, 503].includes(error.response?.status) ? error.response.status : 500);
+    res.status(status).json({ success: false, code: error.statusCode ? error.code : undefined,
+      message: error.statusCode ? error.message : "Không thể xử lý ảnh khuôn mặt lúc này" });
   }
 };
 
@@ -156,8 +157,8 @@ const exportCustomersExcel = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("Lỗi xuất Excel khách hàng:", error);
-    res.status(error instanceof CustomerExportError ? error.statusCode : 500).json({
-      message: error instanceof CustomerExportError ? error.message : "Lỗi hệ thống khi xuất Excel khách hàng",
+    res.status(error.statusCode || 500).json({
+      message: error instanceof CustomerExportError || error.statusCode === 400 ? error.message : "Lỗi hệ thống khi xuất Excel khách hàng",
     });
   }
 };

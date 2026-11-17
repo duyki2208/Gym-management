@@ -51,3 +51,6 @@ __pycache__/
 
 # AI agent config (local dev only)
 .agent/
+
+# Local documentation (keep on disk, exclude from Git)
+/docs/

@@ -12,6 +12,7 @@ const {
   PaymentCompletionError,
 } = require('../services/posPaymentService');
 const { PERMISSIONS, userHasPermission } = require('../middleware/permissions');
+const { parseSepayEvent, assertSepayOrder } = require('../services/sepayWebhookService');
 
 
 const getPosModels = (req) => req.models || { SaleOrder, Product, Customer, Transaction, Invoice, Setting, connection: mongoose.connection };
@@ -50,31 +51,15 @@ exports.getOrderStatus = async (req, res) => {
   }
 };
 
-// @desc    Webhook nhận thông báo biến động số dư chuyển khoản thực tế từ SePay / Casso / PayOS
-// @route   POST /api/v1/pos/webhook
-// @desc    Webhook nhận thông báo biến động số dư chuyển khoản thực tế từ SePay / Casso / PayOS
+// @desc    Webhook nhận giao dịch tiền vào từ SePay
 // @route   POST /api/v1/pos/webhook
 exports.handleWebhook = async (req, res) => {
   try {
-    const body = req.body;
-    const branchCode = req.branchCode || req.query.branchCode || 'HN01';
+    const event = parseSepayEvent(req.body);
+    const branchCode = req.branchCode || req.query?.branchCode || 'HN01';
 
     // SePay truyền thông tin giao dịch ở root (content, transferAmount, referenceCode...)
-    const content = body.content || body.description || (body.data && (body.data.description || body.data.content)) || '';
-    const amount = Number(body.transferAmount || body.amountIn || (body.data && body.data.amount) || 0);
-    const sepayTxId = String(
-      body.id ||
-      body.referenceCode ||
-      (body.data && (body.data.id || body.data.referenceCode)) ||
-      ''
-    ).trim();
-
-    if (!sepayTxId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Webhook thiếu mã giao dịch ổn định để xử lý idempotency'
-      });
-    }
+    const { content, amount, id: sepayTxId } = event;
 
     console.log(`[Webhook SePay] [Chi nhánh ${branchCode}] Mã GD SePay: ${sepayTxId} | Nội dung: "${content}" | Số tiền: ${amount}`);
 
@@ -105,6 +90,8 @@ exports.handleWebhook = async (req, res) => {
         message: `Không tìm thấy đơn hàng tương ứng với mã GYM${orderCode.toUpperCase()}`
       });
     }
+
+    assertSepayOrder(event, matchedOrder);
 
     // Không thoát sớm khi order đã paid: service sẽ kiểm tra và repair
     // Transaction/Invoice còn thiếu từ một lần xử lý bị gián đoạn.

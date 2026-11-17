@@ -37,9 +37,9 @@ const DOCUMENT_UPLOAD_TYPES = Object.freeze({
   },
 });
 
-const createMemoryUpload = ({ maxBytes, allowedTypes }) => multer({
+const createMemoryUpload = ({ maxBytes, allowedTypes, maxFields = 20, maxFieldBytes = 64 * 1024 }) => multer({
   storage: multer.memoryStorage(),
-  limits: { files: 1, fileSize: maxBytes },
+  limits: { files: 1, fileSize: maxBytes, fields: maxFields, fieldSize: maxFieldBytes, fieldNameSize: 100, parts: maxFields + 1 },
   fileFilter: (req, file, callback) => {
     const extension = path.extname(file.originalname || "").toLowerCase();
     const expected = allowedTypes[extension];

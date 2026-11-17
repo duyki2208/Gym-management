@@ -9,6 +9,12 @@ const FormData = require('form-data');
 
 const FACE_SERVICE_URL = process.env.FACE_SERVICE_URL || 'http://localhost:5001';
 const TIMEOUT_MS = 8000;
+const REQUEST_LIMITS = { timeout: TIMEOUT_MS, maxRedirects: 0, maxBodyLength: 32 * 1024 * 1024, maxContentLength: 256 * 1024 };
+const validateImage = (buffer) => {
+  if (!Buffer.isBuffer(buffer) || !buffer.length || buffer.length > 5 * 1024 * 1024) {
+    throw Object.assign(new Error('Ảnh không hợp lệ hoặc vượt 5 MiB'), { statusCode: 413, code: 'FACE_IMAGE_LIMIT' });
+  }
+};
 
 const getInternalSecret = () => {
   const secret = process.env.INTERNAL_SERVICE_SECRET;
@@ -27,6 +33,7 @@ const getInternalSecret = () => {
  * @returns {{ found: boolean, embedding: number[]|null, message: string }}
  */
 async function getEmbedding(imageBuffer, branchCode = 'HN01') {
+  validateImage(imageBuffer);
   const form = new FormData();
   form.append('image', imageBuffer, { filename: 'face.jpg', contentType: 'image/jpeg' });
   form.append('branchCode', branchCode);
@@ -39,7 +46,7 @@ async function getEmbedding(imageBuffer, branchCode = 'HN01') {
 
   const response = await axios.post(`${FACE_SERVICE_URL}/embed`, form, {
     headers,
-    timeout: TIMEOUT_MS,
+    ...REQUEST_LIMITS,
   });
 
   return response.data;
@@ -53,6 +60,10 @@ async function getEmbedding(imageBuffer, branchCode = 'HN01') {
  * @returns {{ matched: boolean, member_id?: string, confidence?: number, reason?: string }}
  */
 async function recognize(imageBuffer, candidates, branchCode = 'HN01', threshold = null) {
+  validateImage(imageBuffer);
+  if (!Array.isArray(candidates) || candidates.length > 2000) {
+    throw Object.assign(new Error('Danh sách nhận diện vượt giới hạn 2.000 hồ sơ'), { statusCode: 503, code: 'FACE_CANDIDATE_LIMIT' });
+  }
   const form = new FormData();
   form.append('image', imageBuffer, { filename: 'frame.jpg', contentType: 'image/jpeg' });
   form.append('candidates', JSON.stringify(candidates));
@@ -69,7 +80,7 @@ async function recognize(imageBuffer, candidates, branchCode = 'HN01', threshold
 
   const response = await axios.post(`${FACE_SERVICE_URL}/recognize`, form, {
     headers,
-    timeout: TIMEOUT_MS,
+    ...REQUEST_LIMITS,
   });
 
   return response.data;

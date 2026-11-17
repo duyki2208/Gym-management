@@ -22,6 +22,9 @@ const validateEnvironment = (env = process.env) => {
   }
 
   const errors = [];
+  if (!["hmac", "apikey"].includes(env.SEPAY_WEBHOOK_AUTH_MODE || "hmac")) {
+    errors.push("SEPAY_WEBHOOK_AUTH_MODE must be hmac or apikey");
+  }
   for (const variable of REQUIRED_PRODUCTION_VARIABLES) {
     if (!String(env[variable] || "").trim()) {
       errors.push(`${variable} is required`);

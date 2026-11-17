@@ -19,8 +19,9 @@ const ImportGoods = () => {
       try {
         const data = await productService.getAll(searchTerm);
         setProducts(data);
-      } catch {
+      } catch (error) {
         setProducts([]);
+        toast.error(error.response?.data?.message || error.message || 'Không thể tải sản phẩm');
       }
     };
     const t = setTimeout(() => fetchProds(), 300);

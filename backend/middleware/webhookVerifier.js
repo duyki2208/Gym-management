@@ -3,15 +3,14 @@ const crypto = require("crypto");
 const DEFAULT_TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
 
 const parseTimestampMilliseconds = (value) => {
-  if (typeof value !== "string" || !/^\d{10,13}$/.test(value.trim())) {
+  if (typeof value !== "string" || !/^\d{10}$/.test(value)) {
     return null;
   }
 
   const numericTimestamp = Number(value.trim());
   if (!Number.isSafeInteger(numericTimestamp)) return null;
 
-  // Providers commonly use either Unix seconds (10 digits) or milliseconds (13 digits).
-  return numericTimestamp < 1e12 ? numericTimestamp * 1000 : numericTimestamp;
+  return numericTimestamp * 1000;
 };
 
 const getTimestampToleranceMilliseconds = () => {
@@ -33,47 +32,33 @@ const getTimestampToleranceMilliseconds = () => {
  *    - Header: `x-sepay-timestamp` (hoặc `X-SePay-Timestamp`): unix timestamp tính bằng giây
  *    - Dữ liệu ký: `${timestamp}.${rawBody}`
  * 2. API Key Header:
- *    - Header: `Authorization: Apikey <KEY>` hoặc `Authorization: Bearer <KEY>`
+ *    - Header: `Authorization: Apikey <KEY>`; chỉ khi AUTH_MODE=apikey.
  */
 const verifySepayWebhook = (req, res, next) => {
   try {
-    const secretKey =
-      process.env.SEPAY_WEBHOOK_SECRET || process.env.SEPAY_API_KEY;
+    const mode = process.env.SEPAY_WEBHOOK_AUTH_MODE || "hmac";
+    const secretKey = process.env.SEPAY_WEBHOOK_SECRET;
+    if (!["hmac", "apikey"].includes(mode)) {
+      return res.status(500).json({ success: false, code: "WEBHOOK_CONFIG_ERROR", message: "Webhook authentication mode is invalid" });
+    }
 
-    // Nếu chưa cấu hình secret:
-    // - Ở Production: chặn lại để đảm bảo an toàn tuyệt đối
-    // - Ở Development: cảnh báo nhưng cho qua để tiện test nội bộ
-    if (!secretKey) {
-      if (process.env.NODE_ENV === "production") {
-        console.error(
-          "[Webhook Security] LỖI: Chưa cấu hình SEPAY_WEBHOOK_SECRET hoặc SEPAY_API_KEY trên Render Production!"
-        );
-        return res.status(500).json({
-          success: false,
-          message: "Webhook security credentials not configured on server",
-        });
-      }
-
-      console.warn(
-        "[Webhook Security Cảnh báo] Chưa cấu hình SEPAY_WEBHOOK_SECRET trong .env. Bỏ qua xác thực ở môi trường Dev."
-      );
-      return next();
+    // Fail closed in every environment; tests must configure their own secret.
+    if (!secretKey?.trim()) {
+      return res.status(500).json({
+        success: false,
+        message: "Webhook security credentials not configured on server",
+      });
     }
 
     const trimmedSecret = secretKey.trim();
 
     // 1. KIỂM TRA CHỮ KÝ HMAC-SHA256 TỪ SEPAY
-    const signatureHeader =
-      req.headers["x-sepay-signature"] ||
-      req.headers["x-signature"] ||
-      req.headers["sepay-signature"] ||
-      req.headers["signature"];
+    const signatureHeader = req.headers["x-sepay-signature"];
 
-    if (signatureHeader) {
+    if (mode === "hmac") {
       // SePay gửi timestamp kèm theo trong header x-sepay-timestamp
       const timestamp =
         req.headers["x-sepay-timestamp"] ||
-        req.headers["x-timestamp"] ||
         "";
 
       const timestampMilliseconds = parseTimestampMilliseconds(timestamp);
@@ -95,47 +80,31 @@ const verifySepayWebhook = (req, res, next) => {
       }
 
       // Chuẩn hóa signature: bóc tách tiền tố "sha256=" nếu có
+      if (typeof signatureHeader !== "string" || !/^sha256=[a-f0-9]{64}$/i.test(signatureHeader) ||
+          typeof req.rawBody !== "string" || !req.rawBody.length) {
+        return res.status(401).json({ success: false, message: "Webhook HMAC thiếu chữ ký hoặc raw body hợp lệ" });
+      }
       const receivedHash = signatureHeader
         .replace(/^sha256=/i, "")
         .trim()
         .toLowerCase();
 
-      const rawBody =
-        typeof req.rawBody === "string" && req.rawBody.length > 0
-          ? req.rawBody
-          : JSON.stringify(req.body);
+      const rawBody = req.rawBody;
 
-      // Thử các biến thể payload ký:
-      // Chuẩn 1 của SePay: `${timestamp}.${rawBody}`
-      // Chuẩn 2 (nếu không có timestamp): `${rawBody}`
-      // Chuẩn 3: dùng JSON.stringify(req.body) phòng trường hợp rawBody bị can thiệp
-      const payloadsToTry = [];
-      if (timestamp) {
-        payloadsToTry.push(`${timestamp}.${rawBody}`);
-        payloadsToTry.push(`${timestamp}.${JSON.stringify(req.body)}`);
+      const computedHash = crypto
+        .createHmac("sha256", trimmedSecret)
+        .update(`${timestamp}.${rawBody}`)
+        .digest("hex");
+
+      const expectedBuf = Buffer.from(computedHash, "utf8");
+      const receivedBuf = Buffer.from(receivedHash, "utf8");
+
+      if (
+        expectedBuf.length === receivedBuf.length &&
+        crypto.timingSafeEqual(expectedBuf, receivedBuf)
+      ) {
+        return next();
       }
-      payloadsToTry.push(rawBody);
-      payloadsToTry.push(JSON.stringify(req.body));
-
-      for (const payload of payloadsToTry) {
-        const computedHash = crypto
-          .createHmac("sha256", trimmedSecret)
-          .update(payload)
-          .digest("hex")
-          .toLowerCase();
-
-        const expectedBuf = Buffer.from(computedHash, "utf8");
-        const receivedBuf = Buffer.from(receivedHash, "utf8");
-
-        if (
-          expectedBuf.length === receivedBuf.length &&
-          crypto.timingSafeEqual(expectedBuf, receivedBuf)
-        ) {
-          console.log("[Webhook Security] Xác thực chữ ký HMAC-SHA256 SePay THÀNH CÔNG!");
-          return next();
-        }
-      }
-
       console.warn(
         `[Webhook Security CẢNH BÁO] Chữ ký HMAC SePay không hợp lệ! Timestamp: "${timestamp}"`
       );
@@ -147,10 +116,8 @@ const verifySepayWebhook = (req, res, next) => {
 
     // 2. KIỂM TRA QUA HEADER AUTHORIZATION (Nếu SePay cấu hình API Key)
     const authHeader = req.headers["authorization"];
-    if (authHeader) {
-      const receivedToken = authHeader
-        .replace(/^(Apikey|Bearer)\s+/i, "")
-        .trim();
+    if (typeof authHeader === "string" && /^Apikey\s+\S+$/i.test(authHeader)) {
+      const receivedToken = authHeader.replace(/^Apikey\s+/i, "");
 
       const tokenBuffer = Buffer.from(receivedToken, "utf8");
       const secretBuffer = Buffer.from(trimmedSecret, "utf8");

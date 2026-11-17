@@ -9,6 +9,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { ipKeyGenerator } = rateLimit;
 const cookieParser = require("cookie-parser");
+const { MulterError } = require("multer");
 const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const { closeAllConnections } = require("./db/branchConnectionManager");
@@ -46,6 +47,7 @@ app.use(
       callback(new Error(`CORS policy: origin ${origin} không được phép`));
     },
     credentials: true,
+    exposedHeaders: ["X-Total-Pages", "X-Total-Count", "X-Page"],
   })
 );
 
@@ -134,7 +136,9 @@ app.get("/", (req, res) => {
 
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || (res.statusCode === 200 ? 500 : res.statusCode);
+  const uploadStatus = err instanceof MulterError
+    ? (["LIMIT_FILE_SIZE", "LIMIT_FIELD_VALUE", "LIMIT_FIELD_COUNT", "LIMIT_FILE_COUNT", "LIMIT_PART_COUNT"].includes(err.code) ? 413 : 400) : null;
+  const statusCode = err.statusCode || uploadStatus || (err.code === 50 ? 503 : (res.statusCode === 200 ? 500 : res.statusCode));
   logger.error("http_request_failed", {
     requestId: req.id,
     method: req.method,

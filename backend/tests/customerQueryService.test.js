@@ -30,7 +30,7 @@ describe("customer query service", () => {
     const result = await listCustomers({
       Customer,
       CustomerPackage,
-      filters: { page: "-2", limit: "500" },
+      filters: { page: "1", limit: "500" },
     });
 
     expect(packageQuery.skip).toHaveBeenCalledWith(0);
@@ -44,5 +44,9 @@ describe("customer query service", () => {
       CustomerPackage: {},
       filters: { startDateFrom: "not-a-date" },
     })).rejects.toMatchObject({ code: "INVALID_DATE_FILTER" });
+  });
+  test("rejects invalid pagination before querying packages", async () => {
+    await expect(listCustomers({ Customer: {}, CustomerPackage: {}, filters: { page: "-2" } }))
+      .rejects.toMatchObject({ statusCode: 400, code: "INVALID_QUERY" });
   });
 });

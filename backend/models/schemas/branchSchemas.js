@@ -3,6 +3,7 @@
  * Pure schemas for Branch Databases (gympro_branch_<code>)
  */
 const mongoose = require("mongoose");
+const { sanitizeAuditValue, auditPath, auditAction } = require("../../utils/auditSanitizer");
 
 // Helper function to resolve Counter model dynamically on the active connection
 const getCounterModel = (doc) => {
@@ -173,6 +174,16 @@ const customerPackageSchema = new mongoose.Schema(
     branchTransferredTo: { type: String, default: null },
     branchTransferredFrom: { type: String, default: null },
     branchTransferDate: { type: Date, default: null },
+    branchTransfer: {
+      fingerprint: String,
+      requestKey: String,
+      targetCustomerId: mongoose.Schema.Types.ObjectId,
+      targetPackageId: mongoose.Schema.Types.ObjectId,
+      invoiceCode: String,
+      transferFee: Number,
+      completedAt: Date,
+      actorId: mongoose.Schema.Types.ObjectId,
+    },
 
     trainer: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -237,6 +248,9 @@ customerPackageSchema.pre("aggregate", function () {
 customerPackageSchema.index({ customer: 1 });
 customerPackageSchema.index({ status: 1 });
 customerPackageSchema.index({ transferStatus: 1 });
+customerPackageSchema.index({ "branchTransfer.requestKey": 1 }, {
+  unique: true, partialFilterExpression: { "branchTransfer.requestKey": { $type: "string" } },
+});
 customerPackageSchema.index(
   { operationKey: 1 },
   {
@@ -879,6 +893,8 @@ const auditLogSchema = new mongoose.Schema(
     username: { type: String, default: "Hệ thống" },
     action: { type: String, required: true },
     method: { type: String, default: "SYSTEM" },
+    statusCode: { type: Number },
+    requestId: { type: String },
     path: { type: String, default: "INTERNAL" },
     severity: { type: String, enum: ["info", "warning", "critical"], default: "info" },
     details: { type: mongoose.Schema.Types.Mixed },
@@ -887,6 +903,13 @@ const auditLogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Cover internal AuditLog.create() writers as well as HTTP middleware.
+auditLogSchema.pre("save", function () {
+  this.details = sanitizeAuditValue(this.details);
+  this.path = auditPath(this.path);
+  this.action = auditAction(this.action);
+});
 
 auditLogSchema.index({ user: 1 });
 auditLogSchema.index({ createdAt: -1 });
